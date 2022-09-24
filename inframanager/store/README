@@ -1,0 +1,104 @@
+example program to demonstrate how to utilize store package
+
+import (
+        "storeapp/store"
+	"fmt"
+)
+
+func main() {
+	//for cni add
+        store.NewEndPoint()
+
+        data1 := store.EndPoint{
+                        PodIpAddress: "10.10.10.1",
+                        InterfaceID: 1,
+                        PodMacAddress: "00:00:00:aa:aa:aa",
+                }
+
+        data2 := store.EndPoint{
+                        PodIpAddress: "10.10.10.2",
+                        InterfaceID: 2,
+                        PodMacAddress: "00:00:00:aa:aa:aa",
+                }
+
+        data3 := store.EndPoint{
+                        PodIpAddress: "10.10.10.3",
+                        InterfaceID: 3,
+                        PodMacAddress: "00:00:00:aa:aa:aa",
+                }
+
+        data4 := store.EndPoint{
+                        PodIpAddress: "10.10.10.4",
+                        InterfaceID: 4,
+                        PodMacAddress: "00:00:00:aa:aa:aa",
+                }
+
+        data1.WriteToStore()
+        data2.WriteToStore()
+        data3.WriteToStore()
+        data4.WriteToStore()
+        data2.DeleteFromStore()
+        data4.DeleteFromStore()
+	
+	data5 := data1.GetFromStore()
+	fmt.Println(data5)
+
+        store.RunSyncEndPointInfo()
+
+	//for service
+	store.NewService()
+
+	var data1 store.Service
+	var ep1 store.ServiceEndPoint
+	var ep2 store.ServiceEndPoint
+	var ep3 store.ServiceEndPoint
+
+	data1.ClusteIp = "10.10.100.1"
+	data1.ClusterPort = 1000
+	data1.GroupID = 1
+	data1.ServiceEndPoint = make(map[string]store.ServiceEndPoint)
+	
+	ep1.IpAddress = "10.10.10.1"
+	ep1.Port = 6556
+	ep1.MemberID = 1
+
+	ep2.IpAddress = "10.10.10.2"
+	ep2.Port = 6557
+	ep2.MemberID = 2
+
+	ep3.IpAddress = "10.10.10.3"
+	ep3.Port = 6558
+	ep3.MemberID = 3
+
+	data1.ServiceEndPoint["10.10.10.1"] = ep1
+	data1.ServiceEndPoint["10.10.10.2"] = ep2
+	data1.ServiceEndPoint["10.10.10.3"] = ep3
+
+	data1.WriteToStore()
+
+	var data2 store.Service
+        var ep4 store.ServiceEndPoint
+        var ep5 store.ServiceEndPoint
+
+        data2.ClusteIp = "10.10.100.2"
+        data2.ClusterPort = 1001
+        data2.GroupID = 2
+        data2.ServiceEndPoint = make(map[string]store.ServiceEndPoint)
+
+        ep4.IpAddress = "10.10.10.4"
+        ep4.Port = 6545
+        ep4.MemberID = 1
+
+        ep5.IpAddress = "10.10.10.5"
+        ep5.Port = 6546
+        ep5.MemberID = 2
+
+        data2.ServiceEndPoint["10.10.10.4"] = ep4
+        data2.ServiceEndPoint["10.10.10.5"] = ep5
+
+        data2.WriteToStore()
+	
+	store.RunSyncServiceInfo()
+}
+
+

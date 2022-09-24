@@ -1,0 +1,1969 @@
+
+k8s_dp¨Œ{
+  "schema_version" : "1.0.0",
+  "tables" : [
+    {
+      "name" : "pipe.k8s_dp_control.write_source_ip_table",
+      "id" : 45702398,
+      "table_type" : "MatchAction_Direct",
+      "size" : 2048,
+      "annotations" : [],
+      "depends_on" : [],
+      "has_const_default_action" : false,
+      "key" : [
+        {
+          "id" : 1,
+          "name" : "meta.mod_blob_ptr",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Exact",
+          "type" : {
+            "type" : "bytes",
+            "width" : 24
+          }
+        }
+      ],
+      "action_specs" : [
+        {
+          "id" : 29330140,
+          "name" : "k8s_dp_control.update_src_ip_mac",
+          "action_scope" : "TableAndDefault",
+          "annotations" : [],
+          "data" : [
+            {
+              "id" : 1,
+              "name" : "new_smac",
+              "repeated" : false,
+              "mandatory" : true,
+              "read_only" : false,
+              "annotations" : [],
+              "type" : {
+                "type" : "bytes",
+                "width" : 48
+              }
+            },
+            {
+              "id" : 2,
+              "name" : "new_ip",
+              "repeated" : false,
+              "mandatory" : true,
+              "read_only" : false,
+              "annotations" : [],
+              "type" : {
+                "type" : "bytes",
+                "width" : 32
+              }
+            }
+          ]
+        },
+        {
+          "id" : 21257015,
+          "name" : "NoAction",
+          "action_scope" : "DefaultOnly",
+          "annotations" : [
+            {
+              "name" : "@defaultonly"
+            }
+          ],
+          "data" : []
+        }
+      ],
+      "data" : [],
+      "supported_operations" : [],
+      "attributes" : ["EntryScope"]
+    },
+    {
+      "name" : "pipe.k8s_dp_control.rx_src_ip",
+      "id" : 34531482,
+      "table_type" : "MatchAction_Direct",
+      "size" : 1024,
+      "annotations" : [],
+      "depends_on" : [],
+      "has_const_default_action" : true,
+      "key" : [
+        {
+          "id" : 1,
+          "name" : "hdr.ipv4.src_addr",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Exact",
+          "type" : {
+            "type" : "bytes",
+            "width" : 32
+          }
+        }
+      ],
+      "action_specs" : [
+        {
+          "id" : 28785571,
+          "name" : "k8s_dp_control.set_source_ip",
+          "action_scope" : "TableAndDefault",
+          "annotations" : [],
+          "data" : [
+            {
+              "id" : 1,
+              "name" : "ptr",
+              "repeated" : false,
+              "mandatory" : true,
+              "read_only" : false,
+              "annotations" : [],
+              "type" : {
+                "type" : "bytes",
+                "width" : 24
+              }
+            }
+          ]
+        },
+        {
+          "id" : 21257015,
+          "name" : "NoAction",
+          "action_scope" : "TableAndDefault",
+          "annotations" : [],
+          "data" : []
+        }
+      ],
+      "data" : [],
+      "supported_operations" : [],
+      "attributes" : ["EntryScope"]
+    },
+    {
+      "name" : "pipe.k8s_dp_control.ipv4_to_port_table",
+      "id" : 38984944,
+      "table_type" : "MatchAction_Direct",
+      "size" : 1024,
+      "annotations" : [],
+      "depends_on" : [],
+      "has_const_default_action" : true,
+      "key" : [
+        {
+          "id" : 1,
+          "name" : "hdr.arp.tpa",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "LPM",
+          "type" : {
+            "type" : "bytes",
+            "width" : 32
+          }
+        }
+      ],
+      "action_specs" : [
+        {
+          "id" : 24323121,
+          "name" : "k8s_dp_control.set_dest_vport",
+          "action_scope" : "TableAndDefault",
+          "annotations" : [],
+          "data" : [
+            {
+              "id" : 1,
+              "name" : "p",
+              "repeated" : false,
+              "mandatory" : true,
+              "read_only" : false,
+              "annotations" : [],
+              "type" : {
+                "type" : "bytes",
+                "width" : 32
+              }
+            }
+          ]
+        }
+      ],
+      "data" : [],
+      "supported_operations" : [],
+      "attributes" : ["EntryScope"]
+    },
+    {
+      "name" : "pipe.k8s_dp_control.mac_to_port_table",
+      "id" : 40521021,
+      "table_type" : "MatchAction_Direct",
+      "size" : 1024,
+      "annotations" : [],
+      "depends_on" : [],
+      "has_const_default_action" : true,
+      "key" : [
+        {
+          "id" : 1,
+          "name" : "hdr.ethernet.dst_mac",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Exact",
+          "type" : {
+            "type" : "bytes",
+            "width" : 48
+          }
+        }
+      ],
+      "action_specs" : [
+        {
+          "id" : 24323121,
+          "name" : "k8s_dp_control.set_dest_vport",
+          "action_scope" : "TableAndDefault",
+          "annotations" : [],
+          "data" : [
+            {
+              "id" : 1,
+              "name" : "p",
+              "repeated" : false,
+              "mandatory" : true,
+              "read_only" : false,
+              "annotations" : [],
+              "type" : {
+                "type" : "bytes",
+                "width" : 32
+              }
+            }
+          ]
+        }
+      ],
+      "data" : [],
+      "supported_operations" : [],
+      "attributes" : ["EntryScope"]
+    },
+    {
+      "name" : "pipe.k8s_dp_control.write_dest_ip_table",
+      "id" : 47856135,
+      "table_type" : "MatchAction_Direct",
+      "size" : 1024,
+      "annotations" : [],
+      "depends_on" : [],
+      "has_const_default_action" : false,
+      "key" : [
+        {
+          "id" : 1,
+          "name" : "meta.mod_blob_ptr",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Exact",
+          "type" : {
+            "type" : "bytes",
+            "width" : 24
+          }
+        }
+      ],
+      "action_specs" : [
+        {
+          "id" : 24750436,
+          "name" : "k8s_dp_control.update_dst_ip_mac",
+          "action_scope" : "TableAndDefault",
+          "annotations" : [],
+          "data" : [
+            {
+              "id" : 1,
+              "name" : "new_dmac",
+              "repeated" : false,
+              "mandatory" : true,
+              "read_only" : false,
+              "annotations" : [],
+              "type" : {
+                "type" : "bytes",
+                "width" : 48
+              }
+            },
+            {
+              "id" : 2,
+              "name" : "new_ip",
+              "repeated" : false,
+              "mandatory" : true,
+              "read_only" : false,
+              "annotations" : [],
+              "type" : {
+                "type" : "bytes",
+                "width" : 32
+              }
+            }
+          ]
+        },
+        {
+          "id" : 21257015,
+          "name" : "NoAction",
+          "action_scope" : "DefaultOnly",
+          "annotations" : [
+            {
+              "name" : "@defaultonly"
+            }
+          ],
+          "data" : []
+        }
+      ],
+      "data" : [],
+      "supported_operations" : [],
+      "attributes" : ["EntryScope"]
+    },
+    {
+      "name" : "pipe.k8s_dp_control.pinned_flows",
+      "id" : 42272886,
+      "table_type" : "MatchAction_Direct",
+      "size" : 1024,
+      "annotations" : [],
+      "depends_on" : [],
+      "has_const_default_action" : true,
+      "key" : [
+        {
+          "id" : 1,
+          "name" : "hdr.ipv4.src_addr",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Exact",
+          "type" : {
+            "type" : "bytes",
+            "width" : 32
+          }
+        },
+        {
+          "id" : 2,
+          "name" : "hdr.ipv4.dst_addr",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Exact",
+          "type" : {
+            "type" : "bytes",
+            "width" : 32
+          }
+        },
+        {
+          "id" : 3,
+          "name" : "hdr.ipv4.protocol",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Exact",
+          "type" : {
+            "type" : "bytes",
+            "width" : 8
+          }
+        },
+        {
+          "id" : 4,
+          "name" : "hdr.tcp.src_port",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Exact",
+          "type" : {
+            "type" : "bytes",
+            "width" : 16
+          }
+        },
+        {
+          "id" : 5,
+          "name" : "hdr.tcp.dst_port",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Exact",
+          "type" : {
+            "type" : "bytes",
+            "width" : 16
+          }
+        }
+      ],
+      "action_specs" : [
+        {
+          "id" : 30607332,
+          "name" : "k8s_dp_control.pinned_flows_hit",
+          "action_scope" : "TableOnly",
+          "annotations" : [
+            {
+              "name" : "@tableonly"
+            }
+          ],
+          "data" : [
+            {
+              "id" : 1,
+              "name" : "p",
+              "repeated" : false,
+              "mandatory" : true,
+              "read_only" : false,
+              "annotations" : [],
+              "type" : {
+                "type" : "bytes",
+                "width" : 32
+              }
+            },
+            {
+              "id" : 2,
+              "name" : "ptr",
+              "repeated" : false,
+              "mandatory" : true,
+              "read_only" : false,
+              "annotations" : [],
+              "type" : {
+                "type" : "bytes",
+                "width" : 24
+              }
+            }
+          ]
+        },
+        {
+          "id" : 21669033,
+          "name" : "k8s_dp_control.pinned_flows_miss",
+          "action_scope" : "DefaultOnly",
+          "annotations" : [
+            {
+              "name" : "@defaultonly"
+            }
+          ],
+          "data" : []
+        }
+      ],
+      "data" : [],
+      "supported_operations" : [],
+      "attributes" : ["EntryScope"]
+    },
+    {
+      "name" : "pipe.k8s_dp_control.tx_balance",
+      "id" : 42660340,
+      "size" : 1024,
+      "annotations" : [],
+      "depends_on" : [286997905, 2170622525],
+      "table_type" : "MatchAction_Indirect_Selector",
+      "has_const_default_action" : true,
+      "key" : [
+        {
+          "id" : 1,
+          "name" : "hdr.ipv4.dst_addr",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Exact",
+          "type" : {
+            "type" : "bytes",
+            "width" : 32
+          }
+        },
+        {
+          "id" : 2,
+          "name" : "hdr.tcp.dst_port",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Exact",
+          "type" : {
+            "type" : "bytes",
+            "width" : 16
+          }
+        }
+      ],
+      "data" : [
+        {
+          "mandatory" : true,
+          "read_only" : false,
+          "oneof" : [
+            {
+              "id" : 65539,
+              "name" : "$ACTION_MEMBER_ID",
+              "repeated" : false,
+              "annotations" : [],
+              "type" : {
+                "type" : "uint32"
+              }
+            },
+            {
+              "id" : 65540,
+              "name" : "$SELECTOR_GROUP_ID",
+              "repeated" : false,
+              "annotations" : [],
+              "type" : {
+                "type" : "uint32"
+              }
+            }
+          ]
+        }
+      ],
+      "supported_operations" : [],
+      "attributes" : ["EntryScope"]
+    },
+    {
+      "name" : "pipe.k8s_dp_control.direction_table",
+      "id" : 47018001,
+      "table_type" : "MatchAction_Direct",
+      "size" : 1024,
+      "annotations" : [],
+      "depends_on" : [],
+      "has_const_default_action" : true,
+      "key" : [
+        {
+          "id" : 1,
+          "name" : "istd.input_port",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Exact",
+          "type" : {
+            "type" : "bytes",
+            "width" : 32
+          }
+        }
+      ],
+      "action_specs" : [
+        {
+          "id" : 28911450,
+          "name" : "k8s_dp_control.set_direction_by_port",
+          "action_scope" : "TableAndDefault",
+          "annotations" : [],
+          "data" : [
+            {
+              "id" : 1,
+              "name" : "direction",
+              "repeated" : false,
+              "mandatory" : true,
+              "read_only" : false,
+              "annotations" : [],
+              "type" : {
+                "type" : "bytes",
+                "width" : 8
+              }
+            }
+          ]
+        },
+        {
+          "id" : 21257015,
+          "name" : "NoAction",
+          "action_scope" : "TableAndDefault",
+          "annotations" : [],
+          "data" : []
+        }
+      ],
+      "data" : [],
+      "supported_operations" : [],
+      "attributes" : ["EntryScope"]
+    },
+    {
+      "name" : "pipe.k8s_dp_control.as_sl3",
+      "id" : 286997905,
+      "table_type" : "Action",
+      "size" : 128,
+      "annotations" : [],
+      "depends_on" : [],
+      "key" : [
+        {
+          "id" : 65539,
+          "name" : "$ACTION_MEMBER_ID",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : true,
+          "match_type" : "Exact",
+          "type" : {
+            "type" : "uint32"
+          }
+        }
+      ],
+      "action_specs" : [
+        {
+          "id" : 27456008,
+          "name" : "k8s_dp_control.set_default_lb_dest",
+          "action_scope" : "TableAndDefault",
+          "annotations" : [],
+          "data" : [
+            {
+              "id" : 1,
+              "name" : "p",
+              "repeated" : false,
+              "mandatory" : true,
+              "read_only" : false,
+              "annotations" : [],
+              "type" : {
+                "type" : "bytes",
+                "width" : 32
+              }
+            },
+            {
+              "id" : 2,
+              "name" : "ptr",
+              "repeated" : false,
+              "mandatory" : true,
+              "read_only" : false,
+              "annotations" : [],
+              "type" : {
+                "type" : "bytes",
+                "width" : 24
+              }
+            }
+          ]
+        },
+        {
+          "id" : 21257015,
+          "name" : "NoAction",
+          "action_scope" : "TableAndDefault",
+          "annotations" : [],
+          "data" : []
+        }
+      ],
+      "data" : [],
+      "supported_operations" : [],
+      "attributes" : []
+    },
+    {
+      "name" : "pipe.k8s_dp_control.as_sl3_sel",
+      "id" : 2170622525,
+      "table_type" : "Selector",
+      "size" : 128,
+      "annotations" : [],
+      "depends_on" : [286997905],
+      "key" : [
+        {
+          "id" : 65560,
+          "name" : "$SELECTOR_GROUP_ID",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : true,
+          "match_type" : "Exact",
+          "type" : {
+            "type" : "uint32"
+          }
+        }
+      ],
+      "data" : [
+        {
+          "mandatory" : false,
+          "read_only" : false,
+          "singleton" : {
+            "id" : 65559,
+            "name" : "$ACTION_MEMBER_ID",
+            "repeated" : true,
+            "annotations" : [],
+            "type" : {
+              "type" : "uint32"
+            }
+          }
+        },
+        {
+          "mandatory" : false,
+          "read_only" : false,
+          "singleton" : {
+            "id" : 65561,
+            "name" : "$ACTION_MEMBER_STATUS",
+            "repeated" : true,
+            "annotations" : [],
+            "type" : {
+              "type" : "bool"
+            }
+          }
+        },
+        {
+          "mandatory" : false,
+          "read_only" : false,
+          "singleton" : {
+            "id" : 65562,
+            "name" : "$MAX_GROUP_SIZE",
+            "repeated" : false,
+            "annotations" : [],
+            "type" : {
+              "type" : "uint32",
+              "default_value" : 120
+            }
+          }
+        }
+      ],
+      "supported_operations" : [],
+      "attributes" : []
+    },
+    {
+      "name" : "pipe.k8s_dp_control.as_sl3_sel_get_member",
+      "id" : 2187399741,
+      "table_type" : "SelectorGetMember",
+      "size" : 1,
+      "annotations" : [],
+      "depends_on" : [2170622525],
+      "key" : [
+        {
+          "id" : 65560,
+          "name" : "$SELECTOR_GROUP_ID",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : true,
+          "match_type" : "Exact",
+          "type" : {
+            "type" : "uint64"
+          }
+        },
+        {
+          "id" : 65563,
+          "name" : "hash_value",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : true,
+          "match_type" : "Exact",
+          "type" : {
+            "type" : "uint64"
+          }
+        }
+      ],
+      "data" : [
+        {
+          "mandatory" : false,
+          "read_only" : false,
+          "singleton" : {
+            "id" : 65559,
+            "name" : "$ACTION_MEMBER_ID",
+            "repeated" : false,
+            "annotations" : [],
+            "type" : {
+              "type" : "uint64"
+            }
+          }
+        }
+      ],
+      "supported_operations" : [],
+      "attributes" : []
+    }
+  ],
+  "learn_filters" : []
+}Â‰
+pipeõ´{
+  "program_name" : "k8s_dp",
+  "build_date" : "Tue Sep  6 16:29:09 2022",
+  "compile_command" : "p4c-dpdk --arch pna -o ./pipe/k8s_dp.spec --p4runtime-files ./p4Info.txt --bf-rt-schema ./bfrt.json --context ./pipe/context.json ./k8s_dp.p4",
+  "compiler_version" : "0.1 (SHA: dfc8ae9bb BUILD: RELEASE)",
+  "schema_version" : "0.1",
+  "target" : "DPDK",
+  "tables" : [
+    {
+      "name" : "k8s_dp_control.write_source_ip_table",
+      "target_name" : "k8s_dp_control.write_source_ip_table",
+      "direction" : "",
+      "handle" : 65536,
+      "table_type" : "match",
+      "size" : 2048,
+      "p4_hidden" : false,
+      "add_on_miss" : false,
+      "idle_timeout_with_auto_delete" : false,
+      "stateful_table_refs" : [],
+      "statistics_table_refs" : [],
+      "meter_table_refs" : [],
+      "match_key_fields" : [
+        {
+          "name" : "meta.mod_blob_ptr",
+          "instance_name" : "meta",
+          "field_name" : "mod_blob_ptr",
+          "match_type" : "exact",
+          "start_bit" : 0,
+          "bit_width" : 24,
+          "bit_width_full" : 24,
+          "position" : 0
+        }
+      ],
+      "actions" : [
+        {
+          "name" : "k8s_dp_control.update_src_ip_mac",
+          "target_name" : "k8s_dp_control.update_src_ip_mac",
+          "handle" : 131072,
+          "constant_default_action" : false,
+          "is_compiler_added_action" : false,
+          "allowed_as_hit_action" : true,
+          "allowed_as_default_action" : true,
+          "p4_parameters" : [
+            {
+              "name" : "new_smac",
+              "start_bit" : 0,
+              "bit_width" : 48,
+              "position" : 0,
+              "byte_array_index" : 0
+            },
+            {
+              "name" : "new_ip",
+              "start_bit" : 0,
+              "bit_width" : 32,
+              "position" : 1,
+              "byte_array_index" : 6
+            }
+          ]
+        },
+        {
+          "name" : "NoAction",
+          "target_name" : "NoAction",
+          "handle" : 131073,
+          "constant_default_action" : false,
+          "is_compiler_added_action" : false,
+          "allowed_as_hit_action" : true,
+          "allowed_as_default_action" : true,
+          "p4_parameters" : []
+        }
+      ],
+      "match_attributes" : {
+        "stage_tables" : [
+          {
+            "action_format" : [
+              {
+                "action_name" : "k8s_dp_control.update_src_ip_mac",
+                "action_handle" : 131072,
+                "immediate_fields" : [
+                  {
+                    "param_name" : "new_smac",
+                    "dest_start" : 0,
+                    "dest_width" : 48
+                  },
+                  {
+                    "param_name" : "new_ip",
+                    "dest_start" : 6,
+                    "dest_width" : 32
+                  }
+                ]
+              },
+              {
+                "action_name" : "NoAction",
+                "action_handle" : 131073,
+                "immediate_fields" : []
+              }
+            ]
+          }
+        ]
+      },
+      "default_action_handle" : 131073
+    },
+    {
+      "name" : "k8s_dp_control.rx_src_ip",
+      "target_name" : "k8s_dp_control.rx_src_ip",
+      "direction" : "",
+      "handle" : 65537,
+      "table_type" : "match",
+      "size" : 65536,
+      "p4_hidden" : false,
+      "add_on_miss" : false,
+      "idle_timeout_with_auto_delete" : false,
+      "stateful_table_refs" : [],
+      "statistics_table_refs" : [],
+      "meter_table_refs" : [],
+      "match_key_fields" : [
+        {
+          "name" : "hdr.ipv4.src_addr",
+          "instance_name" : "hdr.ipv4",
+          "field_name" : "src_addr",
+          "match_type" : "exact",
+          "start_bit" : 0,
+          "bit_width" : 32,
+          "bit_width_full" : 32,
+          "position" : 0
+        }
+      ],
+      "actions" : [
+        {
+          "name" : "k8s_dp_control.set_source_ip",
+          "target_name" : "k8s_dp_control.set_source_ip",
+          "handle" : 131074,
+          "constant_default_action" : false,
+          "is_compiler_added_action" : false,
+          "allowed_as_hit_action" : true,
+          "allowed_as_default_action" : false,
+          "p4_parameters" : [
+            {
+              "name" : "ptr",
+              "start_bit" : 0,
+              "bit_width" : 24,
+              "position" : 0,
+              "byte_array_index" : 0
+            }
+          ]
+        },
+        {
+          "name" : "NoAction",
+          "target_name" : "NoAction",
+          "handle" : 131075,
+          "constant_default_action" : true,
+          "is_compiler_added_action" : false,
+          "allowed_as_hit_action" : true,
+          "allowed_as_default_action" : true,
+          "p4_parameters" : []
+        }
+      ],
+      "match_attributes" : {
+        "stage_tables" : [
+          {
+            "action_format" : [
+              {
+                "action_name" : "k8s_dp_control.set_source_ip",
+                "action_handle" : 131074,
+                "immediate_fields" : [
+                  {
+                    "param_name" : "ptr",
+                    "dest_start" : 0,
+                    "dest_width" : 24
+                  }
+                ]
+              },
+              {
+                "action_name" : "NoAction",
+                "action_handle" : 131075,
+                "immediate_fields" : []
+              }
+            ]
+          }
+        ]
+      },
+      "default_action_handle" : 131075
+    },
+    {
+      "name" : "k8s_dp_control.ipv4_to_port_table",
+      "target_name" : "k8s_dp_control.ipv4_to_port_table",
+      "direction" : "",
+      "handle" : 65538,
+      "table_type" : "match",
+      "size" : 65536,
+      "p4_hidden" : false,
+      "add_on_miss" : false,
+      "idle_timeout_with_auto_delete" : false,
+      "stateful_table_refs" : [],
+      "statistics_table_refs" : [],
+      "meter_table_refs" : [],
+      "match_key_fields" : [
+        {
+          "name" : "hdr.arp.tpa",
+          "instance_name" : "hdr.arp",
+          "field_name" : "tpa",
+          "match_type" : "lpm",
+          "start_bit" : 0,
+          "bit_width" : 32,
+          "bit_width_full" : 32,
+          "position" : 0
+        }
+      ],
+      "actions" : [
+        {
+          "name" : "k8s_dp_control.set_dest_vport",
+          "target_name" : "k8s_dp_control.set_dest_vport",
+          "handle" : 131076,
+          "constant_default_action" : true,
+          "is_compiler_added_action" : false,
+          "allowed_as_hit_action" : true,
+          "allowed_as_default_action" : true,
+          "p4_parameters" : [
+            {
+              "name" : "p",
+              "start_bit" : 0,
+              "bit_width" : 32,
+              "position" : 0,
+              "byte_array_index" : 0
+            }
+          ]
+        }
+      ],
+      "match_attributes" : {
+        "stage_tables" : [
+          {
+            "action_format" : [
+              {
+                "action_name" : "k8s_dp_control.set_dest_vport",
+                "action_handle" : 131076,
+                "immediate_fields" : [
+                  {
+                    "param_name" : "p",
+                    "dest_start" : 0,
+                    "dest_width" : 32
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "default_action_handle" : 131076
+    },
+    {
+      "name" : "k8s_dp_control.mac_to_port_table",
+      "target_name" : "k8s_dp_control.mac_to_port_table",
+      "direction" : "",
+      "handle" : 65539,
+      "table_type" : "match",
+      "size" : 65536,
+      "p4_hidden" : false,
+      "add_on_miss" : false,
+      "idle_timeout_with_auto_delete" : false,
+      "stateful_table_refs" : [],
+      "statistics_table_refs" : [],
+      "meter_table_refs" : [],
+      "match_key_fields" : [
+        {
+          "name" : "hdr.ethernet.dst_mac",
+          "instance_name" : "hdr.ethernet",
+          "field_name" : "dst_mac",
+          "match_type" : "exact",
+          "start_bit" : 0,
+          "bit_width" : 48,
+          "bit_width_full" : 48,
+          "position" : 0
+        }
+      ],
+      "actions" : [
+        {
+          "name" : "k8s_dp_control.set_dest_vport",
+          "target_name" : "k8s_dp_control.set_dest_vport_1",
+          "handle" : 131077,
+          "constant_default_action" : true,
+          "is_compiler_added_action" : false,
+          "allowed_as_hit_action" : true,
+          "allowed_as_default_action" : true,
+          "p4_parameters" : [
+            {
+              "name" : "p",
+              "start_bit" : 0,
+              "bit_width" : 32,
+              "position" : 0,
+              "byte_array_index" : 0
+            }
+          ]
+        }
+      ],
+      "match_attributes" : {
+        "stage_tables" : [
+          {
+            "action_format" : [
+              {
+                "action_name" : "k8s_dp_control.set_dest_vport",
+                "action_handle" : 131077,
+                "immediate_fields" : [
+                  {
+                    "param_name" : "p",
+                    "dest_start" : 0,
+                    "dest_width" : 32
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "default_action_handle" : 131077
+    },
+    {
+      "name" : "k8s_dp_control.write_dest_ip_table",
+      "target_name" : "k8s_dp_control.write_dest_ip_table",
+      "direction" : "",
+      "handle" : 65540,
+      "table_type" : "match",
+      "size" : 1024,
+      "p4_hidden" : false,
+      "add_on_miss" : false,
+      "idle_timeout_with_auto_delete" : false,
+      "stateful_table_refs" : [],
+      "statistics_table_refs" : [],
+      "meter_table_refs" : [],
+      "match_key_fields" : [
+        {
+          "name" : "meta.mod_blob_ptr",
+          "instance_name" : "meta",
+          "field_name" : "mod_blob_ptr",
+          "match_type" : "exact",
+          "start_bit" : 0,
+          "bit_width" : 24,
+          "bit_width_full" : 24,
+          "position" : 0
+        }
+      ],
+      "actions" : [
+        {
+          "name" : "k8s_dp_control.update_dst_ip_mac",
+          "target_name" : "k8s_dp_control.update_dst_ip_mac",
+          "handle" : 131078,
+          "constant_default_action" : false,
+          "is_compiler_added_action" : false,
+          "allowed_as_hit_action" : true,
+          "allowed_as_default_action" : true,
+          "p4_parameters" : [
+            {
+              "name" : "new_dmac",
+              "start_bit" : 0,
+              "bit_width" : 48,
+              "position" : 0,
+              "byte_array_index" : 0
+            },
+            {
+              "name" : "new_ip",
+              "start_bit" : 0,
+              "bit_width" : 32,
+              "position" : 1,
+              "byte_array_index" : 6
+            }
+          ]
+        },
+        {
+          "name" : "NoAction",
+          "target_name" : "NoAction",
+          "handle" : 131079,
+          "constant_default_action" : false,
+          "is_compiler_added_action" : false,
+          "allowed_as_hit_action" : true,
+          "allowed_as_default_action" : true,
+          "p4_parameters" : []
+        }
+      ],
+      "match_attributes" : {
+        "stage_tables" : [
+          {
+            "action_format" : [
+              {
+                "action_name" : "k8s_dp_control.update_dst_ip_mac",
+                "action_handle" : 131078,
+                "immediate_fields" : [
+                  {
+                    "param_name" : "new_dmac",
+                    "dest_start" : 0,
+                    "dest_width" : 48
+                  },
+                  {
+                    "param_name" : "new_ip",
+                    "dest_start" : 6,
+                    "dest_width" : 32
+                  }
+                ]
+              },
+              {
+                "action_name" : "NoAction",
+                "action_handle" : 131079,
+                "immediate_fields" : []
+              }
+            ]
+          }
+        ]
+      },
+      "default_action_handle" : 131079
+    },
+    {
+      "name" : "k8s_dp_control.pinned_flows",
+      "target_name" : "k8s_dp_control.pinned_flows",
+      "direction" : "",
+      "handle" : 65541,
+      "table_type" : "match",
+      "size" : 65536,
+      "p4_hidden" : false,
+      "add_on_miss" : true,
+      "idle_timeout_with_auto_delete" : false,
+      "stateful_table_refs" : [],
+      "statistics_table_refs" : [],
+      "meter_table_refs" : [],
+      "match_key_fields" : [
+        {
+          "name" : "hdr.ipv4.src_addr",
+          "instance_name" : "hdr.ipv4",
+          "field_name" : "src_addr",
+          "match_type" : "exact",
+          "start_bit" : 0,
+          "bit_width" : 32,
+          "bit_width_full" : 32,
+          "position" : 0
+        },
+        {
+          "name" : "hdr.ipv4.dst_addr",
+          "instance_name" : "hdr.ipv4",
+          "field_name" : "dst_addr",
+          "match_type" : "exact",
+          "start_bit" : 0,
+          "bit_width" : 32,
+          "bit_width_full" : 32,
+          "position" : 1
+        },
+        {
+          "name" : "hdr.ipv4.protocol",
+          "instance_name" : "hdr.ipv4",
+          "field_name" : "protocol",
+          "match_type" : "exact",
+          "start_bit" : 0,
+          "bit_width" : 8,
+          "bit_width_full" : 8,
+          "position" : 2
+        },
+        {
+          "name" : "hdr.tcp.src_port",
+          "instance_name" : "hdr.tcp",
+          "field_name" : "src_port",
+          "match_type" : "exact",
+          "start_bit" : 0,
+          "bit_width" : 16,
+          "bit_width_full" : 16,
+          "position" : 3
+        },
+        {
+          "name" : "hdr.tcp.dst_port",
+          "instance_name" : "hdr.tcp",
+          "field_name" : "dst_port",
+          "match_type" : "exact",
+          "start_bit" : 0,
+          "bit_width" : 16,
+          "bit_width_full" : 16,
+          "position" : 4
+        }
+      ],
+      "actions" : [
+        {
+          "name" : "k8s_dp_control.pinned_flows_hit",
+          "target_name" : "k8s_dp_control.pinned_flows_hit",
+          "handle" : 131080,
+          "constant_default_action" : false,
+          "is_compiler_added_action" : false,
+          "allowed_as_hit_action" : true,
+          "allowed_as_default_action" : false,
+          "p4_parameters" : [
+            {
+              "name" : "p",
+              "start_bit" : 0,
+              "bit_width" : 32,
+              "position" : 0,
+              "byte_array_index" : 0
+            },
+            {
+              "name" : "ptr",
+              "start_bit" : 0,
+              "bit_width" : 24,
+              "position" : 1,
+              "byte_array_index" : 4
+            }
+          ]
+        },
+        {
+          "name" : "k8s_dp_control.pinned_flows_miss",
+          "target_name" : "k8s_dp_control.pinned_flows_miss",
+          "handle" : 131081,
+          "constant_default_action" : true,
+          "is_compiler_added_action" : false,
+          "allowed_as_hit_action" : true,
+          "allowed_as_default_action" : true,
+          "p4_parameters" : []
+        }
+      ],
+      "match_attributes" : {
+        "stage_tables" : [
+          {
+            "action_format" : [
+              {
+                "action_name" : "k8s_dp_control.pinned_flows_hit",
+                "action_handle" : 131080,
+                "immediate_fields" : [
+                  {
+                    "param_name" : "p",
+                    "dest_start" : 0,
+                    "dest_width" : 32
+                  },
+                  {
+                    "param_name" : "ptr",
+                    "dest_start" : 4,
+                    "dest_width" : 24
+                  }
+                ]
+              },
+              {
+                "action_name" : "k8s_dp_control.pinned_flows_miss",
+                "action_handle" : 131081,
+                "immediate_fields" : []
+              }
+            ]
+          }
+        ]
+      },
+      "default_action_handle" : 131081
+    },
+    {
+      "name" : "k8s_dp_control.tx_balance",
+      "target_name" : "k8s_dp_control.tx_balance",
+      "direction" : "",
+      "handle" : 65542,
+      "table_type" : "match",
+      "size" : 65536,
+      "p4_hidden" : false,
+      "add_on_miss" : false,
+      "idle_timeout_with_auto_delete" : false,
+      "stateful_table_refs" : [],
+      "statistics_table_refs" : [],
+      "meter_table_refs" : [],
+      "action_data_table_refs" : [
+        {
+          "name" : "k8s_dp_control.as_sl3",
+          "handle" : 65544
+        }
+      ],
+      "selection_table_refs" : [
+        {
+          "name" : "k8s_dp_control.as_sl3_sel",
+          "handle" : 65543
+        }
+      ],
+      "action_profile" : "as_sl3",
+      "match_key_fields" : [
+        {
+          "name" : "hdr.ipv4.dst_addr",
+          "instance_name" : "hdr.ipv4",
+          "field_name" : "dst_addr",
+          "match_type" : "exact",
+          "start_bit" : 0,
+          "bit_width" : 32,
+          "bit_width_full" : 32,
+          "position" : 0
+        },
+        {
+          "name" : "hdr.tcp.dst_port",
+          "instance_name" : "hdr.tcp",
+          "field_name" : "dst_port",
+          "match_type" : "exact",
+          "start_bit" : 0,
+          "bit_width" : 16,
+          "bit_width_full" : 16,
+          "position" : 1
+        }
+      ],
+      "actions" : [
+        {
+          "name" : "k8s_dp_control.set_default_lb_dest",
+          "target_name" : "k8s_dp_control.set_default_lb_dest",
+          "handle" : 131082,
+          "constant_default_action" : false,
+          "is_compiler_added_action" : false,
+          "allowed_as_hit_action" : true,
+          "allowed_as_default_action" : true,
+          "p4_parameters" : [
+            {
+              "name" : "p",
+              "start_bit" : 0,
+              "bit_width" : 32,
+              "position" : 0,
+              "byte_array_index" : 0
+            },
+            {
+              "name" : "ptr",
+              "start_bit" : 0,
+              "bit_width" : 24,
+              "position" : 1,
+              "byte_array_index" : 4
+            }
+          ]
+        },
+        {
+          "name" : "NoAction",
+          "target_name" : "NoAction",
+          "handle" : 131083,
+          "constant_default_action" : false,
+          "is_compiler_added_action" : false,
+          "allowed_as_hit_action" : true,
+          "allowed_as_default_action" : true,
+          "p4_parameters" : []
+        }
+      ],
+      "match_attributes" : {
+        "stage_tables" : [
+          {
+            "action_format" : [
+              {
+                "action_name" : "k8s_dp_control.set_default_lb_dest",
+                "action_handle" : 131082,
+                "immediate_fields" : [
+                  {
+                    "param_name" : "p",
+                    "dest_start" : 0,
+                    "dest_width" : 32
+                  },
+                  {
+                    "param_name" : "ptr",
+                    "dest_start" : 4,
+                    "dest_width" : 24
+                  }
+                ]
+              },
+              {
+                "action_name" : "NoAction",
+                "action_handle" : 131083,
+                "immediate_fields" : []
+              }
+            ]
+          }
+        ]
+      },
+      "default_action_handle" : 131083
+    },
+    {
+      "name" : "k8s_dp_control.direction_table",
+      "target_name" : "k8s_dp_control.direction_table",
+      "direction" : "",
+      "handle" : 65545,
+      "table_type" : "match",
+      "size" : 65536,
+      "p4_hidden" : false,
+      "add_on_miss" : false,
+      "idle_timeout_with_auto_delete" : false,
+      "stateful_table_refs" : [],
+      "statistics_table_refs" : [],
+      "meter_table_refs" : [],
+      "match_key_fields" : [
+        {
+          "name" : "istd.input_port",
+          "instance_name" : "istd",
+          "field_name" : "input_port",
+          "match_type" : "exact",
+          "start_bit" : 0,
+          "bit_width" : 32,
+          "bit_width_full" : 32,
+          "position" : 0
+        }
+      ],
+      "actions" : [
+        {
+          "name" : "k8s_dp_control.set_direction_by_port",
+          "target_name" : "k8s_dp_control.set_direction_by_port",
+          "handle" : 131084,
+          "constant_default_action" : false,
+          "is_compiler_added_action" : false,
+          "allowed_as_hit_action" : true,
+          "allowed_as_default_action" : false,
+          "p4_parameters" : [
+            {
+              "name" : "direction",
+              "start_bit" : 0,
+              "bit_width" : 8,
+              "position" : 0,
+              "byte_array_index" : 0
+            }
+          ]
+        },
+        {
+          "name" : "NoAction",
+          "target_name" : "NoAction",
+          "handle" : 131085,
+          "constant_default_action" : true,
+          "is_compiler_added_action" : false,
+          "allowed_as_hit_action" : true,
+          "allowed_as_default_action" : true,
+          "p4_parameters" : []
+        }
+      ],
+      "match_attributes" : {
+        "stage_tables" : [
+          {
+            "action_format" : [
+              {
+                "action_name" : "k8s_dp_control.set_direction_by_port",
+                "action_handle" : 131084,
+                "immediate_fields" : [
+                  {
+                    "param_name" : "direction",
+                    "dest_start" : 0,
+                    "dest_width" : 8
+                  }
+                ]
+              },
+              {
+                "action_name" : "NoAction",
+                "action_handle" : 131085,
+                "immediate_fields" : []
+              }
+            ]
+          }
+        ]
+      },
+      "default_action_handle" : 131085
+    },
+    {
+      "name" : "k8s_dp_control.as_sl3_sel",
+      "target_name" : "k8s_dp_control.as_sl3_sel",
+      "direction" : "",
+      "handle" : 65543,
+      "table_type" : "selection",
+      "size" : 65536,
+      "p4_hidden" : true,
+      "add_on_miss" : false,
+      "idle_timeout_with_auto_delete" : false,
+      "max_n_groups" : 128,
+      "max_n_members_per_group" : 1024,
+      "bound_to_action_data_table_handle" : 65544
+    },
+    {
+      "name" : "k8s_dp_control.as_sl3",
+      "target_name" : "k8s_dp_control.as_sl3",
+      "direction" : "",
+      "handle" : 65544,
+      "table_type" : "action",
+      "size" : 65536,
+      "p4_hidden" : true,
+      "add_on_miss" : false,
+      "idle_timeout_with_auto_delete" : false,
+      "actions" : [
+        {
+          "name" : "k8s_dp_control.set_default_lb_dest",
+          "target_name" : "k8s_dp_control.set_default_lb_dest",
+          "handle" : 131082,
+          "p4_parameters" : [
+            {
+              "name" : "p",
+              "start_bit" : 0,
+              "bit_width" : 32,
+              "position" : 0,
+              "byte_array_index" : 0
+            },
+            {
+              "name" : "ptr",
+              "start_bit" : 0,
+              "bit_width" : 24,
+              "position" : 1,
+              "byte_array_index" : 4
+            }
+          ]
+        },
+        {
+          "name" : "NoAction",
+          "target_name" : "NoAction",
+          "handle" : 131083,
+          "p4_parameters" : []
+        }
+      ],
+      "default_action_handle" : 131083
+    }
+  ],
+  "externs" : []
+}ºT
+
+
+
+struct ethernet_t {
+	bit<48> dst_mac
+	bit<48> src_mac
+	bit<16> ether_type
+}
+
+struct vlan_tag_h {
+	bit<16> pcp_cfi_vid
+	bit<16> ether_type
+}
+
+struct ipv4_t {
+	bit<8> version_ihl
+	bit<8> dscp_ecn
+	bit<16> total_len
+	bit<16> identification
+	bit<16> flags_frag_offset
+	bit<8> ttl
+	bit<8> protocol
+	bit<16> header_checksum
+	bit<32> src_addr
+	bit<32> dst_addr
+}
+
+struct tcp_t {
+	bit<16> src_port
+	bit<16> dst_port
+	bit<32> seq_no
+	bit<32> ack_no
+	bit<8> data_offset_res
+	bit<8> flags
+	bit<16> window
+	bit<16> checksum
+	bit<16> urgent_ptr
+}
+
+struct arp_t {
+	bit<16> htype
+	bit<16> ptype
+	bit<8> hlen
+	bit<8> plen
+	bit<16> oper
+	bit<48> sha
+	bit<32> spa
+	bit<48> tha
+	bit<32> tpa
+}
+
+struct cksum_state_t {
+	bit<16> state_1
+	bit<16> state_0
+}
+
+struct pinned_flows_hit_arg_t {
+	bit<32> p
+	bit<24> ptr
+}
+
+struct set_default_lb_dest_arg_t {
+	bit<32> p
+	bit<24> ptr
+}
+
+struct set_dest_vport_1_arg_t {
+	bit<32> p
+}
+
+struct set_dest_vport_arg_t {
+	bit<32> p
+}
+
+struct set_direction_by_port_arg_t {
+	bit<8> direction
+}
+
+struct set_source_ip_arg_t {
+	bit<24> ptr
+}
+
+struct tx_balance_set_group_id_arg_t {
+	bit<32> group_id
+}
+
+struct update_dst_ip_mac_arg_t {
+	bit<48> new_dmac
+	bit<32> new_ip
+}
+
+struct update_src_ip_mac_arg_t {
+	bit<48> new_smac
+	bit<32> new_ip
+}
+
+header ethernet instanceof ethernet_t
+header vlan_tag instanceof vlan_tag_h
+header ipv4 instanceof ipv4_t
+header tcp instanceof tcp_t
+header arp instanceof arp_t
+header cksum_state instanceof cksum_state_t
+
+struct main_metadata_t {
+	bit<32> pna_main_input_metadata_input_port
+	bit<32> local_metadata_dst_port
+	bit<16> local_metadata_mod_action
+	bit<24> local_metadata_mod_blob_ptr
+	bit<32> local_metadata_direction
+	bit<32> pna_main_output_metadata_output_port
+	bit<32> k8s_dp_control_pinned_flows_ipv4_src_addr
+	bit<32> k8s_dp_control_pinned_flows_ipv4_dst_addr
+	bit<8> k8s_dp_control_pinned_flows_ipv4_protocol
+	bit<16> k8s_dp_control_pinned_flows_tcp_src_port
+	bit<16> k8s_dp_control_pinned_flows_tcp_dst_port
+	bit<32> k8s_dp_control_tx_balance_ipv4_dst_addr
+	bit<16> k8s_dp_control_tx_balance_tcp_dst_port
+	bit<32> k8s_dp_control_as_sl3_sel_ipv4_src_addr
+	bit<16> k8s_dp_control_as_sl3_sel_tcp_src_port
+	bit<8> MainControlT_tmp
+	bit<32> MainControlT_tmp_0
+	bit<8> MainControlT_tmp_1
+	bit<8> MainControlT_tmp_2
+	bit<32> MainControlT_tmp_3
+	bit<24> MainControlT_tmp_4
+	bit<8> MainControlT_do_clb_pinned_flows_add_on_miss
+	bit<8> MainControlT_tmp_5
+	bit<32> MainControlT_as_sl3_group_id
+	bit<32> MainControlT_as_sl3_member_id
+	bit<8> timeout_id
+}
+metadata instanceof main_metadata_t
+
+regarray direction size 0x100 initval 0
+
+action NoAction args none {
+	return
+}
+
+action update_src_ip_mac args instanceof update_src_ip_mac_arg_t {
+	mov h.cksum_state.state_0 0x0
+	mov h.cksum_state.state_1 0x0
+	cksub h.cksum_state.state_0 h.ipv4.header_checksum
+	cksub h.cksum_state.state_1 h.tcp.checksum
+	cksub h.cksum_state.state_0 h.ipv4.src_addr
+	cksub h.cksum_state.state_1 h.ipv4.src_addr
+	mov h.ethernet.src_mac t.new_smac
+	mov h.ipv4.src_addr t.new_ip
+	ckadd h.cksum_state.state_0 h.ipv4.src_addr
+	ckadd h.cksum_state.state_1 h.ipv4.src_addr
+	mov h.ipv4.header_checksum h.cksum_state.state_0
+	mov h.tcp.checksum h.cksum_state.state_1
+	return
+}
+
+action set_source_ip args instanceof set_source_ip_arg_t {
+	mov m.local_metadata_mod_action 0x1
+	mov m.local_metadata_mod_blob_ptr t.ptr
+	return
+}
+
+action set_dest_vport args instanceof set_dest_vport_arg_t {
+	mov m.pna_main_output_metadata_output_port t.p
+	return
+}
+
+action set_dest_vport_1 args instanceof set_dest_vport_1_arg_t {
+	mov m.pna_main_output_metadata_output_port t.p
+	return
+}
+
+action update_dst_ip_mac args instanceof update_dst_ip_mac_arg_t {
+	mov h.cksum_state.state_0 0x0
+	mov h.cksum_state.state_1 0x0
+	cksub h.cksum_state.state_0 h.ipv4.header_checksum
+	cksub h.cksum_state.state_1 h.tcp.checksum
+	cksub h.cksum_state.state_0 h.ipv4.dst_addr
+	cksub h.cksum_state.state_1 h.ipv4.dst_addr
+	mov h.ipv4.dst_addr t.new_ip
+	mov h.ethernet.dst_mac t.new_dmac
+	ckadd h.cksum_state.state_0 h.ipv4.dst_addr
+	ckadd h.cksum_state.state_1 h.ipv4.dst_addr
+	mov h.ipv4.header_checksum h.cksum_state.state_0
+	mov h.tcp.checksum h.cksum_state.state_1
+	return
+}
+
+action pinned_flows_hit args instanceof pinned_flows_hit_arg_t {
+	mov m.local_metadata_dst_port t.p
+	mov m.local_metadata_mod_action 0x2
+	mov m.local_metadata_mod_blob_ptr t.ptr
+	return
+}
+
+action pinned_flows_miss args none {
+	jmpneq LABEL_END_8 m.MainControlT_do_clb_pinned_flows_add_on_miss 0x1
+	mov m.MainControlT_tmp_3 m.local_metadata_dst_port
+	mov m.MainControlT_tmp_4 m.local_metadata_mod_blob_ptr
+	mov m.timeout_id 0x2
+	learn pinned_flows_hit m.MainControlT_tmp_3 m.timeout_id
+	LABEL_END_8 :	return
+}
+
+action set_default_lb_dest args instanceof set_default_lb_dest_arg_t {
+	mov m.local_metadata_dst_port t.p
+	mov m.local_metadata_mod_action 0x2
+	mov m.local_metadata_mod_blob_ptr t.ptr
+	return
+}
+
+action tx_balance_set_group_id args instanceof tx_balance_set_group_id_arg_t {
+	mov m.MainControlT_as_sl3_group_id t.group_id
+	return
+}
+
+action set_direction_by_port args instanceof set_direction_by_port_arg_t {
+	jmpneq LABEL_FALSE_7 t.direction 0x0
+	mov m.local_metadata_direction 0x0
+	jmp LABEL_END_9
+	LABEL_FALSE_7 :	mov m.local_metadata_direction 0x1
+	LABEL_END_9 :	return
+}
+
+table write_source_ip_table {
+	key {
+		m.local_metadata_mod_blob_ptr exact
+	}
+	actions {
+		update_src_ip_mac
+		NoAction
+	}
+	default_action NoAction args none 
+	size 0x800
+}
+
+
+table rx_src_ip {
+	key {
+		h.ipv4.src_addr exact
+	}
+	actions {
+		set_source_ip
+		NoAction
+	}
+	default_action NoAction args none const
+	size 0x10000
+}
+
+
+table ipv4_to_port_table {
+	key {
+		h.arp.tpa lpm
+	}
+	actions {
+		set_dest_vport
+	}
+	default_action set_dest_vport args p 0x0 const
+	size 0x10000
+}
+
+
+table mac_to_port_table {
+	key {
+		h.ethernet.dst_mac exact
+	}
+	actions {
+		set_dest_vport_1
+	}
+	default_action set_dest_vport_1 args p 0x0 const
+	size 0x10000
+}
+
+
+table write_dest_ip_table {
+	key {
+		m.local_metadata_mod_blob_ptr exact
+	}
+	actions {
+		update_dst_ip_mac
+		NoAction
+	}
+	default_action NoAction args none 
+	size 0x400
+}
+
+
+table tx_balance {
+	key {
+		m.k8s_dp_control_tx_balance_ipv4_dst_addr exact
+		m.k8s_dp_control_tx_balance_tcp_dst_port exact
+	}
+	actions {
+		tx_balance_set_group_id
+		NoAction
+	}
+	default_action NoAction args none 
+	size 0x10000
+}
+
+
+table as_sl3 {
+	key {
+		m.MainControlT_as_sl3_member_id exact
+	}
+	actions {
+		set_default_lb_dest
+		NoAction
+	}
+	default_action NoAction args none 
+	size 0x10000
+}
+
+
+table direction_table {
+	key {
+		m.pna_main_input_metadata_input_port exact
+	}
+	actions {
+		set_direction_by_port
+		NoAction
+	}
+	default_action NoAction args none const
+	size 0x10000
+}
+
+
+selector as_sl3_sel {
+	group_id m.MainControlT_as_sl3_group_id
+	selector {
+		m.k8s_dp_control_as_sl3_sel_ipv4_src_addr
+		m.k8s_dp_control_as_sl3_sel_tcp_src_port
+	}
+	member_id m.MainControlT_as_sl3_member_id
+	n_groups_max 80
+	n_members_per_group_max 400
+}
+
+learner pinned_flows {
+	key {
+		m.k8s_dp_control_pinned_flows_ipv4_src_addr
+		m.k8s_dp_control_pinned_flows_ipv4_dst_addr
+		m.k8s_dp_control_pinned_flows_ipv4_protocol
+		m.k8s_dp_control_pinned_flows_tcp_src_port
+		m.k8s_dp_control_pinned_flows_tcp_dst_port
+	}
+	actions {
+		pinned_flows_hit @tableonly
+		pinned_flows_miss @defaultonly
+	}
+	default_action pinned_flows_miss args none 
+	size 0x10000
+	timeout {
+		120
+		120
+		120
+		120
+		120
+		120
+		120
+		120
+
+		}
+}
+
+apply {
+	rx m.pna_main_input_metadata_input_port
+	extract h.ethernet
+	jmpeq PACKET_PARSER_PARSE_VLAN_TAG h.ethernet.ether_type 0x8100
+	jmpeq PACKET_PARSER_PARSE_IPV4 h.ethernet.ether_type 0x800
+	jmpeq PACKET_PARSER_PARSE_ARP h.ethernet.ether_type 0x806
+	jmp PACKET_PARSER_ACCEPT
+	PACKET_PARSER_PARSE_VLAN_TAG :	extract h.vlan_tag
+	jmpeq PACKET_PARSER_PARSE_IPV4 h.vlan_tag.ether_type 0x800
+	jmpeq PACKET_PARSER_PARSE_ARP h.vlan_tag.ether_type 0x806
+	jmp PACKET_PARSER_ACCEPT
+	PACKET_PARSER_PARSE_IPV4 :	extract h.ipv4
+	jmpeq PACKET_PARSER_PARSE_TCP h.ipv4.protocol 0x6
+	jmp PACKET_PARSER_ACCEPT
+	PACKET_PARSER_PARSE_TCP :	extract h.tcp
+	jmp PACKET_PARSER_ACCEPT
+	PACKET_PARSER_PARSE_ARP :	extract h.arp
+	PACKET_PARSER_ACCEPT :	mov m.local_metadata_mod_action 0x0
+	mov m.local_metadata_mod_blob_ptr 0x0
+	table direction_table
+	jmpneq LABEL_FALSE m.local_metadata_direction 0x0
+	mov m.MainControlT_tmp_1 1
+	jmpv LABEL_END_0 h.ipv4
+	mov m.MainControlT_tmp_1 0
+	LABEL_END_0 :	mov m.MainControlT_tmp_2 1
+	jmpv LABEL_END_1 h.tcp
+	mov m.MainControlT_tmp_2 0
+	LABEL_END_1 :	mov m.MainControlT_tmp_5 m.MainControlT_tmp_1
+	jmpeq LABEL_FALSE_0 m.MainControlT_tmp_5 0x0
+	jmpeq LABEL_FALSE_0 m.MainControlT_tmp_2 0x0
+	mov m.MainControlT_tmp_5 0x1
+	jmp LABEL_END
+	LABEL_FALSE_0 :	mov m.MainControlT_tmp_5 0x0
+	jmp LABEL_END
+	LABEL_FALSE :	mov m.MainControlT_tmp_5 0
+	LABEL_END :	jmpneq LABEL_FALSE_1 m.MainControlT_tmp_5 0x1
+	table rx_src_ip
+	jmp LABEL_END_3
+	LABEL_FALSE_1 :	jmpnv LABEL_END_3 h.ipv4
+	jmpnv LABEL_END_3 h.tcp
+	mov m.MainControlT_tmp h.tcp.flags
+	shr m.MainControlT_tmp 0x1
+	mov m.MainControlT_tmp_0 m.MainControlT_tmp
+	jmpneq LABEL_FALSE_3 m.MainControlT_tmp_0 0x1
+	mov m.MainControlT_as_sl3_member_id 0x0
+	mov m.MainControlT_as_sl3_group_id 0x0
+	mov m.k8s_dp_control_tx_balance_ipv4_dst_addr h.ipv4.dst_addr
+	mov m.k8s_dp_control_tx_balance_tcp_dst_port h.tcp.dst_port
+	table tx_balance
+	mov m.k8s_dp_control_as_sl3_sel_ipv4_src_addr h.ipv4.src_addr
+	mov m.k8s_dp_control_as_sl3_sel_tcp_src_port h.tcp.src_port
+	table as_sl3_sel
+	table as_sl3
+	mov m.MainControlT_do_clb_pinned_flows_add_on_miss 1
+	mov m.k8s_dp_control_pinned_flows_ipv4_src_addr h.ipv4.src_addr
+	mov m.k8s_dp_control_pinned_flows_ipv4_dst_addr h.ipv4.dst_addr
+	mov m.k8s_dp_control_pinned_flows_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_tcp_src_port h.tcp.src_port
+	mov m.k8s_dp_control_pinned_flows_tcp_dst_port h.tcp.dst_port
+	table pinned_flows
+	jmp LABEL_END_3
+	LABEL_FALSE_3 :	mov m.MainControlT_do_clb_pinned_flows_add_on_miss 0
+	mov m.k8s_dp_control_pinned_flows_ipv4_src_addr h.ipv4.src_addr
+	mov m.k8s_dp_control_pinned_flows_ipv4_dst_addr h.ipv4.dst_addr
+	mov m.k8s_dp_control_pinned_flows_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_tcp_src_port h.tcp.src_port
+	mov m.k8s_dp_control_pinned_flows_tcp_dst_port h.tcp.dst_port
+	table pinned_flows
+	LABEL_END_3 :	jmpeq LABEL_SWITCH m.local_metadata_mod_action 0x1
+	jmpeq LABEL_SWITCH_0 m.local_metadata_mod_action 0x2
+	jmp LABEL_ENDSWITCH
+	LABEL_SWITCH :	table write_source_ip_table
+	jmp LABEL_ENDSWITCH
+	LABEL_SWITCH_0 :	table write_dest_ip_table
+	LABEL_ENDSWITCH :	jmpnv LABEL_FALSE_4 h.arp
+	jmpneq LABEL_FALSE_4 h.arp.oper 0x1
+	table ipv4_to_port_table
+	jmp LABEL_END_6
+	LABEL_FALSE_4 :	jmpnv LABEL_END_6 h.ethernet
+	table mac_to_port_table
+	LABEL_END_6 :	emit h.ethernet
+	emit h.vlan_tag
+	emit h.ipv4
+	emit h.tcp
+	emit h.arp
+	tx m.pna_main_output_metadata_output_port
+}
+
+
+" 

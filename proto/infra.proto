@@ -1,0 +1,86 @@
+syntax = "proto3";
+package infra;
+option go_package="proto";
+
+import "cnibackend.proto";
+import "felixbackend.proto";
+
+service InfraAgent {
+    rpc CreateNetwork(CreateNetworkRequest) returns (cni.AddReply) {}
+    rpc DeleteNetwork(DeleteNetworkRequest) returns (cni.DelReply) {}
+
+    rpc NatTranslationAdd(NatTranslation) returns (Reply) {}
+    rpc SetSnatAddress(SetSnatAddressRequest) returns (Reply) {}
+    rpc AddDelSnatPrefix(AddDelSnatPrefixRequest) returns (Reply) {}
+    rpc NatTranslationDelete(NatTranslation) returns (Reply) {}
+
+    rpc ActivePolicyUpdate(felix.ActivePolicyUpdate) returns (Reply) {}
+    rpc ActivePolicyRemove(felix.ActivePolicyRemove) returns (Reply) {}
+    rpc UpdateIPSet(felix.IPSetUpdate) returns (Reply) {}
+    rpc UpdateIPSetDelta(felix.IPSetDeltaUpdate) returns (Reply) {}
+    rpc RemoveIPSet(felix.IPSetRemove) returns (Reply) {}
+    rpc UpdateActiveProfile(felix.ActiveProfileUpdate) returns (Reply) {}
+    rpc RemoveActiveProfile(felix.ActiveProfileRemove) returns (Reply) {}
+    rpc UpdateHostEndpoint(felix.HostEndpointUpdate) returns (Reply) {}
+    rpc RemoveHostEndpoint(felix.HostEndpointRemove) returns (Reply) {}
+    rpc UpdateLocalEndpoint(felix.WorkloadEndpointUpdate) returns (Reply) {}
+    rpc RemoveLocalEndpoint(felix.WorkloadEndpointRemove) returns (Reply) {}
+    rpc UpdateHostMetaData(felix.HostMetadataUpdate) returns (Reply) {}
+    rpc RemoveHostMetaData(felix.HostMetadataRemove) returns (Reply) {}
+    rpc UpdateServiceAccount(felix.ServiceAccountUpdate) returns (Reply) {}
+    rpc RemoveServiceAccount(felix.ServiceAccountRemove) returns (Reply) {}
+    rpc UpdateNamespace(felix.NamespaceUpdate) returns (Reply) {}
+    rpc RemoveNamespace(felix.NamespaceRemove) returns (Reply) {}
+    rpc UpdateRoute(felix.RouteUpdate) returns (Reply) {}
+    rpc RemoveRoute(felix.RouteRemove) returns (Reply) {}
+    rpc UpdateVXLANTunnelEndpoint(felix.VXLANTunnelEndpointUpdate) returns (Reply) {}
+    rpc RemoveVXLANTunnelEndpoint(felix.VXLANTunnelEndpointRemove) returns (Reply) {}
+    rpc UpdateWireguardEndpoint(felix.WireguardEndpointUpdate) returns (Reply) {}
+    rpc RemoveWireguardEndpoint(felix.WireguardEndpointRemove) returns (Reply) {}
+    rpc UpdateGlobalBGPConfig(felix.GlobalBGPConfigUpdate) returns (Reply) {}
+}
+
+message NatEndpoint {
+    string ipv4_addr = 1;
+    uint32 port = 2;
+}
+
+message NatEndpointTuple {
+    NatEndpoint dst_ep = 1;
+    NatEndpoint src_ep =2;
+}
+
+message NatTranslation {
+    NatEndpoint endpoint =2;
+    string proto = 3;
+    bool is_real_ip = 4;
+    repeated NatEndpointTuple backends = 6;
+}
+
+message Reply {
+    bool successful = 1;
+    string error_message = 2;
+}
+
+message SetSnatAddressRequest {
+    string snat_ipv4 = 1;
+    string snat_ipv6 = 2;
+}
+
+message AddDelSnatPrefixRequest {
+    bool is_add = 1;
+    string prefix = 2;
+}
+
+message CreateNetworkRequest {
+    cni.AddRequest add_request = 1;
+    string host_if_name = 2;
+    string mac_addr = 3;
+}
+
+message DeleteNetworkRequest {
+    cni.DelRequest del_request = 1;
+    string host_if_name = 2;
+    string mac_addr = 3;
+    string ipv4_addr = 4;
+}

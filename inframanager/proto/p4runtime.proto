@@ -1,0 +1,465 @@
+syntax = "proto3";
+
+package pb;
+option go_package = "./;pb";
+
+import "google/protobuf/any.proto";
+import "status.proto";
+import "p4info.proto";
+import "p4data.proto";
+
+
+service P4Runtime {
+  
+  rpc Write(WriteRequest) returns (WriteResponse) {
+  }
+  
+  rpc Read(ReadRequest) returns (stream ReadResponse) {
+  }
+
+  rpc SetForwardingPipelineConfig(SetForwardingPipelineConfigRequest)
+      returns (SetForwardingPipelineConfigResponse) {
+  }
+  
+  rpc GetForwardingPipelineConfig(GetForwardingPipelineConfigRequest)
+      returns (GetForwardingPipelineConfigResponse) {
+  }
+
+  rpc StreamChannel(stream StreamMessageRequest)
+      returns (stream StreamMessageResponse) {
+  }
+
+  rpc Capabilities(CapabilitiesRequest) returns (CapabilitiesResponse) {
+  }
+}
+
+message WriteRequest {
+  uint64 device_id = 1;
+  uint64 role_id = 2 [deprecated=true];
+  string role = 6;
+  Uint128 election_id = 3;
+  repeated Update updates = 4;
+  enum Atomicity {
+    CONTINUE_ON_ERROR = 0;
+    ROLLBACK_ON_ERROR = 1; 
+    DATAPLANE_ATOMIC = 2;
+  }
+  Atomicity atomicity = 5;
+}
+
+message WriteResponse {
+}
+
+message ReadRequest {
+  uint64 device_id = 1;
+  string role = 3;
+  repeated Entity entities = 2;
+}
+
+message ReadResponse {
+  repeated Entity entities = 1;
+}
+
+message Update {
+  enum Type {
+    UNSPECIFIED = 0;
+    INSERT = 1;
+    MODIFY = 2;
+    DELETE = 3;
+  }
+  Type type = 1;
+  Entity entity = 2;
+}
+
+message Entity {
+  oneof entity {
+    ExternEntry extern_entry = 1;
+    TableEntry table_entry = 2;
+    ActionProfileMember action_profile_member = 3;
+    ActionProfileGroup action_profile_group = 4;
+    MeterEntry meter_entry = 5;
+    DirectMeterEntry direct_meter_entry = 6;
+    CounterEntry counter_entry = 7;
+    DirectCounterEntry direct_counter_entry = 8;
+    PacketReplicationEngineEntry packet_replication_engine_entry = 9;
+    ValueSetEntry value_set_entry = 10;
+    RegisterEntry register_entry = 11;
+    DigestEntry digest_entry = 12;
+  }
+}
+
+message ExternEntry {
+  uint32 extern_type_id = 1;
+  uint32 extern_id = 2;  
+  .google.protobuf.Any entry = 3;
+}
+
+message TableEntry {
+  uint32 table_id = 1;
+  repeated FieldMatch match = 2;
+  TableAction action = 3;
+  int32 priority = 4;
+  uint64 controller_metadata = 5 [deprecated=true];
+  MeterConfig meter_config = 6;
+  CounterData counter_data = 7;
+  bool is_default_action = 8;
+  int64 idle_timeout_ns = 9;
+  message IdleTimeout {
+    int64 elapsed_ns = 1;
+  }
+ 
+  IdleTimeout time_since_last_hit = 10;
+  bytes metadata = 11;
+}
+
+// field_match_type ::= exact | ternary | lpm | range | optional
+message FieldMatch {
+  uint32 field_id = 1;
+
+  message Exact {
+    bytes value = 1;
+  }
+  message Ternary {
+    bytes value = 1;
+    bytes mask = 2;
+  }
+  message LPM {
+    bytes value = 1;
+    int32 prefix_len = 2;  
+  }
+  message Range {
+    bytes low = 1;
+    bytes high = 2;
+  }
+  // If the Optional match should be a wildcard, the FieldMatch must be omitted.
+  // Otherwise, this behaves like an exact match.
+  message Optional {
+    bytes value = 1;
+  }
+
+  oneof field_match_type {
+    Exact exact = 2;
+    Ternary ternary = 3;
+    LPM lpm = 4;
+    Range range = 6;
+    Optional optional = 7;
+    // Architecture-specific match value; it corresponds to the other_match_type
+    // in the P4Info MatchField message.
+    .google.protobuf.Any other = 100;
+  }
+}
+
+message TableAction {
+  oneof type {
+    Action action = 1;
+    uint32 action_profile_member_id = 2;
+    uint32 action_profile_group_id = 3;
+    ActionProfileActionSet action_profile_action_set = 4;
+  }
+}
+
+//message Action {
+  //uint32 action_id = 1;
+  //message Param {
+   // uint32 param_id = 2;
+   // bytes value = 3;
+ // }
+ // repeated Param params = 4;
+//}
+
+message ActionProfileActionSet {
+  repeated ActionProfileAction action_profile_actions = 1;
+}
+
+message ActionProfileAction {
+  Action action = 1;
+  int32 weight = 2;
+  oneof watch_kind {
+    int32 watch = 3 [deprecated=true];
+    bytes watch_port = 4;
+  }
+}
+
+message ActionProfileMember {
+  uint32 action_profile_id = 1;
+  uint32 member_id = 2;
+  Action action = 3;
+}
+
+
+message ActionProfileGroup {
+  uint32 action_profile_id = 1;
+  uint32 group_id = 2;
+  message Member {
+    uint32 member_id = 1;
+    int32 weight = 2;
+    oneof watch_kind {
+      int32 watch = 3 [deprecated=true];
+      bytes watch_port = 4;
+    }
+  }
+  repeated Member members = 3;
+  int32 max_size = 4;
+}
+
+
+message Index {
+  int64 index = 1;
+}
+
+
+message MeterEntry {
+  uint32 meter_id = 1;
+  Index index = 2;
+  MeterConfig config = 3;
+}
+
+message DirectMeterEntry {
+  TableEntry table_entry = 1;
+  MeterConfig config = 2;
+}
+
+message MeterConfig {
+  int64 cir = 1;
+  int64 cburst = 2;
+  int64 pir = 3;
+  int64 pburst = 4;
+}
+
+
+message CounterEntry {
+  uint32 counter_id = 1;
+  Index index = 2;
+  CounterData data = 3;
+}
+
+
+message DirectCounterEntry {
+  TableEntry table_entry = 1;
+  CounterData data = 2;
+}
+
+message CounterData {
+  int64 byte_count = 1;
+  int64 packet_count = 2;
+}
+
+message PacketReplicationEngineEntry {
+  oneof type {
+    MulticastGroupEntry multicast_group_entry = 1;
+    CloneSessionEntry clone_session_entry = 2;
+  }
+}
+
+message Replica {
+  uint32 egress_port = 1;
+  uint32 instance = 2;
+}
+
+message MulticastGroupEntry {
+  uint32 multicast_group_id = 1;
+  repeated Replica replicas = 2;
+}
+
+message CloneSessionEntry {
+  uint32 session_id = 1;
+  repeated Replica replicas = 2;
+  uint32 class_of_service = 3;
+  int32 packet_length_bytes = 4;
+}
+
+message ValueSetMember {
+  repeated FieldMatch match = 1;
+}
+
+message ValueSetEntry {
+  uint32 value_set_id = 1;
+  repeated ValueSetMember members = 2;
+}
+
+message RegisterEntry {
+  uint32 register_id = 1;
+  Index index = 2;
+  P4Data data = 3;
+}
+
+message DigestEntry {
+  uint32 digest_id = 1;
+  message Config {
+    int64 max_timeout_ns = 1;  
+    int32 max_list_size = 2;  
+    int64 ack_timeout_ns = 3;  
+  }
+  Config config = 2;
+}
+
+
+message StreamMessageRequest {
+  oneof update {
+    MasterArbitrationUpdate arbitration = 1;
+    PacketOut packet = 2;
+    DigestListAck digest_ack = 3;
+    .google.protobuf.Any other = 4;
+  }
+}
+
+
+message PacketOut {
+  bytes payload = 1;
+  repeated PacketMetadata metadata = 2;
+}
+
+message DigestListAck {
+  uint32 digest_id = 1;
+  uint64 list_id = 2;
+}
+
+message StreamMessageResponse {
+  oneof update {
+    MasterArbitrationUpdate arbitration = 1;
+    PacketIn packet = 2;
+    DigestList digest = 3;
+    IdleTimeoutNotification idle_timeout_notification = 4;
+    .google.protobuf.Any other = 5;
+    StreamError error = 6;
+  }
+}
+
+message PacketIn {
+  bytes payload = 1;
+  repeated PacketMetadata metadata = 2;
+}
+
+message DigestList {
+  uint32 digest_id = 1;
+  uint64 list_id = 2;  
+  repeated P4Data data = 3;
+  int64 timestamp = 4;
+}
+
+message PacketMetadata {
+  uint32 metadata_id = 1;
+  bytes value = 2;
+}
+
+message MasterArbitrationUpdate {
+  uint64 device_id = 1;
+  Role role = 2;
+  Uint128 election_id = 3;
+  Status status = 4;
+}
+
+message Role {
+  uint64 id = 1 [deprecated=true];
+  string name = 3;
+  .google.protobuf.Any config = 2;
+}
+
+message IdleTimeoutNotification {
+  repeated TableEntry table_entry = 1;
+  int64 timestamp = 2;
+}
+
+
+message StreamError {
+  int32 canonical_code = 1;
+  string message = 2;
+  string space = 3;
+
+  int32 code = 4;
+  oneof details {
+    PacketOutError packet_out = 5;
+    DigestListAckError digest_list_ack = 6;
+    StreamOtherError other = 7;
+  }
+}
+
+message PacketOutError {
+  PacketOut packet_out = 1;
+}
+
+message DigestListAckError {
+  DigestListAck digest_list_ack = 1;
+}
+
+message StreamOtherError {
+  google.protobuf.Any other = 1;
+}
+
+message Uint128 {
+  uint64 high = 1;
+  uint64 low = 2;
+}
+
+
+message SetForwardingPipelineConfigRequest {
+  enum Action {
+    UNSPECIFIED = 0;
+    VERIFY = 1;
+    VERIFY_AND_SAVE = 2;
+    VERIFY_AND_COMMIT = 3;
+    COMMIT = 4;
+    RECONCILE_AND_COMMIT = 5;
+  }
+  uint64 device_id = 1;
+  uint64 role_id = 2 [deprecated=true];
+  string role = 6;
+  Uint128 election_id = 3;
+  Action action = 4;
+  ForwardingPipelineConfig config = 5;
+}
+
+message SetForwardingPipelineConfigResponse {
+}
+
+message ForwardingPipelineConfig {
+  P4Info p4info = 1;
+  bytes p4_device_config = 2;
+  message Cookie {
+    uint64 cookie = 1;
+  }
+  Cookie cookie = 3;
+}
+
+message GetForwardingPipelineConfigRequest {
+  enum ResponseType {
+    ALL = 0;
+    COOKIE_ONLY = 1;
+    P4INFO_AND_COOKIE = 2;
+    DEVICE_CONFIG_AND_COOKIE = 3;
+  }
+  uint64 device_id = 1;
+  ResponseType response_type = 2;
+}
+
+message GetForwardingPipelineConfigResponse {
+  ForwardingPipelineConfig config = 1;
+}
+
+message Error {
+  int32 canonical_code = 1;
+  string message = 2;
+  string space = 3;
+  int32 code = 4;
+  .google.protobuf.Any details = 5;
+}
+
+
+enum SdnPort {
+  SDN_PORT_UNKNOWN = 0;
+ 
+  SDN_PORT_MIN = 1;
+ 
+  SDN_PORT_MAX = -257;
+  
+  SDN_PORT_RECIRCULATE = -6;
+
+  SDN_PORT_CPU = -3;
+}
+
+message CapabilitiesRequest {
+}
+
+message CapabilitiesResponse {
+  string p4runtime_api_version = 1;
+}

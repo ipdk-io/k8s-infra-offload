@@ -1,0 +1,15 @@
+
+resources:
+- ./infraagent-configmap.yaml
+- ./infraagent-service-account.yaml
+- ./infraagent-cluster-role.yaml
+- ./infraagent-daemonset.yaml
+- ./inframanager-service-account.yaml
+- ./inframanager-cluster-role.yaml
+- ./inframanager-daemonset.yaml
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: infraagent:latest
+- name: inframanager:latest
