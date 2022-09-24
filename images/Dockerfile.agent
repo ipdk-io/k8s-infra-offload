@@ -1,0 +1,24 @@
+# Copyright (c) 2022 Intel Corporation
+# SPDX-License-Identifier: Apache 2.0
+
+FROM golang:1.18 as builder
+WORKDIR /workspace
+
+COPY go.mod go.mod
+COPY go.sum go.sum
+# cache deps before building and copying source so that we don't need to re-download as much
+# and so that source changes don't invalidate our downloaded layer
+COPY infraagent infraagent
+COPY proto proto
+COPY pkg pkg
+
+RUN go mod download && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o ./bin/felix-api-proxy ./infraagent/felix_api_proxy/main.go && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o ./bin/infraagent ./infraagent/agent/main.go
+
+FROM alpine:3.16
+WORKDIR /
+COPY --from=builder /workspace/bin/infraagent /infraagent
+COPY --from=builder /workspace/bin/felix-api-proxy /felix-api-proxy
+
+ENTRYPOINT ["/infraagent"]

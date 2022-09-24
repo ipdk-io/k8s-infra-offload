@@ -1,0 +1,50 @@
+@startuml
+
+title VPP dataplane Policies flow
+autoactivate on
+
+actor "Calico VPP dataplane" as user
+participant "Felix" as felix
+participant "Policy Server" as policyserver
+
+hide unlinked
+
+opt #LightSkyBlue Policy creation flow
+    autonumber 1.1
+    user -> policyserver: Serve policy server
+    create vpplink
+    policyserver -> vpplink : connection
+    policyserver -> policyserver : createAllowFromHostPolicy
+    deactivate vpplink
+    policyserver -> vpplink : PolicyCreate
+    return policyID
+    deactivate policyserver
+    policyserver -> policyserver : createEndpointToHostPolicy
+    policyserver -> vpplink : PolicyCreate
+    return policyID
+    deactivate policyserver
+    policyserver -> policyserver : createAllowToHostPolicy
+    policyserver -> vpplink : PolicyCreate
+    return policyID
+    deactivate policyserver
+    deactivate policyserver
+    policyserver -> felix : MessageReader
+    return connection
+    activate policyserver
+    loop forever
+    felix -> policyserver : felixUpdates
+    policyserver -> policyserver : handleFelixUpdate
+    policyserver -> policyserver : handleConfigUpdate
+    deactivate policyserver
+    policyserver -> policyserver : fromProtoPolicy
+    deactivate policyserver
+    return vppPolicy
+    policyserver -> vpplink : updatePolicy(vppPolicy)
+    deactivate vpplink
+    deactivate policyserver
+    deactivate policyserver
+    deactivate policyserver
+    end
+end
+
+@enduml

@@ -1,0 +1,43 @@
+@startuml
+
+title VPP dataplane Services intitialization flow
+autoactivate on
+
+actor "Calico VPP dataplane" as user
+actor "K8s Cache client" as k8suser
+participant "Services Server" as serviceserver
+participant "Kubernetes client" as k8sclient
+participant "Calico client" as calicoclient
+participant "Calico server" as calicoserver
+participant "K8s cache" as cache
+participant "VPP link" as vpplink
+
+hide unlinked
+
+opt #LightSkyBlue Service startup flow
+    autonumber 1.1
+    user -> serviceserver: create new Server
+    serviceserver -> k8sclient: create new client
+    return k8s Client
+    deactivate serviceserver
+    serviceserver -> calicoclient: create new client
+    activate serviceserver
+    return Calico client
+    deactivate serviceserver
+    calicoclient -> calicoserver: get Nodes
+    activate calicoclient
+    return NodeSpec
+    deactivate calicoclient
+    activate serviceserver
+    serviceserver -> cache: register Services event handler
+    deactivate cache
+    serviceserver -> cache: register Service Endpoints event handler
+    deactivate cache
+    deactivate serviceserver
+    user -> serviceserver: Serve
+    serviceserver -> vpplink: configure SNAT
+    deactivate serviceserver
+    deactivate vpplink
+end
+
+@enduml

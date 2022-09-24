@@ -1,0 +1,18 @@
+@startuml
+title Update Service and Endpoints state
+
+autoactivate on
+
+actor "K8s cache" as k8scache
+participant "Service Server" as serviceserver
+participant "VPP link" as vpplink
+
+opt #LightSkyBlue Update Service and Endpoints state
+    autonumber 1.1
+    k8scache -> serviceserver: service endpoint changed (AddServicePort)
+    serviceserver -> vpplink: update service port or state (CnatTranslateAdd)
+    return error
+    deactivate serviceserver
+    deactivate vpplink
+end
+@enduml

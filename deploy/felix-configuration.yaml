@@ -1,0 +1,11 @@
+apiVersion: crd.projectcalico.org/v1
+kind: FelixConfiguration
+metadata:
+  name: default
+spec:
+  bpfLogLevel: ""
+  logSeverityScreen: Info
+  reportingInterval: 0s
+  vxlanEnabled: false
+  useInternalDataplaneDriver: false
+  dataplaneDriver: "/var/lib/calico/felix-plugins/felix-api-proxy"

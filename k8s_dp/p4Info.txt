@@ -1,0 +1,354 @@
+pkg_info {
+  arch: "pna"
+}
+tables {
+  preamble {
+    id: 45702398
+    name: "k8s_dp_control.write_source_ip_table"
+    alias: "write_source_ip_table"
+  }
+  match_fields {
+    id: 1
+    name: "meta.mod_blob_ptr"
+    bitwidth: 24
+    match_type: EXACT
+  }
+  action_refs {
+    id: 29330140
+  }
+  action_refs {
+    id: 21257015
+    annotations: "@defaultonly"
+    scope: DEFAULT_ONLY
+  }
+  size: 2048
+}
+tables {
+  preamble {
+    id: 34531482
+    name: "k8s_dp_control.rx_src_ip"
+    alias: "rx_src_ip"
+  }
+  match_fields {
+    id: 1
+    name: "hdr.ipv4.src_addr"
+    bitwidth: 32
+    match_type: EXACT
+  }
+  action_refs {
+    id: 28785571
+  }
+  action_refs {
+    id: 21257015
+  }
+  const_default_action_id: 21257015
+  size: 1024
+}
+tables {
+  preamble {
+    id: 38984944
+    name: "k8s_dp_control.ipv4_to_port_table"
+    alias: "ipv4_to_port_table"
+  }
+  match_fields {
+    id: 1
+    name: "hdr.arp.tpa"
+    bitwidth: 32
+    match_type: LPM
+  }
+  action_refs {
+    id: 24323121
+  }
+  const_default_action_id: 24323121
+  size: 1024
+}
+tables {
+  preamble {
+    id: 40521021
+    name: "k8s_dp_control.mac_to_port_table"
+    alias: "mac_to_port_table"
+  }
+  match_fields {
+    id: 1
+    name: "hdr.ethernet.dst_mac"
+    bitwidth: 48
+    match_type: EXACT
+  }
+  action_refs {
+    id: 24323121
+  }
+  const_default_action_id: 24323121
+  size: 1024
+}
+tables {
+  preamble {
+    id: 47856135
+    name: "k8s_dp_control.write_dest_ip_table"
+    alias: "write_dest_ip_table"
+  }
+  match_fields {
+    id: 1
+    name: "meta.mod_blob_ptr"
+    bitwidth: 24
+    match_type: EXACT
+  }
+  action_refs {
+    id: 24750436
+  }
+  action_refs {
+    id: 21257015
+    annotations: "@defaultonly"
+    scope: DEFAULT_ONLY
+  }
+  size: 1024
+}
+tables {
+  preamble {
+    id: 42272886
+    name: "k8s_dp_control.pinned_flows"
+    alias: "pinned_flows"
+  }
+  match_fields {
+    id: 1
+    name: "hdr.ipv4.src_addr"
+    bitwidth: 32
+    match_type: EXACT
+  }
+  match_fields {
+    id: 2
+    name: "hdr.ipv4.dst_addr"
+    bitwidth: 32
+    match_type: EXACT
+  }
+  match_fields {
+    id: 3
+    name: "hdr.ipv4.protocol"
+    bitwidth: 8
+    match_type: EXACT
+  }
+  match_fields {
+    id: 4
+    name: "hdr.tcp.src_port"
+    bitwidth: 16
+    match_type: EXACT
+  }
+  match_fields {
+    id: 5
+    name: "hdr.tcp.dst_port"
+    bitwidth: 16
+    match_type: EXACT
+  }
+  action_refs {
+    id: 30607332
+    annotations: "@tableonly"
+    scope: TABLE_ONLY
+  }
+  action_refs {
+    id: 21669033
+    annotations: "@defaultonly"
+    scope: DEFAULT_ONLY
+  }
+  const_default_action_id: 21669033
+  size: 1024
+}
+tables {
+  preamble {
+    id: 42660340
+    name: "k8s_dp_control.tx_balance"
+    alias: "tx_balance"
+  }
+  match_fields {
+    id: 1
+    name: "hdr.ipv4.dst_addr"
+    bitwidth: 32
+    match_type: EXACT
+  }
+  match_fields {
+    id: 2
+    name: "hdr.tcp.dst_port"
+    bitwidth: 16
+    match_type: EXACT
+  }
+  action_refs {
+    id: 27456008
+  }
+  action_refs {
+    id: 21257015
+  }
+  const_default_action_id: 21257015
+  implementation_id: 286997905
+  size: 1024
+}
+tables {
+  preamble {
+    id: 47018001
+    name: "k8s_dp_control.direction_table"
+    alias: "direction_table"
+  }
+  match_fields {
+    id: 1
+    name: "istd.input_port"
+    bitwidth: 32
+    match_type: EXACT
+    type_name {
+      name: "PortId_t"
+    }
+  }
+  action_refs {
+    id: 28911450
+  }
+  action_refs {
+    id: 21257015
+  }
+  const_default_action_id: 21257015
+  size: 1024
+}
+actions {
+  preamble {
+    id: 21257015
+    name: "NoAction"
+    alias: "NoAction"
+    annotations: "@noWarn(\"unused\")"
+  }
+}
+actions {
+  preamble {
+    id: 29330140
+    name: "k8s_dp_control.update_src_ip_mac"
+    alias: "update_src_ip_mac"
+  }
+  params {
+    id: 1
+    name: "new_smac"
+    bitwidth: 48
+  }
+  params {
+    id: 2
+    name: "new_ip"
+    bitwidth: 32
+  }
+}
+actions {
+  preamble {
+    id: 28785571
+    name: "k8s_dp_control.set_source_ip"
+    alias: "set_source_ip"
+  }
+  params {
+    id: 1
+    name: "ptr"
+    bitwidth: 24
+  }
+}
+actions {
+  preamble {
+    id: 24323121
+    name: "k8s_dp_control.set_dest_vport"
+    alias: "set_dest_vport"
+  }
+  params {
+    id: 1
+    name: "p"
+    bitwidth: 32
+    type_name {
+      name: "PortId_t"
+    }
+  }
+}
+actions {
+  preamble {
+    id: 24750436
+    name: "k8s_dp_control.update_dst_ip_mac"
+    alias: "update_dst_ip_mac"
+  }
+  params {
+    id: 1
+    name: "new_dmac"
+    bitwidth: 48
+  }
+  params {
+    id: 2
+    name: "new_ip"
+    bitwidth: 32
+  }
+}
+actions {
+  preamble {
+    id: 30607332
+    name: "k8s_dp_control.pinned_flows_hit"
+    alias: "pinned_flows_hit"
+  }
+  params {
+    id: 1
+    name: "p"
+    bitwidth: 32
+    type_name {
+      name: "PortId_t"
+    }
+  }
+  params {
+    id: 2
+    name: "ptr"
+    bitwidth: 24
+  }
+}
+actions {
+  preamble {
+    id: 21669033
+    name: "k8s_dp_control.pinned_flows_miss"
+    alias: "pinned_flows_miss"
+  }
+}
+actions {
+  preamble {
+    id: 27456008
+    name: "k8s_dp_control.set_default_lb_dest"
+    alias: "set_default_lb_dest"
+  }
+  params {
+    id: 1
+    name: "p"
+    bitwidth: 32
+    type_name {
+      name: "PortId_t"
+    }
+  }
+  params {
+    id: 2
+    name: "ptr"
+    bitwidth: 24
+  }
+}
+actions {
+  preamble {
+    id: 28911450
+    name: "k8s_dp_control.set_direction_by_port"
+    alias: "set_direction_by_port"
+  }
+  params {
+    id: 1
+    name: "direction"
+    bitwidth: 8
+  }
+}
+action_profiles {
+  preamble {
+    id: 286997905
+    name: "k8s_dp_control.as_sl3"
+    alias: "as_sl3"
+  }
+  table_ids: 42660340
+  with_selector: true
+  size: 128
+}
+type_info {
+  new_types {
+    key: "PortId_t"
+    value {
+      translated_type {
+        uri: "p4.org/pna/v1/PortId_t"
+        sdn_bitwidth: 32
+      }
+    }
+  }
+}

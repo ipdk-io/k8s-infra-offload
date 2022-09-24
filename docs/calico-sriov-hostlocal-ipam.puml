@@ -1,0 +1,76 @@
+@startuml
+
+title Calico host-local IPAM integration with INFRA Agent
+autoactivate on
+
+actor "User" as user
+participant "K8s control plane" as k8s
+participant "calico-node" as caliconode
+participant "CRI" as cri
+participant "calico-cni" as calicocni
+participant "hostlocal" as hostlocal
+participant "INFRA Agent" as infraagent
+
+hide unlinked
+
+opt #LightCyan Calico deployment
+    autonumber 1.1
+    user -> k8s: Deploy calico
+    create caliconode
+    k8s -> caliconode: start
+    caliconode -> caliconode: waitForBackendReadiness
+    deactivate caliconode
+    deactivate caliconode
+    deactivate k8s
+end
+
+opt #LightSkyBlue INFRA Agent deployment
+    user -> k8s: Deploy INFRA Agent
+    create infraagent
+    k8s -> infraagent: start
+    create cniServer
+    infraagent -> cniServer: createCniServer(intfType: sriov)
+    ' infraagent -> cniServer: NewPodInterface(sriov)
+    create sroivPodIntf
+    cniServer -> sroivPodIntf: NewPodInterface(sriov)
+    return sroivPodIntf
+    ' cniServer --> infraagent: sroivPodIntf
+    return sroivPodIntf
+    ' deactivate cniServer
+
+    group SRIOV Initilazation stage
+        infraagent -> sroivPodIntf: Init()
+        sroivPodIntf -> sroivPodIntf: initializeVFPool()
+        deactivate
+        sroivPodIntf -> sroivPodIntf: getNodePodCIDR()
+        deactivate
+        sroivPodIntf -> sroivPodIntf: assignHostIPfromPodCIDR()
+        deactivate
+        sroivPodIntf -> sroivPodIntf: configureHostVF()
+        deactivate
+        sroivPodIntf -> sroivPodIntf: writeCalicoHostlocalIpamConfig()
+        deactivate
+        sroivPodIntf -> sroivPodIntf: setPluginReadiness()
+        deactivate
+        return
+    end
+    deactivate k8s
+end
+
+opt #LightSeaGreen Setup Pod Network
+user -> k8s: create pod
+k8s -> cri: CmdAdd()
+cri -> calicocni: CmdAdd()
+calicocni -> hostlocal: CmdAdd()
+return IPConfig
+calicocni -> infraagent: cmdAdd(IPConfig)
+infraagent -> sroivPodIntf: CreateInterface(IPConfig)
+return PodInterface
+infraagent -> sroivPodIntf: SetupNetwork()
+sroivPodIntf -> inframanager: DoNetworking()
+
+return 
+
+end
+
+@enduml

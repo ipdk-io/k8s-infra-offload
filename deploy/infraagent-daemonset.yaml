@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: infraagent-ds
+  namespace: kube-system
+spec:
+  selector:
+      matchLabels:
+        name: infraagent
+  template:
+    metadata:
+      labels:
+        name: infraagent
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+      # this toleration is to have the daemonset runnable on master nodes
+      # remove it if your masters can't run pods
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      - key: node.kubernetes.io/network-unavailable
+        effect: NoSchedule
+        operator: Exists
+      - key: node.kubernetes.io/not-ready
+        effect: NoSchedule
+        operator: Exists
+      hostNetwork: true
+      serviceAccountName: infraagent-sa
+      initContainers:
+      - name: init
+        image: infraagent:latest
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: calico
+          mountPath: /var/lib/calico
+        command: ["/bin/sh", "-c"]
+        args: ["mkdir -p /var/lib/calico/felix-plugins && cp felix-api-proxy /var/lib/calico/felix-plugins/felix-api-proxy"]
+      - name: wait-for-calico
+        image: infraagent:latest
+        imagePullPolicy: Always
+        command:
+        - /infraagent
+        - checkCalicoConfig
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        volumeMounts:
+        - name: cni-net
+          mountPath: /etc/cni/net.d
+      containers:
+      - name: agent
+        image: infraagent:latest
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 0
+          privileged: true
+          capabilities:
+            add: ["SYS_ADMIN", "NET_ADMIN"]
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        volumeMounts:
+        - name: cni-net
+          mountPath: /etc/cni/net.d
+        - name: cni-bin
+          mountPath: /opt/cni/bin
+        - name: netns
+          mountPath: /run/netns
+          mountPropagation: Bidirectional
+        - name: sys
+          mountPath: /sys
+        - name: calico-run
+          mountPath: /var/run/calico
+        - name: config-volume
+          mountPath: /etc/infra/
+        - name: cache
+          mountPath: /var/lib/cni/infraagent
+        command:
+        - /infraagent
+      volumes:
+      - name: calico
+        hostPath:
+          path: /var/lib/calico
+          type: DirectoryOrCreate
+      - name: cni-net
+        hostPath:
+          path: /etc/cni/net.d
+      - name: cni-bin
+        hostPath:
+          path: /opt/cni/bin
+      - name: netns
+        hostPath:
+          path: /run/netns
+      - name: sys
+        hostPath:
+          path: /sys
+      - name: calico-run
+        hostPath:
+          path: /var/run/calico/
+      - name: config-volume
+        configMap:
+          name: infraagent-config
+      - name: cache
+        hostPath:
+          path: /var/lib/cni/infraagent
+          type: DirectoryOrCreate
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate

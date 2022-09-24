@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: inframanager-ds
+  namespace: kube-system
+spec:
+  selector:
+      matchLabels:
+        name: inframanager
+  template:
+    metadata:
+      labels:
+        name: inframanager
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+      # this toleration is to have the daemonset runnable on master nodes
+      # remove it if your masters can't run pods
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      - key: node.kubernetes.io/network-unavailable
+        effect: NoSchedule
+        operator: Exists
+      - key: node.kubernetes.io/not-ready
+        effect: NoSchedule
+        operator: Exists
+      hostNetwork: true
+      serviceAccountName: inframanager-sa
+      containers:
+      - name: manager
+        image: inframanager:latest
+        imagePullPolicy: IfNotPresent
+        command:
+        - /inframanager
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 1
+    type: RollingUpdate
