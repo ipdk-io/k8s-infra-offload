@@ -332,7 +332,8 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
  
   Pull P4-K8s and other software
   ```bash
-  git clone https://github.com/intel-innersource/networking.ethernet.acceleration.plugins.p4-k8s.git p4-k8s
+  git clone https://github.com/ipdk-io/k8s-infra-offload.git p4-k8s
+  cd p4-k8s
   go get -u google.golang.org/protobuf
   ```
   
