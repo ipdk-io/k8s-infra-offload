@@ -121,7 +121,6 @@ struct main_metadata_t {
 	ModDataPtr_t mod_blob_ptr_snat;
 	ActCommit_t act_commit;
 	PNA_Direction_t direction;
-	bit<1> vip_flag;
 }
 
 #define ARP_REQUEST	 1
