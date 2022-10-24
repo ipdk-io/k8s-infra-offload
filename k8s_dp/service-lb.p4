@@ -529,15 +529,15 @@ control k8s_dp_control(
 				}
 			}
 		} else {
-		if (IS_IPV4_UDP) {
-			if(!(tx_balance_udp.apply().miss)) {
-				create_reverse_ct = true;
-				do_clb_pinned_flows_add_on_miss = true;
-				save_to_meta_udp(hdr, meta);
-				pinned_flows.apply();
-			} else {
-				save_to_meta_udp(hdr, meta);
-				pinned_flows_reverse.apply();
+			if (IS_IPV4_UDP) {
+				if(!(tx_balance_udp.apply().miss)) {
+					create_reverse_ct = true;
+					do_clb_pinned_flows_add_on_miss = true;
+					save_to_meta_udp(hdr, meta);
+					pinned_flows.apply();
+				} else {
+					save_to_meta_udp(hdr, meta);
+					pinned_flows_reverse.apply();
 				}
 			}
 		}	
@@ -558,7 +558,7 @@ control k8s_dp_control(
 							set_meta_udp.apply();
 						}
 					}
-				pinned_flows_reverse.apply();		
+					pinned_flows_reverse.apply();		
 				}
 		    	}
 
