@@ -20,8 +20,9 @@ hack/cicd/*       @ahalimx86 @lpawlikx @ipatrykx
 # EPG
 images/Dockerfile.manager       @nupurjai @vishala-r
 k8s_dp/*       @nupurjai @vishala-r
-# scripts/ and k8s_dp/ dirs can move inside hack/ dir
+# scripts/ and k8s_dp/ dirs
 hack/scripts/*       @nupurjai @vishala-r
 hack/k8s_dp/*       @nupurjai @vishala-r
 infrmanager/*       @nupurjai @vishala-r
+pkg/utils/*       @nupurjai @vishala-r
 pkg/infrmanager/*       @nupurjai @vishala-r
