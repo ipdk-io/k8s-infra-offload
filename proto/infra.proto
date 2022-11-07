@@ -8,6 +8,7 @@ import "felixbackend.proto";
 service InfraAgent {
     rpc CreateNetwork(CreateNetworkRequest) returns (cni.AddReply) {}
     rpc DeleteNetwork(DeleteNetworkRequest) returns (cni.DelReply) {}
+    rpc SetupHostInterface(SetupHostInterfaceRequest) returns (Reply) {}
 
     rpc NatTranslationAdd(NatTranslation) returns (Reply) {}
     rpc SetSnatAddress(SetSnatAddressRequest) returns (Reply) {}
@@ -83,4 +84,10 @@ message DeleteNetworkRequest {
     string host_if_name = 2;
     string mac_addr = 3;
     string ipv4_addr = 4;
+}
+
+message SetupHostInterfaceRequest {
+    string if_name = 1;
+    string ipv4_addr = 2;
+    string mac_addr = 3;
 }

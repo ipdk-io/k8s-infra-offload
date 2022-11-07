@@ -26,15 +26,21 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+var (
+	linkAdd       = netlink.LinkAdd
+	sysctlFunc    = sysctl.Sysctl
+	delLinkByName = ip.DelLinkByName
+)
+
 func DoIpvlanNetwork(in *pb.AddRequest, master string, mode netlink.IPVlanMode) (string, error) {
 	logger := log.WithField("func", "DoIpvlanNetwork").WithField("pkg", "netconf")
-	m, err := netlink.LinkByName(master)
+	m, err := linkByName(master)
 	if err != nil {
 		logger.WithError(err).Error("Cannot get master interface")
 		return "", err
 	}
 
-	netns, err := ns.GetNS(in.GetNetns())
+	netns, err := getNS(in.GetNetns())
 	if err != nil {
 		logger.WithError(err).Error("Failed to get network namespace")
 		return "", err
@@ -50,7 +56,7 @@ func DoIpvlanNetwork(in *pb.AddRequest, master string, mode netlink.IPVlanMode) 
 		Mode: mode,
 	}
 
-	if err := netlink.LinkAdd(mv); err != nil {
+	if err := linkAdd(mv); err != nil {
 		logger.WithError(err).Error("Failed to create ipvlan")
 		return "", fmt.Errorf("failed to create ipvlan to %s %v", master, err)
 	}
@@ -62,12 +68,7 @@ func DoIpvlanNetwork(in *pb.AddRequest, master string, mode netlink.IPVlanMode) 
 	}
 	// setup routing via infra_host for pod IP address
 	if len(ipList) > 0 {
-		infraHostLink, err := netlink.LinkByName(types.InfraHost)
-		if err != nil {
-			logger.WithError(err).Error("Cannot get Infra host interface")
-			return "", err
-		}
-		if err := setupHostRoute(ipList[0].IPNet, infraHostLink); err != nil {
+		if err = setupRouting(ipList); err != nil {
 			return "", err
 		}
 	}
@@ -75,30 +76,43 @@ func DoIpvlanNetwork(in *pb.AddRequest, master string, mode netlink.IPVlanMode) 
 	return contMac, nil
 }
 
+func setupRouting(ipList []netlink.Addr) error {
+	logger := log.WithField("func", "setupRouting").WithField("pkg", "netconf")
+	infraHostLink, err := linkByName(types.InfraHost)
+	if err != nil {
+		logger.WithError(err).Error("Cannot get Infra host interface")
+		return err
+	}
+	if err := setupHostRoute(ipList[0].IPNet, infraHostLink); err != nil {
+		return err
+	}
+	return nil
+}
+
 func configureIpvlanNamespace(netns ns.NetNS, mv *netlink.IPVlan, in *pb.AddRequest) ([]netlink.Addr, string, error) {
 	var ipList []netlink.Addr
 	var contMac string = ""
 	err := netns.Do(func(_ ns.NetNS) error {
-		if err := netlink.LinkSetName(mv, in.InterfaceName); err != nil {
+		if err := linkSetName(mv, in.InterfaceName); err != nil {
 			return fmt.Errorf("failed to rename interface: %w", err)
 		}
 		// re-fetch ipvlan
-		contIpvlan, err := netlink.LinkByName(in.InterfaceName)
+		contIpvlan, err := linkByName(in.InterfaceName)
 		if err != nil {
 			return fmt.Errorf("failed to refetch ipvlan %q: %w", in.InterfaceName, err)
 		}
-		_, _ = sysctl.Sysctl(fmt.Sprintf("net/ipv4/conf/%s/arp_notify", in.InterfaceName), "1")
+		_, _ = sysctlFunc(fmt.Sprintf("net/ipv4/conf/%s/arp_notify", in.InterfaceName), "1")
 		if err = setLinkAddress(contIpvlan, in.GetContainerIps()); err != nil {
 			return fmt.Errorf("failed to set link address: %w", err)
 		}
-		if err = netlink.LinkSetUp(contIpvlan); err != nil {
+		if err = linkSetUp(contIpvlan); err != nil {
 			return err
 		}
-		if err = setupPodRoute(contIpvlan, in.ContainerRoutes); err != nil {
+		if err = setupPodRoute(contIpvlan, in.ContainerRoutes, nonTargetIP); err != nil {
 			return fmt.Errorf("cannot setup routes: %w", err)
 		}
 		contMac = contIpvlan.Attrs().HardwareAddr.String()
-		ipList, err = netlink.AddrList(contIpvlan, netlink.FAMILY_V4)
+		ipList, err = addrList(contIpvlan, netlink.FAMILY_V4)
 		if err != nil {
 			return err
 		}
@@ -110,16 +124,16 @@ func configureIpvlanNamespace(netns ns.NetNS, mv *netlink.IPVlan, in *pb.AddRequ
 
 func ReleaseIpvlanNetwork(in *pb.DelRequest) error {
 	var podIp netlink.Addr
-	err := ns.WithNetNSPath(in.GetNetns(), func(_ ns.NetNS) error {
+	err := withNetNSPath(in.GetNetns(), func(_ ns.NetNS) error {
 		// don't return an error if the device is already removed
-		link, err := netlink.LinkByName(in.GetInterfaceName())
+		link, err := linkByName(in.GetInterfaceName())
 		if err == nil {
-			al, err := netlink.AddrList(link, netlink.FAMILY_V4)
+			al, err := addrList(link, netlink.FAMILY_V4)
 			if err == nil || len(al) > 0 {
 				podIp = al[0]
 			}
 		}
-		if err := ip.DelLinkByName(in.GetInterfaceName()); err != nil {
+		if err := delLinkByName(in.GetInterfaceName()); err != nil {
 			if err != ip.ErrLinkNotFound {
 				return err
 			}
@@ -128,10 +142,10 @@ func ReleaseIpvlanNetwork(in *pb.DelRequest) error {
 	})
 	// delete route on host
 	if podIp.IPNet != nil {
-		infraHost, err := netlink.LinkByName(types.InfraHost)
+		infraHost, err := linkByName(types.InfraHost)
 		if err == nil {
 			// ignore errors
-			_ = netlink.RouteDel(&netlink.Route{LinkIndex: infraHost.Attrs().Index, Dst: podIp.IPNet, Scope: netlink.SCOPE_LINK})
+			_ = routeDel(&netlink.Route{LinkIndex: infraHost.Attrs().Index, Dst: podIp.IPNet, Scope: netlink.SCOPE_LINK})
 		}
 	}
 

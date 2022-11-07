@@ -17,29 +17,31 @@ package agent
 import (
 	"fmt"
 	"os"
-	"path"
+
 	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"google.golang.org/grpc"
 )
+
+const sleepDuration = time.Millisecond * 100
 
 func init() {
 	var timeoutString string
-	checkCalicoConfig.PersistentFlags().StringVar(&timeoutString, "timeout", "0s", "timeout after which program return error if file does not exist, passing duration <= 0 means wait forever.")
-	if err := viper.BindPFlag("timeout", checkCalicoConfig.PersistentFlags().Lookup("timeout")); err != nil {
+	checkManager.PersistentFlags().StringVar(&timeoutString, "timeout", "0s", "timeout after which program return error if file does not exist, passing duration <= 0 means wait forever.")
+	if err := viper.BindPFlag("timeout", checkManager.PersistentFlags().Lookup("timeout")); err != nil {
 		fmt.Fprintf(os.Stderr, "There was an error while binding flags '%s'", err)
 		os.Exit(1)
 	}
-	rootCmd.AddCommand(checkCalicoConfig)
+	rootCmd.AddCommand(checkManager)
 }
 
-var checkCalicoConfig = &cobra.Command{
-	Use:           "checkCalicoConfig",
-	Short:         "Wait until Calico config exist then exit",
+var checkManager = &cobra.Command{
+	Use:           "checkManager",
+	Short:         "Wait until Infra Manager is running",
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -48,19 +50,17 @@ var checkCalicoConfig = &cobra.Command{
 			return err
 		}
 		if timeout == 0 {
-			fmt.Fprintf(os.Stdout, "Waiting for Calico config file in %s\n", path.Dir(types.DefaultCalicoConfig))
+			fmt.Fprintln(os.Stdout, "Waiting for Infra Manager to be running")
 		} else {
-			fmt.Fprintf(os.Stdout, "Waiting for Calico config file in %s for %s\n", path.Dir(types.DefaultCalicoConfig), viper.GetString("timeout"))
+			fmt.Fprintf(os.Stdout, "Waiting for Infra Manager to be running for %s\n", viper.GetString("timeout"))
 		}
 
-		watcher, err := utils.NewCalicoWatcher(timeout, types.DefaultCalicoConfig, fsnotify.NewWatcher)
-		if err != nil {
-			return err
-		}
+		managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
+		watcher := utils.NewGrpcWatcher(timeout, sleepDuration, managerAddr, grpc.Dial, utils.CheckGrpcServerStatus)
 		if err := utils.WaitFor(watcher); err != nil {
 			return err
 		}
-		fmt.Fprintln(os.Stdout, "Calico config file exist. Exit.")
+		fmt.Fprintln(os.Stdout, "Infra Manager is serving. Exit.")
 		return nil
 	},
 }

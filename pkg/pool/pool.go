@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"path"
 	"sync"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
@@ -39,10 +40,12 @@ type resourcePool struct {
 	sync.Mutex
 }
 
-func NewResourcePool(resources []*types.InterfaceInfo) ResourcePool {
+func NewResourcePool(resources []*types.InterfaceInfo, cachePath string) ResourcePool {
 	pool := make([]*Resource, 0)
+	cached := getCachedResources(cachePath)
 	for _, r := range resources {
-		res := &Resource{InterfaceInfo: r, InUse: false}
+		inUse := getInUse(cached, r)
+		res := &Resource{InterfaceInfo: r, InUse: inUse}
 		pool = append(pool, res)
 	}
 	return &resourcePool{Pool: pool}
@@ -90,4 +93,38 @@ func Load(path string) (ResourcePool, error) {
 		return nil, err
 	}
 	return pool, nil
+}
+
+func getCachedResources(p string) []*types.InterfaceInfo {
+	retv := make([]*types.InterfaceInfo, 0)
+	de, err := os.ReadDir(p)
+	if err != nil {
+		return retv
+	}
+	for _, e := range de {
+		if e.IsDir() {
+			continue
+		}
+		fp := path.Join(p, e.Name())
+		bs, err := os.ReadFile(fp)
+		if err != nil {
+			continue
+		}
+		iface := &types.InterfaceInfo{}
+		err = json.Unmarshal(bs, iface)
+		if err != nil {
+			continue
+		}
+		retv = append(retv, iface)
+	}
+	return retv
+}
+
+func getInUse(cache []*types.InterfaceInfo, res *types.InterfaceInfo) bool {
+	for _, e := range cache {
+		if e.InterfaceName == res.InterfaceName {
+			return true
+		}
+	}
+	return false
 }

@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build mev
-
 package test
 
 import (
@@ -22,13 +20,15 @@ import (
 	"encoding/binary"
 	"flag"
 	"fmt"
-	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
-	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 	"math/big"
 	"net"
 	"path/filepath"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
+
+	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
 
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
 	"github.com/antoninbas/p4runtime-go-client/pkg/signals"
@@ -43,15 +43,15 @@ var (
 )
 
 var (
-	arpTpa = [2]string{"10.10.10.1", "10.10.10.2"}
+	ipAddress = [2]string{"10.10.10.1", "10.10.10.2"}
+)
+
+var (
+	port = [2]int{0, 1}
 )
 
 var (
 	macAddress = [2]string{"00:09:00:08:c5:50", "00:0a:00:09:c5:50"}
-)
-
-var (
-	port = [2]int{25, 26}
 )
 
 func valueToBytes(value int) []byte {
@@ -85,38 +85,17 @@ func Pack32BinaryIP4(ip4Address string) []byte {
 	return buf.Bytes()
 }
 
-func insertIpv4ToPortTableEntry(ctx context.Context, p4RtC *client.Client) error {
-	for i := 0; i < 2; i++ {
-		entry1 := p4RtC.NewTableEntry(
-			"my_control.ipv4_to_port_table",
-			map[string]client.MatchInterface{
-				"hdrs.arp.tpa": &client.LpmMatch{
-					Value: Pack32BinaryIP4(arpTpa[i]),
-					PLen:  int32(32),
-				},
-			},
-			p4RtC.NewTableActionDirect("my_control.ipv4_send_to_port", [][]byte{valueToBytes(port[i])}),
-			nil,
-		)
-		if err := p4RtC.InsertTableEntry(ctx, entry1); err != nil {
-			log.Errorf("Cannot insert entry in 'ipv4_to_port_table': %v", err)
-		}
-	}
-
-	return nil
-}
-
 func insertMacToPortTableEntry(ctx context.Context, p4RtC *client.Client) error {
 	for i := 0; i < 2; i++ {
 		mac, _ := net.ParseMAC(macAddress[i])
 		entry1 := p4RtC.NewTableEntry(
-			"my_control.mac_to_port_table",
+			"k8s_dp_control.mac_to_port_table",
 			map[string]client.MatchInterface{
-				"hdrs.mac[meta.depth].da": &client.ExactMatch{
+				"hdr.ethernet.dst_mac": &client.ExactMatch{
 					Value: mac,
 				},
 			},
-			p4RtC.NewTableActionDirect("my_control.mac_send_to_port", [][]byte{valueToBytes(port[i])}),
+			p4RtC.NewTableActionDirect("k8s_dp_control.set_dest_vport", [][]byte{valueToBytes(port[i])}),
 			nil,
 		)
 		if err := p4RtC.InsertTableEntry(ctx, entry1); err != nil {
@@ -127,16 +106,32 @@ func insertMacToPortTableEntry(ctx context.Context, p4RtC *client.Client) error 
 	return nil
 }
 
-func insertCniAddTableEntry(ctx context.Context, p4RtC *client.Client) error {
-	insertIpv4ToPortTableEntry(ctx, p4RtC)
-	insertMacToPortTableEntry(ctx, p4RtC)
+func insertIpv4ToPortTableEntry(ctx context.Context, p4RtC *client.Client) error {
+	for i := 0; i < 2; i++ {
+		entry1 := p4RtC.NewTableEntry(
+			"k8s_dp_control.ipv4_to_port_table",
+			map[string]client.MatchInterface{
+				"hdr.arp.tpa": &client.LpmMatch{
+					Value: Pack32BinaryIP4(ipAddress[i]),
+					PLen:  int32(32),
+				},
+			},
+			p4RtC.NewTableActionDirect("k8s_dp_control.set_dest_vport", [][]byte{valueToBytes(port[i])}),
+			nil,
+		)
+		if err := p4RtC.InsertTableEntry(ctx, entry1); err != nil {
+			log.Errorf("Cannot insert entry in 'ipv4_to_port_table': %v", err)
+		}
+	}
+
 	return nil
 }
 
 func CniAddTest() {
 	ctx := context.Background()
-	p4InfoPath, _ := filepath.Abs("cni_add/p4Info.txt")
-	p4BinPath, _ := filepath.Abs("cni_add/simple_l3.pb.bin")
+
+	p4InfoPath, _ := filepath.Abs("k8s_dp/p4Info.txt")
+	p4BinPath, _ := filepath.Abs("k8s_dp/k8s_dp.pb.bin")
 
 	var addr string
 	flag.StringVar(&addr, "addr", defaultAddr, "P4Runtime server socket")
@@ -146,6 +141,7 @@ func CniAddTest() {
 	flag.StringVar(&binPath, "bin", p4BinPath, "Path to P4 bin")
 	var p4infoPath string
 	flag.StringVar(&p4infoPath, "p4info", p4InfoPath, "Path to P4Info")
+
 	flag.Parse()
 
 	if binPath == "" || p4infoPath == "" {
@@ -170,7 +166,7 @@ func CniAddTest() {
 
 	electionID := p4_v1.Uint128{High: 0, Low: 1}
 
-	p4RtC := client.NewClient(c, deviceID, electionID)
+	p4RtC := client.NewClient(c, deviceID, &electionID)
 	arbitrationCh := make(chan bool)
 	go p4RtC.Run(stopCh, arbitrationCh, nil)
 
@@ -208,7 +204,10 @@ func CniAddTest() {
 	}
 
 	log.Info("installing the entries to the table")
-	if err := insertCniAddTableEntry(ctx, p4RtC); err != nil {
+	if err := insertIpv4ToPortTableEntry(ctx, p4RtC); err != nil {
+		log.Fatalf("Error when installing entry %v", err)
+	}
+	if err := insertMacToPortTableEntry(ctx, p4RtC); err != nil {
 		log.Fatalf("Error when installing entry %v", err)
 	}
 

@@ -396,6 +396,26 @@ func (mr *MockInfraAgentClientMockRecorder) SetSnatAddress(ctx, in interface{}, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSnatAddress", reflect.TypeOf((*MockInfraAgentClient)(nil).SetSnatAddress), varargs...)
 }
 
+// SetupHostInterface mocks base method.
+func (m *MockInfraAgentClient) SetupHostInterface(ctx context.Context, in *proto.SetupHostInterfaceRequest, opts ...grpc.CallOption) (*proto.Reply, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SetupHostInterface", varargs...)
+	ret0, _ := ret[0].(*proto.Reply)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SetupHostInterface indicates an expected call of SetupHostInterface.
+func (mr *MockInfraAgentClientMockRecorder) SetupHostInterface(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetupHostInterface", reflect.TypeOf((*MockInfraAgentClient)(nil).SetupHostInterface), varargs...)
+}
+
 // UpdateActiveProfile mocks base method.
 func (m *MockInfraAgentClient) UpdateActiveProfile(ctx context.Context, in *proto.ActiveProfileUpdate, opts ...grpc.CallOption) (*proto.Reply, error) {
 	m.ctrl.T.Helper()
@@ -927,6 +947,21 @@ func (m *MockInfraAgentServer) SetSnatAddress(arg0 context.Context, arg1 *proto.
 func (mr *MockInfraAgentServerMockRecorder) SetSnatAddress(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSnatAddress", reflect.TypeOf((*MockInfraAgentServer)(nil).SetSnatAddress), arg0, arg1)
+}
+
+// SetupHostInterface mocks base method.
+func (m *MockInfraAgentServer) SetupHostInterface(arg0 context.Context, arg1 *proto.SetupHostInterfaceRequest) (*proto.Reply, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetupHostInterface", arg0, arg1)
+	ret0, _ := ret[0].(*proto.Reply)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SetupHostInterface indicates an expected call of SetupHostInterface.
+func (mr *MockInfraAgentServerMockRecorder) SetupHostInterface(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetupHostInterface", reflect.TypeOf((*MockInfraAgentServer)(nil).SetupHostInterface), arg0, arg1)
 }
 
 // UpdateActiveProfile mocks base method.

@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"path"
@@ -31,6 +30,9 @@ import (
 
 	cniTypes "github.com/containernetworking/cni/pkg/types"
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/vishvananda/netlink"
@@ -40,6 +42,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -53,7 +57,8 @@ const (
 )
 
 var (
-	restInClusterConfig = rest.InClusterConfig
+	restInClusterConfig         = rest.InClusterConfig
+	getHealthServerResponseFunc = getHealthServerResponse
 
 	envVariables = map[string]string{
 		"CNI_PATH":        types.DefaultCNIBinPath,
@@ -97,7 +102,7 @@ func GetNodeIP(client kubernetes.Interface, nodeName string) (string, error) {
 	nodes, err := client.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{
 		FieldSelector: "metadata.name=" + nodeName})
 	if err != nil {
-		panic(err.Error())
+		return "", err
 	}
 
 	if len(nodes.Items) == 0 {
@@ -127,12 +132,12 @@ func (g *DefaultInterfaceAddressGetter) GetAddr(ifc net.Interface) ([]net.Addr, 
 	return ifc.Addrs()
 }
 
-func getInterface(ifaceList []net.Interface, internalIP string, ifAddressGetter InterfaceAddressGetter) (string, error) {
+func getInterface(ifaceList []net.Interface, internalIP string, ifAddressGetter InterfaceAddressGetter, logEntry *log.Entry) (string, error) {
 	var ifaceName string
 	for _, i := range ifaceList {
 		addrs, err := ifAddressGetter.GetAddr(i)
 		if err != nil {
-			log.Printf("Unable to get Addrs for interface %v err:%v", i.Name, err)
+			logEntry.Infof("Unable to get Addrs for interface %v err:%v", i.Name, err)
 			continue
 		}
 		for _, addr := range addrs {
@@ -148,7 +153,7 @@ func getInterface(ifaceList []net.Interface, internalIP string, ifAddressGetter 
 	return ifaceName, nil
 }
 
-func GetNodeNetInterface(k8sclient kubernetes.Interface, nodeName string, ifGetter InterfaceAddressGetter) (string, error) {
+func GetNodeNetInterface(k8sclient kubernetes.Interface, nodeName string, ifGetter InterfaceAddressGetter, logEntry *log.Entry) (string, error) {
 	internalIP, err := GetNodeIP(k8sclient, nodeName)
 	if err != nil {
 		return "", err
@@ -159,7 +164,7 @@ func GetNodeNetInterface(k8sclient kubernetes.Interface, nodeName string, ifGett
 		return "", err
 	}
 
-	return getInterface(ifaces, internalIP, ifGetter)
+	return getInterface(ifaces, internalIP, ifGetter, logEntry)
 }
 
 func GetK8sConfig() (*rest.Config, error) {
@@ -207,8 +212,11 @@ func GetVFList(pf string, prefix string) ([]*types.InterfaceInfo, error) {
 			vfPciAddr := path.Base(realPath) // get vf pciAddr
 
 			r := regexp.MustCompile(`(?m)(\d+)$`) // get vfid from link name
-			vfIdStr := r.FindString(entry.Name())
-			vfId, _ := strconv.Atoi(vfIdStr)
+			vfIDStr := r.FindString(entry.Name())
+			vfID, err := strconv.Atoi(vfIDStr)
+			if err != nil {
+				continue
+			}
 
 			netPath := path.Join(devicePath, entry.Name(), "net") // get vf interface name
 			netEntry, err := os.ReadDir(netPath)
@@ -228,7 +236,7 @@ func GetVFList(pf string, prefix string) ([]*types.InterfaceInfo, error) {
 				continue
 			}
 			macStr := strings.Trim(string(mac), "\n")
-			out = append(out, &types.InterfaceInfo{PciAddr: vfPciAddr, VfID: vfId, InterfaceName: ifaceName, MacAddr: macStr})
+			out = append(out, &types.InterfaceInfo{PciAddr: vfPciAddr, VfID: vfID, InterfaceName: ifaceName, MacAddr: macStr})
 		}
 	}
 	// sort using vfid as a field
@@ -325,12 +333,14 @@ func setupRequiredEnvironment(ec *EnvConfigurer) ([]byte, error) {
 	return ec.readCalicoConfig()
 }
 
-type ipamExecAddFunc func(plugin string, netconf []byte) (cniTypes.Result, error)
+// IpamExecAddFunc can be used to point to IPAM add function
+type IpamExecAddFunc func(plugin string, netconf []byte) (cniTypes.Result, error)
 
-// GetIPFromIPAM will request IP address from host-local IPAM, it will be used
-// as infra host interface
-func GetIPFromIPAM(ec *EnvConfigurer, ipamExecAdd ipamExecAddFunc) (*net.IPNet, error) {
+// GetIPFromIPAM will request IP address from host-local IPAM, it will be used as Infra host interface
+func GetIPFromIPAM(ec *EnvConfigurer, ipamExecAdd IpamExecAddFunc) (*net.IPNet, error) {
 	newConfBs, err := setupRequiredEnvironment(ec)
+	// clear environment
+	defer ec.unsetEnvVariables(envVariables)
 	if err != nil {
 		return nil, err
 	}
@@ -349,11 +359,13 @@ func GetIPFromIPAM(ec *EnvConfigurer, ipamExecAdd ipamExecAddFunc) (*net.IPNet, 
 	return &result.IPs[0].Address, nil
 }
 
-type ipamExecDelFunc func(plugin string, netconf []byte) error
+// IpamExecDelFunc can be used to point to IPAM delete function
+type IpamExecDelFunc func(plugin string, netconf []byte) error
 
 // ReleaseIPFromIPAM will release IP address assigned for Infra host interface
-func ReleaseIPFromIPAM(ec *EnvConfigurer, ipamExecDel ipamExecDelFunc) error {
+func ReleaseIPFromIPAM(ec *EnvConfigurer, ipamExecDel IpamExecDelFunc) error {
 	newConfBs, err := setupRequiredEnvironment(ec)
+	defer ec.unsetEnvVariables(envVariables)
 	if err != nil {
 		return err
 	}
@@ -363,6 +375,7 @@ func ReleaseIPFromIPAM(ec *EnvConfigurer, ipamExecDel ipamExecDelFunc) error {
 type variableConfigurer interface {
 	getenv(string) string
 	setenv(string, string) error
+	unsetenv(string) error
 }
 
 type OsVariableConfigurer struct{}
@@ -380,6 +393,10 @@ func (ovc *OsVariableConfigurer) setenv(key, value string) error {
 	return os.Setenv(key, value)
 }
 
+func (ovc *OsVariableConfigurer) unsetenv(key string) error {
+	return os.Unsetenv(key)
+}
+
 func (ec *EnvConfigurer) setupVariable(key, value string) error {
 	if len(ec.varConf.getenv(key)) == 0 {
 		return ec.varConf.setenv(key, value)
@@ -387,9 +404,22 @@ func (ec *EnvConfigurer) setupVariable(key, value string) error {
 	return nil
 }
 
+func (ec *EnvConfigurer) unsetVariable(key string) error {
+	return ec.varConf.unsetenv(key)
+}
+
 func (ec *EnvConfigurer) setupEnvVariables(variables map[string]string) error {
 	for key, value := range variables {
 		if err := ec.setupVariable(key, value); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (ec *EnvConfigurer) unsetEnvVariables(variables map[string]string) error {
+	for key := range variables {
+		if err := ec.unsetVariable(key); err != nil {
 			return err
 		}
 	}
@@ -454,4 +484,63 @@ func getCommandFromPod(pods *v1.PodList, podName, containerName string) []string
 // GetDataDirPath will return path to cache directory of given type
 func GetDataDirPath(t string) string {
 	return path.Join(types.DataDir, t)
+}
+
+// VerifiedFilePath validates a file for potential file path traversal attacks.
+// It returns the real filepath after cleaning and evaluiating any symlinks in the path.
+// It returns error if the "fileName" is not within the "allowedDir", point to a non-privileged location or "fileName" points to a file outside of allowed dir.
+func VerifiedFilePath(fileName string, allowedDir string) (string, error) {
+	path := fileName
+	path = filepath.Clean(path)
+	if _, err := os.Lstat(path); err == nil {
+		realPath, err := filepath.EvalSymlinks(path)
+		if err != nil {
+			return "", fmt.Errorf("Unsafe or invalid path specified. %s", err)
+		}
+		path = realPath
+	}
+
+	inTrustedRoot := func(path string) error {
+		p := path
+		for p != "/" {
+			p = filepath.Dir(p)
+			if p == allowedDir {
+				return nil
+			}
+		}
+		return fmt.Errorf("path: %s is outside of permissible directory: %s", path, allowedDir)
+	}
+
+	err := inTrustedRoot(path)
+	if err != nil {
+		return "", fmt.Errorf("Unsafe or invalid path specified. %s", err.Error())
+	}
+	return path, nil
+}
+
+type grpcDialType func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error)
+
+func getHealthServerResponse(conn *grpc.ClientConn) (*healthpb.HealthCheckResponse, error) {
+	return healthpb.NewHealthClient(conn).Check(context.Background(), &healthpb.HealthCheckRequest{Service: ""})
+}
+
+// CheckGrpcServerStatus will check gRPC server status using gRPC health check
+func CheckGrpcServerStatus(target string, log *log.Entry, grpcDial grpcDialType) (bool, error) {
+	conn, err := grpcDial(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	defer func() {
+		if conn == nil {
+			return
+		}
+		if err := conn.Close(); err != nil {
+			log.WithError(err).Error("failed to close connection")
+		}
+	}()
+	if err != nil {
+		return false, err
+	}
+	resp, err := getHealthServerResponseFunc(conn)
+	if err != nil {
+		return false, err
+	}
+	return resp.Status == healthpb.HealthCheckResponse_SERVING, nil
 }

@@ -18,7 +18,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 	"gopkg.in/tomb.v2"
 )
@@ -30,11 +29,11 @@ var (
 	mockClient     *mock_proto.MockInfraAgentClient
 	grpcListener   *bufconn.Listener
 	socketListener *bufconn.Listener
+	ts             *testing.T
 )
 
 func TestPolicyServer(t *testing.T) {
-	mockCrtl = gomock.NewController(t)
-	mockClient = mock_proto.NewMockInfraAgentClient(mockCrtl)
+	ts = t
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Policy Server Test Suite")
 }
@@ -172,7 +171,8 @@ var _ = BeforeSuite(func() {
 	}
 
 	grpcDial = func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
-		return grpc.DialContext(context.TODO(), "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
+		cc := &grpc.ClientConn{}
+		return cc, nil
 	}
 
 	cancellableListener = func(ctx context.Context) (net.Listener, error) {
@@ -184,8 +184,15 @@ var _ = BeforeSuite(func() {
 	}
 })
 
-func testPolicyMsg(bs []byte, callExpect func(blockChan chan<- bool)) {
+func testPolicyMsg(bs []byte, callExpect *gomock.Call) {
 	var t tomb.Tomb
+
+	done := false
+
+	callExpect.DoAndReturn(func(_ interface{}, _ interface{}, _ ...interface{}) (*proto.Reply, error) {
+		done = true
+		return &proto.Reply{Successful: true}, nil
+	})
 
 	srv, err := NewPolicyServer(logrus.NewEntry(logrus.StandardLogger()))
 	Expect(err).ToNot(HaveOccurred())
@@ -201,33 +208,34 @@ func testPolicyMsg(bs []byte, callExpect func(blockChan chan<- bool)) {
 	conn, err := socketListener.Dial()
 	Expect(err).ShouldNot(HaveOccurred())
 
-	blockChan := make(chan bool)
-	callExpect(blockChan)
-
 	err = writeTo(conn, bs)
 	Expect(err).ShouldNot(HaveOccurred())
 
 	Eventually(func() bool {
-		callOccur := <-blockChan
-		return callOccur
-	}, "3s", "3s").Should(BeTrue())
+		return done
+	}, "3s").Should(Equal(true))
 
 	t.Kill(errors.New("stop"))
 	err = t.Wait()
 	Expect(err).To(HaveOccurred())
 	Expect(err.Error()).Should(Equal("stop"))
-	close(blockChan)
 }
 
 var _ = Describe("policy", func() {
 	var _ = BeforeEach(func() {
 		grpcListener = bufconn.Listen(bufSize)
 		socketListener = bufconn.Listen(bufSize)
+		mockCrtl = gomock.NewController(ts)
+		mockClient = mock_proto.NewMockInfraAgentClient(mockCrtl)
 	})
 
 	var _ = AfterEach(func() {
 		grpcListener.Close()
+		grpcListener = nil
 		socketListener.Close()
+		socketListener = nil
+		mockClient = nil
+		mockCrtl.Finish()
 	})
 
 	var _ = Context("SyncPolicy() should", func() {
@@ -239,12 +247,8 @@ var _ = Describe("policy", func() {
 
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().UpdateIPSet(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.IPSetUpdate) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().UpdateIPSet(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling IPSetRemove", func() {
@@ -253,12 +257,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().RemoveIPSet(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.IPSetRemove) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().RemoveIPSet(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling IPSetDeltaUpdate", func() {
@@ -267,12 +267,9 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().UpdateIPSetDelta(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.IPSetDeltaUpdate) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().UpdateIPSetDelta(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
+
 		})
 
 		var _ = It("return no error when handling ActivePolicyUpdate", func() {
@@ -282,12 +279,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().ActivePolicyUpdate(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.ActivePolicyUpdate) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().ActivePolicyUpdate(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling ActivePolicyRemove", func() {
@@ -296,12 +289,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().ActivePolicyRemove(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.ActivePolicyRemove) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().ActivePolicyRemove(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling ActiveProfileUpdate", func() {
@@ -311,12 +300,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().UpdateActiveProfile(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.ActiveProfileUpdate) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().UpdateActiveProfile(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling ActiveProfileRemove", func() {
@@ -325,12 +310,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().RemoveActiveProfile(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.ActiveProfileRemove) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().RemoveActiveProfile(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling HostEndpointUpdate", func() {
@@ -339,12 +320,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().UpdateHostEndpoint(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.HostEndpointUpdate) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().UpdateHostEndpoint(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling HostEndpointRemove", func() {
@@ -353,12 +330,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().RemoveHostEndpoint(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.HostEndpointRemove) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().RemoveHostEndpoint(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling WorkloadEndpointUpdate", func() {
@@ -367,12 +340,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().UpdateLocalEndpoint(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.WorkloadEndpointUpdate) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().UpdateLocalEndpoint(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling WorloadEndpointRemove", func() {
@@ -381,12 +350,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().RemoveLocalEndpoint(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.WorkloadEndpointRemove) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().RemoveLocalEndpoint(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling HostMetadataUpdate", func() {
@@ -395,12 +360,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().UpdateHostMetaData(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.HostMetadataUpdate) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().UpdateHostMetaData(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling HostMetadataRemove", func() {
@@ -409,12 +370,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().RemoveHostMetaData(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.HostMetadataRemove) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().RemoveHostMetaData(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling ServiceAccountUpdate", func() {
@@ -423,12 +380,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().UpdateServiceAccount(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.ServiceAccountUpdate) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().UpdateServiceAccount(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling ServiceAccountRemove", func() {
@@ -437,12 +390,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().RemoveServiceAccount(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.ServiceAccountRemove) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().RemoveServiceAccount(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling NamespaceUpdate", func() {
@@ -451,12 +400,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().UpdateNamespace(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.NamespaceUpdate) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().UpdateNamespace(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling NamespaceRemove", func() {
@@ -465,12 +410,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().RemoveNamespace(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.NamespaceRemove) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().RemoveNamespace(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling RouteUpdate", func() {
@@ -479,12 +420,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().UpdateRoute(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.RouteUpdate) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().UpdateRoute(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling RouteRemove", func() {
@@ -493,12 +430,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().RemoveRoute(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.RouteRemove) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().RemoveRoute(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling VXLANTunnelEndpointUpdate", func() {
@@ -507,12 +440,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().UpdateVXLANTunnelEndpoint(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.VXLANTunnelEndpointUpdate) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().UpdateVXLANTunnelEndpoint(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error when handling VXLANTunnelEndpointRemove", func() {
@@ -521,12 +450,8 @@ var _ = Describe("policy", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			bs, err := envelope.Marshal()
 			Expect(err).ShouldNot(HaveOccurred())
-			testPolicyMsg(bs, func(blockChan chan<- bool) {
-				mockClient.EXPECT().RemoveVXLANTunnelEndpoint(gomock.Any(), gomock.Any()).Times(1).DoAndReturn(func(_ context.Context, _ *proto.VXLANTunnelEndpointRemove) (*proto.Reply, error) {
-					blockChan <- true
-					return &proto.Reply{Successful: true}, nil
-				})
-			})
+			call := mockClient.EXPECT().RemoveVXLANTunnelEndpoint(gomock.Any(), gomock.Any()).Times(1)
+			testPolicyMsg(bs, call)
 		})
 
 		var _ = It("return no error on not handled messages", func() {

@@ -18,6 +18,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
+
+	log "github.com/sirupsen/logrus"
+)
+
+const (
+	storeFile = "/opt/inframanager/cni_db.json"
 )
 
 func isEndPointStoreEmpty() bool {
@@ -26,6 +33,48 @@ func isEndPointStoreEmpty() bool {
 	} else {
 		return false
 	}
+}
+
+func InitEndPointStore(setFwdPipe bool) bool {
+	flags := os.O_CREATE
+
+	/*
+		Initialize the store to empty while setting the
+		forwarding pipeline. It indicates that the p4-ovs
+		server has just started and pipeline is set.
+		And no stale forwarding rules should exist in the store.
+		Truncate if any entries from previous server runs.
+	*/
+	if setFwdPipe {
+		flags = flags | os.O_TRUNC
+	}
+
+	/* Create the store file if it doesn't exist */
+	file, err := os.OpenFile(storeFile, flags, 0600)
+	if err != nil {
+		log.Error("Failed to open", storeFile)
+		return false
+	}
+	file.Close()
+
+	data, err := os.ReadFile(storeFile)
+	if err != nil {
+		log.Error("Error reading ", storeFile, err)
+		return false
+	}
+
+	if len(data) == 0 {
+		return true
+	}
+
+	err = json.Unmarshal(data, &EndPointSet.EndPointMap)
+	if err != nil {
+		log.Error("Error unmarshalling data from ", storeFile, err)
+		return false
+	}
+
+	log.Infof("Map: " + fmt.Sprint(EndPointSet.EndPointMap))
+	return true
 }
 
 func (ep EndPoint) WriteToStore() bool {
@@ -49,17 +98,12 @@ func (ep EndPoint) DeleteFromStore() bool {
 	return true
 }
 
-func (ep EndPoint) GetFromStore() (store, error) {
-	if isEndPointStoreEmpty() {
-		return nil, nil
-	}
-
+func (ep EndPoint) GetFromStore() store {
 	res := EndPointSet.EndPointMap[ep.PodIpAddress]
 	if (res == EndPoint{}) {
-		err := fmt.Errorf("no match found for key %s", ep.PodIpAddress)
-		return nil, err
+		return nil
 	} else {
-		return res, nil
+		return res
 	}
 }
 
@@ -71,11 +115,15 @@ func (ep EndPoint) UpdateToStore() bool {
 func RunSyncEndPointInfo() bool {
 	jsonStr, err := json.MarshalIndent(EndPointSet.EndPointMap, "", " ")
 	if err != nil {
-		fmt.Println(err)
+		log.Errorf("Failed to marshal endpoint entries map %s", err)
 		return false
 	}
 
-	_ = ioutil.WriteFile("cni_add.json", jsonStr, 0777)
+	if err = ioutil.WriteFile(storeFile, jsonStr, 0600); err != nil {
+		log.Errorf("Failed to write entries to %s, err %s",
+			storeFile, err)
+		return false
+	}
 
 	return true
 }

@@ -15,13 +15,16 @@
 package inframanager
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path"
 
-	api "github.com/ipdk-io/k8s-infra-offload/inframanager/api-handler"
+	api "github.com/ipdk-io/k8s-infra-offload/inframanager/api_handler"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
+	"gopkg.in/tomb.v2"
 
-	"github.com/antoninbas/p4runtime-go-client/pkg/signals"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -31,7 +34,11 @@ const (
 
 func logInit() {
 	logFilename := path.Join(logDir, path.Base(os.Args[0])+".log")
-	logFile, err := os.OpenFile(logFilename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	verifiedFileName, err := utils.VerifiedFilePath(logFilename, logDir)
+	if err != nil {
+		panic(err)
+	}
+	logFile, err := os.OpenFile(verifiedFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		panic(err)
 	}
@@ -48,6 +55,7 @@ func logInit() {
 type Manager struct {
 	server *api.ApiServer
 	log    *log.Entry
+	t      tomb.Tomb
 }
 
 var manager *Manager
@@ -61,19 +69,23 @@ func NewManager() {
 
 func (m *Manager) createAndStartServer() {
 	m.server = api.CreateServer(m.log)
-	m.server.Start()
+	m.server.Start(&m.t)
 }
 
 func (m *Manager) stopServer() {
-	m.server.Stop()
+	m.t.Kill(fmt.Errorf("%s", "Stopping server"))
+	if err := m.t.Wait(); err != nil {
+		log.Errorf("stop server error %s", err)
+	}
 }
 
-func Run() {
-	signalChannel := signals.RegisterSignalHandlers()
+func Run(stopCh <-chan struct{}, waitCh chan<- struct{}) {
 
 	manager.createAndStartServer()
 
-	<-signalChannel
+	<-stopCh
 
 	manager.stopServer()
+	store.RunSyncEndPointInfo()
+	close(waitCh)
 }

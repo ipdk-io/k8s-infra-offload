@@ -24,71 +24,82 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-// Wait for Calico config file created in given location, if file does not exist wait until it will be created
-// for given time or forever if timeout == 0, returns errors on fail or nil if file was created
-func WaitForCalicoConfig(timeout time.Duration, configPath string) error {
-	// check if file exist
-	if _, err := os.Stat(configPath); err == nil {
-		return nil
-	}
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return err
-	}
-	defer watcher.Close()
-	done := make(chan bool)
-	quit := make(chan bool)
-
-	go handleEvents(watcher, done, quit, configPath)
-
-	if err := watcher.Add(path.Dir(configPath)); err != nil {
-		return err
-	}
-	// block
-	var result bool
-	if timeout > 0 {
-		// wait until timeout
-		select {
-		case <-time.After(timeout):
-			quit <- true
-			return fmt.Errorf("timeout while waiting for Calico config")
-		case result = <-done:
-			if !result {
-				return fmt.Errorf("error while waiting for a Calico config")
-			}
-			return nil
-		}
-	} else {
-		// wait forever
-		result = <-done
-		if !result {
-			return fmt.Errorf("error while waiting for a Calico config")
-		}
-	}
-
-	return nil
+// calicoWatcher can be used to wait for calico file
+type calicoWatcher struct {
+	timeout    time.Duration
+	configPath string
+	done       chan bool
+	quit       chan bool
+	errors     chan error
+	fsWatcher  *fsnotify.Watcher
 }
 
-func handleEvents(watcher *fsnotify.Watcher, done chan<- bool, quit <-chan bool, configPath string) {
+// NewCalicoWatcher returns new watcher for Calico's config file
+func NewCalicoWatcher(timeout time.Duration, configPath string, newFsWatcher func() (*fsnotify.Watcher, error)) (*calicoWatcher, error) {
+	done := make(chan bool)
+	quit := make(chan bool)
+	errors := make(chan error)
+	fsWatcher, err := newFsWatcher()
+	if err != nil {
+		return nil, err
+	}
+	return &calicoWatcher{
+		timeout:    timeout,
+		configPath: configPath,
+		done:       done,
+		quit:       quit,
+		errors:     errors,
+		fsWatcher:  fsWatcher,
+	}, nil
+}
+
+func (cw *calicoWatcher) initialCheck() bool {
+	if _, err := os.Stat(cw.configPath); err == nil {
+		return true
+	}
+	return false
+}
+
+func (cw *calicoWatcher) handleEvents() {
 	for {
 		select {
-		case event, ok := <-watcher.Events:
+		case event, ok := <-cw.fsWatcher.Events:
 			if !ok {
-				done <- false
+				cw.done <- false
+				cw.errors <- fmt.Errorf(event.String())
 				return
 			}
 			if event.Op&fsnotify.Create == fsnotify.Create {
-				fileName := path.Base(configPath)
+				fileName := path.Base(cw.configPath)
 				if strings.Contains(event.Name, fileName) {
-					done <- true
+					cw.done <- true
+					cw.errors <- nil
 					return
 				}
 			}
-		case <-watcher.Errors:
-			done <- false
+		case <-cw.fsWatcher.Errors:
+			cw.done <- false
+			cw.errors <- fmt.Errorf("watcher error")
 			return
-		case <-quit:
+		case <-cw.quit:
+			cw.errors <- fmt.Errorf("quit signal received")
 			return
 		}
 	}
+}
+
+func (cw *calicoWatcher) getChannels() (chan bool, chan bool, chan error) {
+	return cw.done, cw.quit, cw.errors
+}
+
+func (cw *calicoWatcher) getTimeout() time.Duration {
+	return cw.timeout
+}
+
+func (cw *calicoWatcher) addWatchedResources() error {
+	return cw.fsWatcher.Add(path.Dir(cw.configPath))
+}
+
+func (cw *calicoWatcher) close() error {
+	return cw.fsWatcher.Close()
 }

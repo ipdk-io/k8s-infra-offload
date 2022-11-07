@@ -19,7 +19,9 @@ import (
 	"net"
 	"os"
 	"path"
+	"time"
 
+	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	"github.com/mdlayher/arp"
 	log "github.com/sirupsen/logrus"
 )
@@ -30,7 +32,12 @@ const (
 
 func logInit() {
 	logFilename := path.Join(logDir, path.Base(os.Args[0])+".log")
-	logFile, err := os.OpenFile(logFilename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	verifiedFileName, err := utils.VerifiedFilePath(logFilename, logDir)
+	if err != nil {
+		panic(err)
+	}
+
+	logFile, err := os.OpenFile(verifiedFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		panic(err)
 	}
@@ -45,6 +52,7 @@ func logInit() {
 }
 
 func runARPProxy(client *arp.Client, ifi *net.Interface) {
+	log.Info("ARP Proxy started!")
 	// Handle ARP requests
 	for {
 		pkt, _, err := client.Read()
@@ -92,14 +100,23 @@ func main() {
 	// Ensure valid interface name
 	ifi, err := net.InterfaceByName(ifaceName)
 	if err != nil {
-		log.Fatal(err)
+		log.Debugf("Interface %s not found. Waiting for the interface to be up. (Error msg: %s)", ifaceName, err)
+	}
+	for err != nil {
+		time.Sleep(100 * time.Millisecond)
+		ifi, err = net.InterfaceByName(ifaceName)
 	}
 
 	// Create ARP Proxy that listens for ARP requests on the above interface
 	client, err := arp.Dial(ifi)
 	if err != nil {
-		log.Fatalf("Couldn't create ARP Proxy: %s", err)
+		log.Debugf("Waiting for IP address to be assigned. (Error msg: %s)", err)
 	}
+	for err != nil {
+		time.Sleep(100 * time.Millisecond)
+		client, err = arp.Dial(ifi)
+	}
+	log.Infof("Interface %s found with valid IP address. Ready to start ARP Proxy.", ifaceName)
 
 	// Run ARP Proxy
 	runARPProxy(client, ifi)

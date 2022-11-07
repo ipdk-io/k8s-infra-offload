@@ -54,6 +54,17 @@ spec:
         volumeMounts:
         - name: cni-net
           mountPath: /etc/cni/net.d
+      - name: wait-for-manager
+        image: infraagent:latest
+        imagePullPolicy: Always
+        command:
+        - /infraagent
+        - checkManager
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
       containers:
       - name: agent
         image: infraagent:latest
@@ -84,6 +95,8 @@ spec:
           mountPath: /etc/infra/
         - name: cache
           mountPath: /var/lib/cni/infraagent
+        - name: cni-cache
+          mountPath: /var/lib/cni/networks
         command:
         - /infraagent
       volumes:
@@ -113,6 +126,9 @@ spec:
         hostPath:
           path: /var/lib/cni/infraagent
           type: DirectoryOrCreate
+      - name: cni-cache
+        hostPath:
+          path: /var/lib/cni/networks
   updateStrategy:
     rollingUpdate:
       maxUnavailable: 1

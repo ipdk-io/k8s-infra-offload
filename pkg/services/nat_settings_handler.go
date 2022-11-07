@@ -40,23 +40,24 @@ func NewNatServiceHandler(log *logrus.Entry) *ServiceHandler {
 	return &ServiceHandler{log: log}
 }
 
-func (s *ServiceHandler) dialManager() (pb.InfraAgentClient, error) {
+func (s *ServiceHandler) dialManager() (pb.InfraAgentClient, *grpc.ClientConn, error) {
 	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
 	s.log.Info("dialer using manager address: ", managerAddr)
 	conn, err := grpcDial(managerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		s.log.Errorf("unable to dial Infra Manager. err %v", err)
-		return nil, err
+		return nil, nil, err
 	}
-	return newInfraAgentClient(conn), nil
+	return newInfraAgentClient(conn), conn, nil
 }
 
 func (s *ServiceHandler) NatTranslationAdd(translation *pb.NatTranslation) error {
 	s.log.Infof("NatTranslationAdd endpoint %v", translation)
-	c, err := s.dialManager()
+	c, conn, err := s.dialManager()
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 	reply, err := c.NatTranslationAdd(context.TODO(), translation)
 	if err != nil {
 		s.log.Errorf("Error calling  infra manager NatTranslationAdd serivce: %v", err)
@@ -70,10 +71,11 @@ func (s *ServiceHandler) NatTranslationAdd(translation *pb.NatTranslation) error
 
 func (s *ServiceHandler) SetSnatAddress(ip string) error {
 	s.log.Info("SetSnatAddress")
-	c, err := s.dialManager()
+	c, conn, err := s.dialManager()
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 	reply, _ := c.SetSnatAddress(context.TODO(), &pb.SetSnatAddressRequest{SnatIpv4: ip, SnatIpv6: ""})
 	if !reply.Successful {
 		return errors.New(reply.ErrorMessage)
@@ -83,10 +85,11 @@ func (s *ServiceHandler) SetSnatAddress(ip string) error {
 
 func (s *ServiceHandler) AddDelSnatPrefix(ip string, isAdd bool) error {
 	s.log.Info("AddDelSnatPrefix")
-	c, err := s.dialManager()
+	c, conn, err := s.dialManager()
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 	reply, _ := c.AddDelSnatPrefix(context.TODO(), &pb.AddDelSnatPrefixRequest{IsAdd: isAdd, Prefix: ip})
 	if !reply.Successful {
 		return errors.New(reply.ErrorMessage)
@@ -96,10 +99,11 @@ func (s *ServiceHandler) AddDelSnatPrefix(ip string, isAdd bool) error {
 
 func (s *ServiceHandler) NatTranslationDelete(translation *pb.NatTranslation) error {
 	s.log.Infof("NatTranslationDelete %v", translation)
-	c, err := s.dialManager()
+	c, conn, err := s.dialManager()
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 	reply, _ := c.NatTranslationDelete(context.TODO(), translation)
 	if !reply.Successful {
 		return errors.New(reply.ErrorMessage)

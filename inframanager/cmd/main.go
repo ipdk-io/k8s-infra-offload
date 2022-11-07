@@ -21,11 +21,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	conf "github.com/ipdk-io/k8s-infra-offload/inframanager/config"
+	conf "github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/config"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
 
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
 	"github.com/antoninbas/p4runtime-go-client/pkg/signals"
-	api "github.com/ipdk-io/k8s-infra-offload/inframanager/api-handler"
+	api "github.com/ipdk-io/k8s-infra-offload/inframanager/api_handler"
 	mgr "github.com/ipdk-io/k8s-infra-offload/pkg/inframanager"
 )
 
@@ -39,17 +40,25 @@ func main() {
 
 	api.PutConf(config)
 
-	p4InfoPath, _ := filepath.Abs(config.P4InfoPath)
-	p4BinPath, _ := filepath.Abs(config.P4BinPath)
+	p4InfoPath, err := filepath.Abs(config.P4InfoPath)
+	if err != nil {
+		log.Fatalf("Failed to get absolute representation of path %s",
+			config.P4InfoPath)
+	}
+	p4BinPath, err := filepath.Abs(config.P4BinPath)
+	if err != nil {
+		log.Fatalf("Failed to get absolute representation of path %s",
+			config.P4BinPath)
+	}
 
 	ctx := context.Background()
 	stopCh := signals.RegisterSignalHandlers()
 
 	api.NewApiServer()
+	store.NewEndPoint()
 
 	if err := api.OpenP4RtC(ctx, 0, 1, stopCh); err != nil {
-		log.Infof("Failed to open p4 runtime client connection")
-		api.CloseCon()
+		log.Errorf("Failed to open p4 runtime client connection")
 		os.Exit(1)
 	}
 	defer api.CloseCon()
@@ -59,20 +68,30 @@ func main() {
 	if err == nil {
 		log.Infof("pipeline is already set")
 		if pipelineConfig.P4Info == nil {
-			log.Fatalf("p4info is null")
+			log.Errorf("p4info is null")
+			api.CloseCon()
+			os.Exit(1)
 		}
+		store.InitEndPointStore(false)
 	} else {
 		// Setting fwding pipeline
 		log.Infof("Setting the pipeline")
 
-		if _, err := api.SetFwdPipe(ctx, p4BinPath, p4InfoPath, 0); err != nil {
-			log.Fatalf("Error when setting forwarding pipe: %v", err)
+		if _, err := api.SetFwdPipe(ctx, p4BinPath, p4InfoPath,
+			0); err != nil {
+			log.Errorf("Error when setting forwarding pipe: %v", err)
+			api.CloseCon()
+			os.Exit(1)
 		}
+		store.InitEndPointStore(true)
 	}
 
 	// Starting inframanager gRPC server
+	waitCh := make(chan struct{})
 	mgr.NewManager()
-	go mgr.Run()
+	go mgr.Run(stopCh, waitCh)
 
-	<-stopCh
+	// Wait till manager is exited
+	<-waitCh
+	log.Infof("Exiting program")
 }

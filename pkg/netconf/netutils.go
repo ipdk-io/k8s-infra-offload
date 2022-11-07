@@ -15,15 +15,51 @@
 package netconf
 
 import (
+	"context"
 	"fmt"
 	"net"
 
 	"github.com/containernetworking/plugins/pkg/ip"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	pb "github.com/ipdk-io/k8s-infra-offload/proto"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+)
+
+const nonTargetIP = "0.0.0.0/0"
+
+var (
+	addrAdd                         = netlink.AddrAdd
+	addrDel                         = netlink.AddrDel
+	addrList                        = netlink.AddrList
+	configureRoutingFunc            = configureRouting
+	getCurrentNS                    = ns.GetCurrentNS
+	getIPFromIPAM                   = utils.GetIPFromIPAM
+	getNS                           = ns.GetNS
+	grpcDial                        = grpc.Dial
+	ipAddRoute                      = ip.AddRoute
+	linkByName                      = netlink.LinkByName
+	linkSetDown                     = netlink.LinkSetDown
+	linkSetMTU                      = netlink.LinkSetMTU
+	linkSetName                     = netlink.LinkSetName
+	linkSetNsFd                     = netlink.LinkSetNsFd
+	linkSetUp                       = netlink.LinkSetUp
+	movePodInterfaceToHostNetnsFunc = movePodInterfaceToHostNetns
+	newInfraAgentClient             = pb.NewInfraAgentClient
+	readInterfaceConf               = utils.ReadInterfaceConf
+	releaseIPFromIPAM               = utils.ReleaseIPFromIPAM
+	routeAdd                        = netlink.RouteAdd
+	routeDel                        = netlink.RouteDel
+	routeListFiltered               = netlink.RouteListFiltered
+	saveInterfaceConf               = utils.SaveInterfaceConf
+	sendSetupHostInterfaceFunc      = sendSetupHostInterface
+	withNetNSPath                   = ns.WithNetNSPath
+	utilsGetDataDirPath             = utils.GetDataDirPath
 )
 
 type nsError struct{ msg string }
@@ -47,7 +83,7 @@ func setupContainerRoutes(link netlink.Link, gw net.IP, containerRoutes []string
 			logger.WithField("route", rip).Debug("Skipping non-IPv4 route")
 			continue
 		}
-		if err = ip.AddRoute(rn, gw, link); err != nil {
+		if err = ipAddRoute(rn, gw, link); err != nil {
 			return fmt.Errorf("failed to add IPv4 route for %v via %v: %v", r, gw, err)
 		}
 	}
@@ -67,16 +103,16 @@ func setLinkAddress(link netlink.Link, containerIps []*pb.IPConfig) error {
 
 		logger.Infof("Address to set %+v", addr)
 		// add the IPs to the container side of the interface
-		if err = netlink.AddrAdd(link, &netlink.Addr{IPNet: addr.IPNet}); err != nil {
+		if err = addrAdd(link, &netlink.Addr{IPNet: addr.IPNet}); err != nil {
 			return fmt.Errorf("failed to add IP addr to %q: %v", link, err)
 		}
 	}
 	return nil
 }
 
-func setupPodRoute(link netlink.Link, containerRoutes []string) error {
+func setupPodRoute(link netlink.Link, containerRoutes []string, gateway string) error {
 	// we need to setup default route via eth0
-	gw, err := netlink.ParseAddr("0.0.0.0/0")
+	gw, err := netlink.ParseAddr(gateway)
 	if err != nil {
 		return err
 	}
@@ -96,7 +132,7 @@ func setupHostRoute(addr *net.IPNet, link netlink.Link) error {
 	routeFilter := &netlink.Route{
 		Dst: addr,
 	}
-	rl, err := netlink.RouteListFiltered(netlink.FAMILY_V4,
+	rl, err := routeListFiltered(netlink.FAMILY_V4,
 		routeFilter, netlink.RT_FILTER_DST)
 	if err != nil {
 		return err
@@ -111,13 +147,13 @@ func setupHostRoute(addr *net.IPNet, link netlink.Link) error {
 			// if route exists for the CIDR, but it is not identical
 			// (e.g. different interface) delete it
 			log.Infof("Deleting route: %v", r)
-			_ = netlink.RouteDel(&r)
+			_ = routeDel(&r)
 		}
 	}
 
 	if !routeFound {
 		// route does not exist add it
-		if err := netlink.RouteAdd(&podRoute); err != nil {
+		if err := routeAdd(&podRoute); err != nil {
 			return err
 		}
 	}
@@ -125,30 +161,82 @@ func setupHostRoute(addr *net.IPNet, link netlink.Link) error {
 	return nil
 }
 
+func configureRoutingForCIDR(link netlink.Link, cidr string, log *logrus.Entry) error {
+	// get first address from Pod CIDR
+	// TODO add ipv6 support
+	log.Infof("CIDR %s", cidr)
+	addr, err := netlink.ParseAddr(cidr)
+	if err != nil {
+		return err
+	}
+
+	// setup routing from pods CIDR via VF[0]
+	// check if it exist already
+	if err := setupHostRoute(addr.IPNet, link); err != nil {
+		return fmt.Errorf("Failed to setup route to CIDR: %w", err)
+	}
+
+	return nil
+}
+
+func configureRouting(link netlink.Link, log *logrus.Entry) error {
+	if err := configureRoutingForCIDR(link, types.ClusterPodsCIDR, log); err != nil {
+		return fmt.Errorf("Failed to setup routing to Cluster CIDR: %w", err)
+	}
+	if err := configureRoutingForCIDR(link, types.NodePodsCIDR, log); err != nil {
+		return fmt.Errorf("Failed to setup routing to Pods CIDR: %w", err)
+	}
+	return nil
+}
+
+func sendSetupHostInterface(request *pb.SetupHostInterfaceRequest) error {
+	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
+	conn, err := grpcDial(managerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	// defer func() {
+	// 	if conn == nil {
+	// 		return
+	// 	}
+	// 	_ = conn.Close()
+	// }()
+	c := newInfraAgentClient(conn)
+	r, err := c.SetupHostInterface(context.TODO(), request)
+	if err != nil {
+		return err
+	}
+	if !r.Successful {
+		return fmt.Errorf("failed to SetupHostInterface error %s", r.ErrorMessage)
+	}
+	return nil
+}
+
 func movePodInterfaceToHostNetns(netNSPath, interfaceName string, ifInfo *types.InterfaceInfo) error {
 	logger := log.WithField("func", "moveInterfaceToHostNetns").WithField("pkg", "netconf")
 	logger.Info("Moving Pod interface to host netns")
 
-	rootns, err := ns.GetCurrentNS()
+	rootns, err := getCurrentNS()
 	if err != nil {
 		logger.WithError(err).Error("cannot get current network namespace")
 		return err
 	}
 
-	err = ns.WithNetNSPath(netNSPath, func(_ ns.NetNS) error {
-		linkObj, err := netlink.LinkByName(interfaceName)
+	err = withNetNSPath(netNSPath, func(_ ns.NetNS) error {
+		linkObj, err := linkByName(interfaceName)
 		if err != nil {
 			logger.WithError(err).Errorf("failed to find netlink device with name %s", interfaceName)
 			return err
 		}
-		if err = netlink.LinkSetDown(linkObj); err != nil {
+		if err = linkSetDown(linkObj); err != nil {
 			return err
 		}
 		// restore original interface name
-		if err = netlink.LinkSetName(linkObj, ifInfo.InterfaceName); err != nil {
+		if err = linkSetName(linkObj, ifInfo.InterfaceName); err != nil {
 			return err
 		}
-		return netlink.LinkSetNsFd(linkObj, int(rootns.Fd()))
+		return linkSetNsFd(linkObj, int(rootns.Fd()))
 	})
 	// namespace might be already deleted do not return error
 	if err != nil {
