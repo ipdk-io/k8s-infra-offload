@@ -19,10 +19,8 @@ const bit<16> ETHERTYPE_ARP  = 0x0806;
 const bit<8>  IP_PROTO_TCP   = 0x06;
 const bit<8> IP_PROTO_UDP = 0x11;
 
-typedef bit<8> ActCommit_t;
 typedef bit<16> ActionRef_t;
 typedef bit<24> ModDataPtr_t;
-typedef bit<8> Atr_t;
 
 const ActionRef_t WRITE_SRC_IP = (ActionRef_t) 1;
 const ActionRef_t WRITE_DEST_IP = (ActionRef_t) 2;
@@ -119,8 +117,6 @@ struct main_metadata_t {
 	ActionRef_t mod_action;
 	ModDataPtr_t mod_blob_ptr_dnat;
 	ModDataPtr_t mod_blob_ptr_snat;
-	ActCommit_t act_commit;
-	PNA_Direction_t direction;
 }
 
 #define ARP_REQUEST	 1
@@ -130,9 +126,7 @@ struct main_metadata_t {
 #define IS_IPV4_TCP (hdr.ipv4.protocol == IP_PROTO_TCP)
 #define IS_IPV4_UDP (hdr.ipv4.protocol == IP_PROTO_UDP)
 
-extern void recirculate();
-
-bool TCP_SYN_flag_set(in bit<8> flags) {
+bool tcp_syn_flag_set(in bit<8> flags) {
 	bool flag = (flags == 0x02);
 	return flag;
 }
@@ -270,6 +264,15 @@ control k8s_dp_control(
 		size = 2048;
 	}
 
+	action set_dest_mac_vport(PortId_t p, bit<48> new_dmac) {
+        	/* Replace DMAC if supplied and if needed */
+		if ((new_dmac != (bit<48>) 0) && (new_dmac != hdr.ethernet.dst_mac)) {
+			hdr.ethernet.src_mac = hdr.ethernet.dst_mac;
+			hdr.ethernet.dst_mac = new_dmac;
+		}
+		send_to_port(p);
+    }
+
 	action set_dest_vport(PortId_t p) {
 		send_to_port(p);
 	}
@@ -278,10 +281,9 @@ control k8s_dp_control(
 		drop_packet();
 	}
 
-
 	/* The Target IP based forwarding table. Used only for ARP Request
 	 * broadcast packets */
-	table ipv4_to_port_table {
+	table arpt_to_port_table {
 		key = {
 			hdr.arp.tpa : exact;
 		}
@@ -291,6 +293,19 @@ control k8s_dp_control(
 		}
 
 		const default_action = set_dest_vport(DEFAULT_HOST_PORT);
+	}
+
+	/* The destination IP based forwarding table. Used for all IP packets */
+	table ipv4_to_port_table {
+		key = {
+			hdr.ipv4.dst_addr : exact;
+		}
+
+		actions = {
+			set_dest_mac_vport;
+		}
+
+		const default_action = set_dest_mac_vport(DEFAULT_HOST_PORT, 0);
 	}
 
 	/* The DMAC based forwarding table. Used for all traffic except ARP
@@ -515,8 +530,8 @@ control k8s_dp_control(
 		create_reverse_ct = false;
 
 		if (IS_IPV4_TCP) {
-			if (TCP_SYN_flag_set(hdr.tcp.flags)) {
-			        if (!(tx_balance_tcp.apply().miss)) {
+			if (tcp_syn_flag_set(hdr.tcp.flags)) {
+			        if (tx_balance_tcp.apply().hit) {
 		        		do_clb_pinned_flows_add_on_miss = true;
 					create_reverse_ct = true;
 					save_to_meta_tcp(hdr, meta);
@@ -530,7 +545,7 @@ control k8s_dp_control(
 			}
 		} else {
 			if (IS_IPV4_UDP) {
-				if(!(tx_balance_udp.apply().miss)) {
+				if (tx_balance_udp.apply().hit) {
 					create_reverse_ct = true;
 					do_clb_pinned_flows_add_on_miss = true;
 					save_to_meta_udp(hdr, meta);
@@ -567,10 +582,13 @@ control k8s_dp_control(
 		}
 
 		/* The brodcast ARP Request pkts are forwarded based upon target IP
-		 * address. Rest all are forwarded based upon DMAC */
+		* address. All IP packets are forwarded based upon DIP and all
+		* non-IP packets are forwarded based upon DMAC */
 		if (hdr.arp.isValid() && hdr.arp.oper == ARP_REQUEST) {
+			arpt_to_port_table.apply();
+		} else if (hdr.ipv4.isValid()) {
 			ipv4_to_port_table.apply();
-		} else if (hdr.ethernet.isValid()) {
+		} else {
 			mac_to_port_table.apply();
 		}
 	}
@@ -580,7 +598,7 @@ control packet_deparser(
 	packet_out pkt,
 	in	   headers_t hdr,                // from main control
 	in	   main_metadata_t user_meta,    // from main control
-	in	   pna_main_output_metadata_t ost)
+	in	   pna_main_output_metadata_t ostd)
 {
 	apply {
 		pkt.emit(hdr);
