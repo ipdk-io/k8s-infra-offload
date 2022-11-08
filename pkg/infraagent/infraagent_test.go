@@ -40,36 +40,40 @@ func TestInfraagent(t *testing.T) {
 var _ = Describe("Infraagent", func() {
 	var _ = Context("NewAgent() should", func() {
 		var _ = It("return agent", func() {
-			a := NewAgent("dummy", "interface", tempDir, nil)
+			a, err := NewAgent("dummy", "interface", tempDir, nil)
 			Expect(a).ToNot(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 	var _ = Context("startServer() should", func() {
 		var _ = It("return no error", func() {
-			a := NewAgent("dummy", "interface", tempDir, nil)
+			a, err := NewAgent("dummy", "interface", tempDir, nil)
 			Expect(a).ToNot(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			agent, ok := a.(*agent)
 			Expect(ok).To(BeTrue())
-			err := agent.startServer("dummy", fakeServe)
+			err = agent.startServer("dummy", fakeServe)
 			Expect(err).ToNot(HaveOccurred())
 		})
 		var _ = It("return error", func() {
-			a := NewAgent("dummy", "interface", tempDir, nil)
+			a, err := NewAgent("dummy", "interface", tempDir, nil)
 			Expect(a).ToNot(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			agent, ok := a.(*agent)
 			Expect(ok).To(BeTrue())
 			_ = agent.startServer("dummy", fakeServeErr)
-			err := agent.t.Wait()
+			err = agent.t.Wait()
 			Expect(err).To(HaveOccurred())
 		})
 	})
 	var _ = Context("setConfig() should", func() {
 		var _ = It("return error if NODE_NAME env is not set", func() {
-			a := NewAgent("dummy", "interface", tempDir, nil)
+			a, err := NewAgent("dummy", "interface", tempDir, nil)
 			Expect(a).ToNot(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			agent, ok := a.(*agent)
 			Expect(ok).To(BeTrue())
-			err := agent.setConfig()
+			err = agent.setConfig()
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return error if can't get node's interface", func() {
@@ -78,8 +82,9 @@ var _ = Describe("Infraagent", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			client := fake.NewSimpleClientset(nodeList)
-			a := NewAgent("dummy", "", tempDir, client)
+			a, err := NewAgent("dummy", "", tempDir, client)
 			Expect(a).ToNot(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			agent, ok := a.(*agent)
 			Expect(ok).To(BeTrue())
 			types.NodeName = "dummyNode"
@@ -88,12 +93,13 @@ var _ = Describe("Infraagent", func() {
 		})
 		var _ = It("return error if can't get NodePodsCIDR", func() {
 			client := fake.NewSimpleClientset()
-			a := NewAgent("dummy", "dummyIf", tempDir, client)
+			a, err := NewAgent("dummy", "dummyIf", tempDir, client)
 			Expect(a).ToNot(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			agent, ok := a.(*agent)
 			Expect(ok).To(BeTrue())
 			types.NodeName = "dummyNode"
-			err := agent.setConfig()
+			err = agent.setConfig()
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return error if can't get  subnets", func() {
@@ -102,8 +108,10 @@ var _ = Describe("Infraagent", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			client := fake.NewSimpleClientset(nodeList)
-			a := NewAgent("dummy", "dummyIf", tempDir, client)
+
+			a, err := NewAgent("dummy", "dummyIf", tempDir, client)
 			Expect(a).ToNot(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			agent, ok := a.(*agent)
 			Expect(ok).To(BeTrue())
 			types.NodeName = "dummyNode"
@@ -120,8 +128,9 @@ var _ = Describe("Infraagent", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			client := fake.NewSimpleClientset(nodeList, podList)
-			a := NewAgent("dummy", "dummyIf", tempDir, client)
+			a, err := NewAgent("dummy", "dummyIf", tempDir, client)
 			Expect(a).ToNot(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			agent, ok := a.(*agent)
 			Expect(ok).To(BeTrue())
 			types.NodeName = "dummyNode"
@@ -131,23 +140,25 @@ var _ = Describe("Infraagent", func() {
 	})
 	var _ = Context("startServers() should", func() {
 		var _ = It("return no error", func() {
-			a := NewAgent("dummy", "dummyIf", tempDir, nil)
+			a, err := NewAgent("dummy", "dummyIf", tempDir, nil)
 			Expect(a).ToNot(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			agent, ok := a.(*agent)
 			Expect(ok).To(BeTrue())
 			servers := []types.Server{&fakeServer{}, &fakeServer{}, &fakeServer{}, &fakeServer{}}
-			err := agent.startServers(servers)
+			err = agent.startServers(servers)
 			Expect(err).ToNot(HaveOccurred())
 			agent.stopServers()
 		})
 		var _ = It("return error if any server failed", func() {
-			a := NewAgent("dummy", "dummyIf", tempDir, nil)
+			a, err := NewAgent("dummy", "dummyIf", tempDir, nil)
 			Expect(a).ToNot(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			agent, ok := a.(*agent)
 			Expect(ok).To(BeTrue())
 			servers := []types.Server{&fakeServer{}, &fakeServer{}, &fakeServerErr{}, &fakeServer{}}
 			_ = agent.startServers(servers)
-			err := agent.t.Wait()
+			err = agent.t.Wait()
 			Expect(err).To(HaveOccurred())
 			agent.stopServers()
 		})

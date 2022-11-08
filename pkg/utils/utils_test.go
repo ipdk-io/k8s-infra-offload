@@ -15,6 +15,7 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,10 +28,15 @@ import (
 	cniTypes "github.com/containernetworking/cni/pkg/types"
 	cni40 "github.com/containernetworking/cni/pkg/types/040"
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
+	"github.com/fsnotify/fsnotify"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
@@ -184,7 +190,7 @@ var _ = Describe("utils", func() {
 			Expect(err).ToNot(HaveOccurred())
 			client := fake.NewSimpleClientset(nodeList)
 			addrGetterMock := interfaceAddressGetterMock{}
-			_, err = GetNodeNetInterface(client, nodeName, &addrGetterMock)
+			_, err = GetNodeNetInterface(client, nodeName, &addrGetterMock, logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -194,7 +200,7 @@ var _ = Describe("utils", func() {
 			Expect(err).ToNot(HaveOccurred())
 			client := fake.NewSimpleClientset(nodeList)
 			addrGetterMock := interfaceAddressGetterMock{}
-			_, err = GetNodeNetInterface(client, nodeName, &addrGetterMock)
+			_, err = GetNodeNetInterface(client, nodeName, &addrGetterMock, logrus.NewEntry(logrus.New()))
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -527,20 +533,20 @@ var _ = Describe("utils", func() {
 	var _ = Context("getInterface() should", func() {
 		var _ = It("return no error if interface is found", func() {
 			addrGetterMock := interfaceAddressGetterMock{}
-			ifName, err := getInterface(ifList, internalIP, &addrGetterMock)
+			ifName, err := getInterface(ifList, internalIP, &addrGetterMock, logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(ifName).To(Equal(testInterfacefName))
 		})
 
 		var _ = It("return error if master interface is not found", func() {
 			addrGetterMock := interfaceAddressGetterMock{}
-			_, err := getInterface(ifList, "42.42.42.42", &addrGetterMock)
+			_, err := getInterface(ifList, "42.42.42.42", &addrGetterMock, logrus.NewEntry(logrus.New()))
 			Expect(err).To(HaveOccurred())
 		})
 
 		var _ = It("return error if address getter returns error", func() {
 			addrGetterMock := interfaceAddressGetterMockErr{}
-			_, err := getInterface(ifList, internalIP, &addrGetterMock)
+			_, err := getInterface(ifList, internalIP, &addrGetterMock, logrus.NewEntry(logrus.New()))
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -574,10 +580,11 @@ var _ = Describe("utils", func() {
 				},
 			}
 			_, tearDown, err := fs.Use(tempDir)
-			// calicoFakeCfg, tearDown, err := prepareCalicoConfig(tempDir, calicoConfig)
 			Expect(err).ToNot(HaveOccurred())
 			defer tearDown()
-			err = WaitForCalicoConfig(time.Microsecond*20, filepath.Join(tempDir, types.DefaultCalicoConfig))
+			watcher, err := NewCalicoWatcher(time.Microsecond*20, filepath.Join(tempDir, types.DefaultCalicoConfig), fsnotify.NewWatcher)
+			Expect(err).ToNot(HaveOccurred())
+			err = WaitFor(watcher)
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -585,7 +592,9 @@ var _ = Describe("utils", func() {
 			calicoFakeCfg, tearDown, err := prepareCalicoConfig(tempDir, calicoConfig)
 			Expect(err).ToNot(HaveOccurred())
 			defer tearDown()
-			err = WaitForCalicoConfig(time.Second, calicoFakeCfg)
+			watcher, err := NewCalicoWatcher(time.Second, calicoFakeCfg, fsnotify.NewWatcher)
+			Expect(err).ToNot(HaveOccurred())
+			err = WaitFor(watcher)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -595,10 +604,12 @@ var _ = Describe("utils", func() {
 			Expect(err).ToNot(HaveOccurred())
 			check_done := false
 			spin_done := false
+			watcher, err := NewCalicoWatcher(0, configPath, fsnotify.NewWatcher)
+			Expect(err).ToNot(HaveOccurred())
 			go func() {
 				defer GinkgoRecover()
 				spin_done = true
-				err := WaitForCalicoConfig(0, configPath)
+				err := WaitFor(watcher)
 				Expect(err).ToNot(HaveOccurred())
 				check_done = true
 			}()
@@ -624,6 +635,261 @@ var _ = Describe("utils", func() {
 			pods := &v1.PodList{}
 			res := getCommandFromPod(pods, "", "")
 			Expect(res).To(BeNil())
+		})
+	})
+
+	var _ = Context("VerifiedFilePath() should", func() {
+		var _ = It("return no error with log file name that does not exist in allowed dir", func() {
+			logDir := "/var/log/infraagent"
+			logFile := "/var/log/infraagent/infraagent.log"
+			fs := &FakeFilesystem{
+				Dirs: []string{
+					logDir,
+				},
+			}
+			_, tearDown, err := fs.Use(tempDir)
+			Expect(err).ToNot(HaveOccurred())
+			defer tearDown()
+			actualFilePath, err := VerifiedFilePath(filepath.Join(tempDir, logFile), filepath.Join(tempDir, logDir))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actualFilePath).To(Equal(filepath.Join(tempDir, logFile)))
+		})
+		var _ = It("return no error with log file name that already exists in allowed dir", func() {
+			logDir := "/var/log/infraagent"
+			logFile := "/var/log/infraagent/infraagent.log"
+			fs := &FakeFilesystem{
+				Dirs: []string{
+					logDir,
+				},
+				Files: map[string][]byte{
+					logFile: []byte(""),
+				},
+			}
+			_, tearDown, err := fs.Use(tempDir)
+			Expect(err).ToNot(HaveOccurred())
+			defer tearDown()
+			actualFilePath, err := VerifiedFilePath(filepath.Join(tempDir, logFile), filepath.Join(tempDir, logDir))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actualFilePath).To(Equal(filepath.Join(tempDir, logFile)))
+		})
+		var _ = It("return error with a log file that is not in the allowed dir", func() {
+			logDir := "/var/log/infraagent"
+			logFile := "/var/log/anotherDir/infraagent.log"
+			fs := &FakeFilesystem{
+				Dirs: []string{
+					logDir,
+					"/var/log/anotherDir",
+				},
+				Files: map[string][]byte{
+					logFile: []byte(""),
+				},
+			}
+			_, tearDown, err := fs.Use(tempDir)
+			Expect(err).NotTo(HaveOccurred())
+			defer tearDown()
+			actualFilePath, err := VerifiedFilePath(filepath.Join(tempDir, logFile), filepath.Join(tempDir, logDir))
+			Expect(err).To(HaveOccurred())
+			Expect(actualFilePath).To(Equal(""))
+		})
+		var _ = It("return error with a log file with symlink outside of allowed dir", func() {
+			logDir := "/var/log/infraagent"
+			logFile := "/var/log/infraagent/infraagent.log"
+			otherFile := "/var/log/anotherDir/infraagent.log"
+			fs := &FakeFilesystem{
+				Dirs: []string{
+					logDir,
+					"/var/log/anotherDir",
+				},
+				Files: map[string][]byte{
+					otherFile: []byte(""),
+				},
+				Symlinks: map[string]string{
+					logFile: "../anotherDir/infraagent.log",
+				},
+			}
+			_, tearDown, err := fs.Use(tempDir)
+			Expect(err).NotTo(HaveOccurred())
+			defer tearDown()
+			actualFilePath, err := VerifiedFilePath(filepath.Join(tempDir, logFile), filepath.Join(tempDir, logDir))
+			Expect(err).To(HaveOccurred())
+			Expect(actualFilePath).To(Equal(""))
+		})
+		var _ = It("return no error with a log file with symlink inside the allowed dir", func() {
+			logDir := "/var/log/infraagent"
+			logFile := "/var/log/infraagent/infraagent.log"
+			otherFile := "/var/log/infraagent/otherfile.log"
+			fs := &FakeFilesystem{
+				Dirs: []string{
+					logDir,
+				},
+				Files: map[string][]byte{
+					otherFile: []byte(""),
+				},
+				Symlinks: map[string]string{
+					logFile: "otherfile.log",
+				},
+			}
+			_, tearDown, err := fs.Use(tempDir)
+			Expect(err).NotTo(HaveOccurred())
+			defer tearDown()
+			actualFilePath, err := VerifiedFilePath(filepath.Join(tempDir, logFile), filepath.Join(tempDir, logDir))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actualFilePath).To(Equal(filepath.Join(tempDir, otherFile)))
+		})
+	})
+	var _ = Context("CheckGrpcServerStatus() should", func() {
+		var _ = It("return error if gRPC dial fails", func() {
+			_, err := CheckGrpcServerStatus("", logrus.NewEntry(logrus.New()), fakeGrpcDialErr)
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("return error if health server returns error", func() {
+			getHealthServerResponseFunc = fakeGetHealthServerResponseErr
+			_, err := CheckGrpcServerStatus("", logrus.NewEntry(logrus.New()), fakeGrpcDial)
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("return no error", func() {
+			getHealthServerResponseFunc = fakeGetHealthServerResponse
+			_, err := CheckGrpcServerStatus("", logrus.NewEntry(logrus.New()), fakeGrpcDial)
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+	var _ = Context("NewGrpcWatcher() should", func() {
+		var _ = It("return new GrpcWatcher", func() {
+			watcher := NewGrpcWatcher(time.Microsecond, time.Microsecond, "", fakeGrpcDial, fakeCheckHealth)
+			Expect(watcher).ToNot(BeNil())
+		})
+	})
+	var _ = Context("GrpcWatcher.initialCheck() should", func() {
+		var _ = It("return true if fakeCheckHealth returns true", func() {
+			watcher := NewGrpcWatcher(time.Microsecond, time.Microsecond, "", fakeGrpcDial, fakeCheckHealth)
+			status := watcher.initialCheck()
+			Expect(status).To(BeTrue())
+		})
+	})
+	var _ = Context("GrpcWatcher.getChannels() should", func() {
+		var _ = It("return 3 channels", func() {
+			watcher := NewGrpcWatcher(time.Microsecond, time.Microsecond, "", fakeGrpcDial, fakeCheckHealth)
+			done, quit, errors := watcher.getChannels()
+			Expect(done).ToNot(BeNil())
+			Expect(quit).ToNot(BeNil())
+			Expect(errors).ToNot(BeNil())
+		})
+	})
+	var _ = Context("GrpcWatcher.getTimeout() should", func() {
+		var _ = It("return timeout", func() {
+			sourceTimeout := time.Microsecond * 2
+			watcher := NewGrpcWatcher(sourceTimeout, time.Microsecond, "", fakeGrpcDial, fakeCheckHealth)
+			resultTimeout := watcher.getTimeout()
+			Expect(resultTimeout).To(Equal(sourceTimeout))
+		})
+	})
+	var _ = Context("GrpcWatcher.addWatchedResources() should", func() {
+		var _ = It("return nil", func() {
+			watcher := NewGrpcWatcher(time.Millisecond, time.Microsecond, "", fakeGrpcDial, fakeCheckHealth)
+			result := watcher.addWatchedResources()
+			Expect(result).To(BeNil())
+		})
+	})
+	var _ = Context("GrpcWatcher.close() should", func() {
+		var _ = It("return nil", func() {
+			watcher := NewGrpcWatcher(time.Millisecond, time.Microsecond, "", fakeGrpcDial, fakeCheckHealth)
+			result := watcher.close()
+			Expect(result).To(BeNil())
+		})
+	})
+	var _ = Context("GrpcWatcher.handleEvents() should", func() {
+		var _ = It("return true on done channel if grpc server is serving", func() {
+			watcher := NewGrpcWatcher(time.Millisecond, time.Microsecond, "", fakeGrpcDial, fakeCheckHealth)
+			done, _, _ := watcher.getChannels()
+			go watcher.handleEvents()
+			result := <-done
+			Expect(result).To(BeTrue())
+		})
+		var _ = It("exit on quit signal", func() {
+			watcher := NewGrpcWatcher(time.Second, time.Microsecond, "", fakeGrpcDial, fakeCheckHealthErr)
+			_, quit, errors := watcher.getChannels()
+			go func() {
+				watcher.handleEvents()
+			}()
+			quit <- true
+			err := <-errors
+			Expect(err).To(HaveOccurred())
+		})
+	})
+	var _ = Context("NewCalicoWatcher() should", func() {
+		var _ = It("return new CalicoWatcher", func() {
+			watcher, err := NewCalicoWatcher(time.Microsecond, "", fakeNewFsWatcher)
+			Expect(watcher).ToNot(BeNil())
+			Expect(err).ToNot(HaveOccurred())
+		})
+		var _ = It("return error if cannot create filesystem watcher", func() {
+			watcher, err := NewCalicoWatcher(time.Microsecond, "", fakeNewFsWatcherErr)
+			Expect(watcher).To(BeNil())
+			Expect(err).To(HaveOccurred())
+		})
+	})
+	var _ = Context("WaitFor() should", func() {
+		var _ = It("return error if cannot add resources to watch", func() {
+			watcher := newFakeWatcher(fakeAddWatchedResourcesErr, time.Microsecond)
+			Expect(watcher).ToNot(BeNil())
+			err := WaitFor(watcher)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+	var _ = Context("processEvents() should", func() {
+		var _ = It("return error if false received on done channel", func() {
+			watcher := newFakeWatcher(fakeAddWatchedResources, time.Second)
+			Expect(watcher).ToNot(BeNil())
+			done, _, _ := watcher.getChannels()
+			var err error
+			finished := make(chan bool)
+			go func() {
+				err = processEvents(watcher)
+				finished <- true
+			}()
+			done <- false
+			<-finished
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("return error if false received on done channel on infinite timeout", func() {
+			watcher := newFakeWatcher(fakeAddWatchedResources, 0)
+			Expect(watcher).ToNot(BeNil())
+			done, _, _ := watcher.getChannels()
+			var err error
+			finished := make(chan bool)
+			go func() {
+				err = processEvents(watcher)
+				finished <- true
+			}()
+			done <- false
+			<-finished
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("return no error if true received on done channel", func() {
+			watcher := newFakeWatcher(fakeAddWatchedResources, time.Second)
+			Expect(watcher).ToNot(BeNil())
+			done, _, _ := watcher.getChannels()
+			var err error
+			finished := make(chan bool)
+			go func() {
+				err = processEvents(watcher)
+				finished <- true
+			}()
+			done <- true
+			<-finished
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+	var _ = Context("CalicoWatcher.handleEvents() should", func() {
+		var _ = It("return error on channel error if error occurred in fsWatcher", func() {
+			watcher, err := NewCalicoWatcher(time.Second, "", fsnotify.NewWatcher)
+			Expect(err).ToNot(HaveOccurred())
+			go func() {
+				_ = WaitFor(watcher)
+			}()
+			watcher.fsWatcher.Errors <- fmt.Errorf("Fake fsWatcher error")
+			err = <-watcher.errors
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })
@@ -670,6 +936,9 @@ func (tvc *testVarConfigurer) setenv(key, value string) error {
 	tvc.t.Setenv(key, value)
 	return nil
 }
+func (tvc *testVarConfigurer) unsetenv(key string) error {
+	return nil
+}
 
 func newTestVarConfigurer() variableConfigurer {
 	return &testVarConfigurer{
@@ -687,6 +956,9 @@ func (tvce *testVarConfigurerErr) setenv(key, value string) error {
 	return errors.New("Fake setenv error")
 }
 
+func (tvce *testVarConfigurerErr) unsetenv(key string) error {
+	return errors.New("Fake unsetenv error")
+}
 func newTestVarConfigurerErr() variableConfigurer {
 	return &testVarConfigurerErr{}
 }
@@ -794,4 +1066,85 @@ func (fs *FakeFilesystem) Use(tmpDir string) (string, func(), error) {
 			panic(fmt.Errorf("error tearing down fake filesystem: %s", err.Error()))
 		}
 	}, nil
+}
+
+func fakeGrpcDial(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	return grpc.DialContext(context.TODO(), "", grpc.WithTransportCredentials(insecure.NewCredentials()))
+}
+
+func fakeGrpcDialErr(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	return nil, errors.New("Fake error on grpcDial")
+}
+
+func fakeGetHealthServerResponse(conn *grpc.ClientConn) (*healthpb.HealthCheckResponse, error) {
+	return &healthpb.HealthCheckResponse{}, nil
+}
+
+func fakeGetHealthServerResponseErr(conn *grpc.ClientConn) (*healthpb.HealthCheckResponse, error) {
+	return nil, fmt.Errorf("Fake error on getHealthServerResponse")
+}
+
+func fakeCheckHealth(target string, log *logrus.Entry, grpcDial grpcDialType) (bool, error) {
+	return true, nil
+}
+
+func fakeCheckHealthErr(target string, log *logrus.Entry, grpcDial grpcDialType) (bool, error) {
+	return false, fmt.Errorf("Fake error on checkHealth")
+}
+
+func fakeNewFsWatcher() (*fsnotify.Watcher, error) {
+	return &fsnotify.Watcher{}, nil
+}
+func fakeNewFsWatcherErr() (*fsnotify.Watcher, error) {
+	return nil, fmt.Errorf("Fake error on newFsWatcher")
+}
+
+type fakeWatcher struct {
+	addWatchResFunc func() error
+	done            chan bool
+	quit            chan bool
+	errors          chan error
+	timeout         time.Duration
+}
+
+func (fs *fakeWatcher) handleEvents() {
+	<-fs.quit
+}
+
+func (fs *fakeWatcher) initialCheck() bool {
+	return false
+}
+
+func (fs *fakeWatcher) getChannels() (chan bool, chan bool, chan error) {
+	return fs.done, fs.quit, fs.errors
+}
+
+func (fs *fakeWatcher) getTimeout() time.Duration {
+	return fs.timeout
+}
+
+func (fs *fakeWatcher) addWatchedResources() error {
+	return fs.addWatchResFunc()
+}
+
+func (fs *fakeWatcher) close() error {
+	return nil
+}
+
+func newFakeWatcher(addResFunc func() error, timeout time.Duration) *fakeWatcher {
+	return &fakeWatcher{
+		addWatchResFunc: addResFunc,
+		done:            make(chan bool),
+		quit:            make(chan bool),
+		errors:          make(chan error),
+		timeout:         timeout,
+	}
+}
+
+func fakeAddWatchedResources() error {
+	return nil
+}
+
+func fakeAddWatchedResourcesErr() error {
+	return fmt.Errorf("Fake error on addWatchedResources")
 }

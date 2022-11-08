@@ -253,15 +253,21 @@ func (s *ServiceServer) addServicePort(service *v1.Service, ep *v1.Endpoints) {
 			return
 		}
 		for _, nt := range oldEntry.Entries {
-			if err := s.handler.NatTranslationDelete(nt); err != nil {
-				s.log.WithError(err).Errorf("Failed to delete entry for %v", nt)
+			// if backends are empty we did not send message to inframanager
+			if len(nt.Backends) > 0 {
+				if err := s.handler.NatTranslationDelete(nt); err != nil {
+					s.log.WithError(err).Errorf("Failed to delete entry for %v", nt)
+				}
 			}
 		}
 		delete(s.stateMap, serviceID)
 	}
 	for _, nt := range se.Entries {
-		if err := s.handler.NatTranslationAdd(nt); err != nil {
-			s.log.WithError(err).Errorf("Failed to delete entry for %v", nt)
+		// do not send if there are no backends available
+		if len(nt.Backends) > 0 {
+			if err := s.handler.NatTranslationAdd(nt); err != nil {
+				s.log.WithError(err).Errorf("Failed to delete entry for %v", nt)
+			}
 		}
 	}
 	s.stateMap[serviceID] = se

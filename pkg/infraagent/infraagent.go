@@ -38,15 +38,18 @@ type Agent interface {
 	Run()
 }
 
-func NewAgent(intfType string, ifName string, logDir string, client kubernetes.Interface) Agent {
-	logInit(logDir)
+func NewAgent(intfType string, ifName string, logDir string, client kubernetes.Interface) (Agent, error) {
+	err := logInit(logDir)
+	if err != nil {
+		return nil, err
+	}
 	agent := &agent{
 		client:           client,
 		log:              log.WithField("pkg", "infraagent"),
 		podInterfaceType: intfType,
 		nodeIntf:         ifName,
 	}
-	return agent
+	return agent, nil
 }
 
 type agent struct {
@@ -140,9 +143,9 @@ func (a *agent) setConfig() error {
 
 	if a.nodeIntf == "" {
 		// discover node interface
-		logger.Infof("node interface is not specified, trying to discover node interface")
+		a.log.Infof("node interface is not specified, trying to discover node interface")
 		interfaceGetter := utils.DefaultInterfaceAddressGetter{}
-		iface, err := utils.GetNodeNetInterface(a.client, types.NodeName, &interfaceGetter)
+		iface, err := utils.GetNodeNetInterface(a.client, types.NodeName, &interfaceGetter, a.log)
 		if err != nil {
 			return fmt.Errorf("Failed to get node interface: %w", err)
 		}
@@ -165,11 +168,20 @@ func (a *agent) setConfig() error {
 	return nil
 }
 
-func logInit(logDir string) {
-	logFilename := path.Join(logDir, path.Base(os.Args[0])+".log")
-	logFile, err := os.OpenFile(logFilename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+func logInit(logDir string) error {
+	if err := os.MkdirAll(logDir, 0644); err != nil {
+		return err
+	}
+
+	logFilename := path.Join(logDir, types.InfraAgentCLIName+".log")
+	verifiedFileName, err := utils.VerifiedFilePath(logFilename, logDir)
 	if err != nil {
-		panic(err)
+		return err
+	}
+
+	logFile, err := os.OpenFile(verifiedFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
 	}
 	mw := io.MultiWriter(os.Stdout, logFile)
 	log.SetOutput(mw)
@@ -179,6 +191,7 @@ func logInit(logDir string) {
 		PadLevelText:     true,
 		QuoteEmptyFields: true,
 	})
+	return nil
 }
 
 func (a *agent) Run() {

@@ -26,9 +26,12 @@ import (
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/proto"
+	"gopkg.in/tomb.v2"
 
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
-	conf "github.com/ipdk-io/k8s-infra-offload/inframanager/config"
+	conf "github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/config"
+	p4 "github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/p4"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
 
 	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
 	log "github.com/sirupsen/logrus"
@@ -39,8 +42,6 @@ import (
 )
 
 var config *conf.Configuration
-var p4RtC *client.Client
-var p4RtCConn *grpc.ClientConn
 
 func PutConf(c *conf.Configuration) {
 	config = c
@@ -88,7 +89,7 @@ func OpenP4RtC(ctx context.Context, high uint64, low uint64, stopCh <-chan struc
 
 	electionID := p4_v1.Uint128{High: high, Low: low}
 	//electionID := p4_v1.Uint128{High: 0, Low: 1}
-	server.p4RtC = client.NewClient(c, config.DeviceId, electionID)
+	server.p4RtC = client.NewClient(c, config.DeviceId, &electionID)
 
 	arbitrationCh := make(chan bool)
 	waitCh := make(chan struct{})
@@ -122,12 +123,11 @@ func OpenP4RtC(ctx context.Context, high uint64, low uint64, stopCh <-chan struc
 	return err
 }
 
-func CloseCon() error {
+func CloseCon() {
 	server := NewApiServer()
 	if server.p4RtCConn != nil {
-		return server.p4RtCConn.Close()
+		server.p4RtCConn.Close()
 	}
-	return errors.New("Cannot close empty connection")
 }
 
 func GetFwdPipe(ctx context.Context,
@@ -164,15 +164,31 @@ func CreateServer(log *log.Entry) *ApiServer {
 	return server
 }
 
-func (s *ApiServer) Start() error {
+func (s *ApiServer) Start(t *tomb.Tomb) {
 	logger := s.log.WithField("func", "startServer")
 	logger.Infof("Serving ApiServer gRPC")
 	types.InfraManagerServerStatus = types.ServerStatusOK
-	err := s.grpc.Serve(s.listener)
-	if err != nil {
-		logger.Fatalf("Failed to serve: %v", err)
-	}
-	return err
+
+	t.Go(func() error {
+		errCh := make(chan error)
+
+		go func() {
+			err := s.grpc.Serve(s.listener)
+			if err != nil {
+				logger.Errorf("Failed to serve: %v", err)
+				errCh <- err
+			}
+		}()
+
+		select {
+		case err := <-errCh:
+			return err
+		case <-t.Dying():
+			logger.Infof("API Server received stop signal")
+			s.Stop()
+			return nil
+		}
+	})
 }
 
 func (s *ApiServer) Stop() {
@@ -183,8 +199,53 @@ func (s *ApiServer) Stop() {
 	types.InfraManagerServerStatus = types.ServerStatusStopped
 }
 
+func insertRule(log *log.Entry, ctx context.Context, p4RtC *client.Client, macAddr string, ipAddr string, portID int, ifaceType p4.InterfaceType) (bool, error) {
+	var err error
+
+	logger := log.WithField("func", "insertRule")
+
+	ep := store.EndPoint{
+		PodIpAddress:  ipAddr,
+		InterfaceID:   uint32(portID),
+		PodMacAddress: macAddr,
+	}
+
+	entry := ep.GetFromStore()
+	if entry != nil {
+		epEntry := entry.(store.EndPoint)
+		if epEntry.PodIpAddress == ep.PodIpAddress &&
+			epEntry.InterfaceID == ep.InterfaceID &&
+			epEntry.PodMacAddress == ep.PodMacAddress {
+
+			logger.Infof("Entry %s %s %d already exists",
+				macAddr, ipAddr, portID)
+			return true, nil
+		} else {
+			err = fmt.Errorf("A different entry for %s already exists in the store", ipAddr)
+			return false, err
+		}
+	}
+
+	logger.Infof("Inserting entry into the cni tables")
+	if err = p4.InsertCniRules(ctx, p4RtC, macAddr, ipAddr, portID, ifaceType); err != nil {
+		logger.Errorf("Failed to insert the entries for %s %s", macAddr, ipAddr)
+		return false, err
+	}
+	logger.Infof("Inserted the entries %s %s %d into the pipeline",
+		macAddr, ipAddr, portID)
+
+	if ep.WriteToStore() != true {
+		err = fmt.Errorf("Failed to add %s %s %d to the store",
+			macAddr, ipAddr, portID)
+		return false, err
+	}
+	logger.Infof("Inserted the entries %s %s %d into the store",
+		macAddr, ipAddr, portID)
+
+	return true, err
+}
+
 func (s *ApiServer) CreateNetwork(ctx context.Context, in *proto.CreateNetworkRequest) (*proto.AddReply, error) {
-	var pipelineConfig *client.FwdPipeConfig
 	var err error
 
 	logger := s.log.WithField("func", "CreateNetwork")
@@ -197,19 +258,6 @@ func (s *ApiServer) CreateNetwork(ctx context.Context, in *proto.CreateNetworkRe
 
 	server := NewApiServer()
 
-	pipelineConfig, err = server.p4RtC.GetFwdPipe(ctx, client.GetFwdPipeAll)
-	if err != nil {
-		log.Errorf("Error when getting forwarding pipe: %v", err)
-		out.Successful = false
-		return out, err
-	}
-
-	if pipelineConfig.P4Info == nil {
-		log.Errorf("p4info is null")
-		out.Successful = false
-		return out, errors.New("p4info is null")
-	}
-
 	ipAddr := strings.Split(in.AddRequest.ContainerIps[0].Address, "/")[0]
 	macAddr := in.MacAddr
 	//TODO: Extract the portId from mac.
@@ -217,21 +265,20 @@ func (s *ApiServer) CreateNetwork(ctx context.Context, in *proto.CreateNetworkRe
 	portName := in.HostIfName
 	tmpName := strings.Split(portName, "_")
 	portIDStr := tmpName[1]
-	portID, _ := strconv.ParseInt(portIDStr, 10, 32)
-
-	logger.Infof("Inserting entry into the cni tables")
-	if err = InsertCniRules(ctx, server.p4RtC, macAddr, ipAddr, int(portID)); err != nil {
-		logger.Errorf("Failed to insert the entries for %s %s", macAddr, ipAddr)
+	portID, err := strconv.ParseInt(portIDStr, 10, 32)
+	if err != nil {
+		logger.Errorf("Failed to convert port id to int %s", portIDStr)
 		out.Successful = false
 		return out, err
 	}
 
-	logger.Infof("Inserted the entries %s %s", macAddr, ipAddr)
+	status, err := insertRule(s.log, ctx, server.p4RtC, macAddr,
+		ipAddr, int(portID), p4.ENDPOINT)
+	out.Successful = status
 	return out, err
 }
 
 func (s *ApiServer) DeleteNetwork(ctx context.Context, in *proto.DeleteNetworkRequest) (*proto.DelReply, error) {
-	var pipelineConfig *client.FwdPipeConfig
 	var err error
 
 	logger := s.log.WithField("func", "DeleteNetwork")
@@ -243,27 +290,34 @@ func (s *ApiServer) DeleteNetwork(ctx context.Context, in *proto.DeleteNetworkRe
 
 	server := NewApiServer()
 
-	pipelineConfig, err = server.p4RtC.GetFwdPipe(ctx, client.GetFwdPipeAll)
-	if err != nil {
-		logger.Errorf("Error when getting forwarding pipe: %v", err)
+	ipAddr := strings.Split(in.Ipv4Addr, "/")[0]
+	macAddr := in.MacAddr
+
+	ep := store.EndPoint{
+		PodIpAddress: ipAddr,
+	}
+
+	entry := ep.GetFromStore()
+	if entry == nil {
+		err = fmt.Errorf("Entry for %s does not exist in the store", ipAddr)
 		out.Successful = false
 		return out, err
 	}
-	if pipelineConfig.P4Info == nil {
-		logger.Errorf("p4info is null")
-		out.Successful = false
-		return out, errors.New("p4info is null")
-	}
 
-	ipAddr := strings.Split(in.Ipv4Addr, "/")[0]
-	macAddr := in.MacAddr
-	if err = DeleteCniRules(ctx, server.p4RtC, macAddr, ipAddr); err != nil {
+	if err = p4.DeleteCniRules(ctx, server.p4RtC, macAddr, ipAddr); err != nil {
 		logger.Errorf("Failed to delete the entries for %s %s", macAddr, ipAddr)
 		out.Successful = false
 		return out, err
 	}
+	logger.Infof("Deleted the entries %s %s from the pipeline", macAddr, ipAddr)
 
-	logger.Infof("Deleted the entries %s %s", macAddr, ipAddr)
+	if ep.DeleteFromStore() != true {
+		out.Successful = false
+		err = fmt.Errorf("Failed to delete %s %s from the store", macAddr, ipAddr)
+		return out, err
+	}
+	logger.Infof("Deleted the entries %s %s from the store", macAddr, ipAddr)
+
 	return out, err
 }
 
@@ -450,6 +504,38 @@ func (s *ApiServer) UpdateGlobalBGPConfig(ctx context.Context, in *proto.GlobalB
 	logger := log.WithField("func", "UpdateGlobalBGPConfig")
 	logger.Infof("Incoming UpdateGlobalBGPConfig Request %+v", in)
 	return &proto.Reply{Successful: true}, nil
+}
+
+func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostInterfaceRequest) (*proto.Reply, error) {
+	var err error
+
+	logger := s.log.WithField("func", "SetupHostInterface")
+	logger.Infof("Incoming SetupHostInterface reqest %s", in.String())
+
+	out := &proto.Reply{
+		Successful: true,
+	}
+
+	server := NewApiServer()
+
+	ipAddr := strings.Split(in.Ipv4Addr, "/")[0]
+	macAddr := in.MacAddr
+	//TODO: Extract the portId from mac.
+	// Temporary: Always send to port 0
+	portName := in.IfName
+	tmpName := strings.Split(portName, "_")
+	portIDStr := tmpName[1]
+	portID, err := strconv.ParseInt(portIDStr, 10, 32)
+	if err != nil {
+		logger.Errorf("Failed to convert port id to int %s", portIDStr)
+		out.Successful = false
+		return out, err
+	}
+
+	status, err := insertRule(s.log, ctx, server.p4RtC, macAddr,
+		ipAddr, int(portID), p4.HOST)
+	out.Successful = status
+	return out, err
 }
 
 // Check is used to check the status of GRPC service

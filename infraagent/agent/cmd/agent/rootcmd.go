@@ -27,10 +27,8 @@ import (
 )
 
 const (
-	agentCliName    = "infraagent"
 	configFilePath  = "/etc/infra/"
 	intfFlagHelpMsg = "master interface name. If not defined Infra Agent will attempt to discover it."
-	logDir          = "/var/log"
 )
 
 var config struct {
@@ -41,7 +39,7 @@ var config struct {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   agentCliName,
+	Use:   types.InfraAgentCLIName,
 	Short: "Infra Agent is daemon that exposes a calico CNI gRPC backend for Intel MEV",
 	Long: `
 Infra Agent is daemon that exposes a calico CNI gRPC backend for networking offload to Infrastructure components.
@@ -55,24 +53,29 @@ It off-loads K8s dataplane to Infrastructure components.
 		ifName := viper.GetString("interface")
 		config, err := utils.GetK8sConfig()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "There was an error while executing %s: '%s'\n", agentCliName, err)
-			os.Exit(1)
+			exitWithError(err, 2)
 		}
 
 		client, err := utils.GetK8sClient(config)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "There was an error while executing %s: '%s'\n", agentCliName, err)
-			os.Exit(1)
+			exitWithError(err, 3)
 		}
-		agent := infraagent.NewAgent(interfaceType, ifName, logDir, client)
+		agent, err := infraagent.NewAgent(interfaceType, ifName, types.InfraAgentLogDir, client)
+		if err != nil {
+			exitWithError(err, 4)
+		}
 		agent.Run()
 	},
 }
 
+func exitWithError(err error, exitCode int) {
+	fmt.Fprintf(os.Stderr, "There was an error while executing %s: '%s'\n", types.InfraAgentCLIName, err)
+	os.Exit(exitCode)
+}
+
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "There was an error while executing %s: '%s'\n", agentCliName, err)
-		os.Exit(1)
+		exitWithError(err, 1)
 	}
 }
 

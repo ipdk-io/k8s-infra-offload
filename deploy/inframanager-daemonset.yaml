@@ -35,8 +35,22 @@ spec:
       - name: manager
         image: inframanager:latest
         imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: log
+          mountPath: /var/log
+        - name: db
+          mountPath: /opt/inframanager
         command:
         - /inframanager
+      volumes:
+      - name: log
+        hostPath:
+          path: /var/log
+          type: DirectoryOrCreate
+      - name: db
+        hostPath:
+          path: /opt/inframanager
+          type: DirectoryOrCreate
   updateStrategy:
     rollingUpdate:
       maxUnavailable: 1

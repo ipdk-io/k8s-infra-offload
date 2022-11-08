@@ -19,6 +19,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"reflect"
+
+	log "github.com/sirupsen/logrus"
+)
+
+const (
+	servicesFile = "/opt/inframanager/services_db.json"
 )
 
 func isServiceStoreEmpty() bool {
@@ -49,17 +55,13 @@ func (s Service) DeleteFromStore() bool {
 	return true
 }
 
-func (s Service) GetFromStore() (store, error) {
-	if isServiceStoreEmpty() {
-		return nil, nil
-	}
+func (s Service) GetFromStore() store {
 
 	res := ServiceMap.ServiceMap[s.ClusterIp]
 	if reflect.DeepEqual(res, Service{}) {
-		err := fmt.Errorf("no match found for key %s", s.ClusterIp)
-		return nil, err
+		return nil
 	} else {
-		return res, nil
+		return res
 	}
 }
 
@@ -71,10 +73,14 @@ func (s Service) UpdateToStore() bool {
 func RunSyncServiceInfo() bool {
 	jsonStr, err := json.MarshalIndent(ServiceMap.ServiceMap, "", " ")
 	if err != nil {
-		fmt.Println(err)
+		log.Errorf("Failed to marshal service entries map %s", err)
 		return false
 	}
 
-	_ = ioutil.WriteFile("service_add.json", jsonStr, 0777)
+	if err = ioutil.WriteFile(servicesFile, jsonStr, 0600); err != nil {
+		log.Errorf("Failed to write entries to %s, err %s",
+			servicesFile, err)
+		return false
+	}
 	return true
 }

@@ -24,32 +24,32 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-func DoSriovNetwork(in *pb.AddRequest, res *types.InterfaceInfo) error {
+func doSriovNetwork(in *pb.AddRequest, res *types.InterfaceInfo) error {
 	logger := log.WithField("func", "DoSriovNetwork").WithField("pkg", "netconf")
 	logger.Infof("Configuring network for pci addr %s name %s", res.PciAddr, res.InterfaceName)
-	nn, err := ns.GetNS(in.GetNetns())
+	nn, err := getNS(in.GetNetns())
 	if err != nil {
 		logger.WithError(err).Errorf("cannot find network namespace %s", in.GetNetns())
 		return err
 	}
 
-	linkObj, err := netlink.LinkByName(res.InterfaceName)
+	linkObj, err := linkByName(res.InterfaceName)
 	if err != nil {
 		return err
 	}
 
-	if err = netlink.LinkSetDown(linkObj); err != nil {
+	if err = linkSetDown(linkObj); err != nil {
 		return err
 	}
 
 	if in.GetSettings().Mtu > 0 {
-		if err = netlink.LinkSetMTU(linkObj, int(in.GetSettings().Mtu)); err != nil {
+		if err = linkSetMTU(linkObj, int(in.GetSettings().Mtu)); err != nil {
 			logger.WithError(err).Errorf("not able to set MTU %v", in.GetSettings())
 			return err
 		}
 	}
 
-	if err = netlink.LinkSetNsFd(linkObj, int(nn.Fd())); err != nil {
+	if err = linkSetNsFd(linkObj, int(nn.Fd())); err != nil {
 		logger.WithError(err).Error("Cannot move to given namespace")
 		return err
 	}
@@ -60,12 +60,12 @@ func DoSriovNetwork(in *pb.AddRequest, res *types.InterfaceInfo) error {
 }
 
 func configureSriovNamespace(in *pb.AddRequest, linkObj netlink.Link) error {
-	return ns.WithNetNSPath(in.Netns, func(nn ns.NetNS) error {
-		if err := netlink.LinkSetName(linkObj, in.InterfaceName); err != nil {
+	return withNetNSPath(in.Netns, func(nn ns.NetNS) error {
+		if err := linkSetName(linkObj, in.InterfaceName); err != nil {
 			return fmt.Errorf("cannot set link name: %w", err)
 		}
 		// re-fetch link information
-		linkObj, err := netlink.LinkByName(in.InterfaceName)
+		linkObj, err := linkByName(in.InterfaceName)
 		if err != nil {
 			return err
 		}
@@ -74,11 +74,11 @@ func configureSriovNamespace(in *pb.AddRequest, linkObj netlink.Link) error {
 			return fmt.Errorf("cannot set link address: %w", err)
 		}
 
-		if err = netlink.LinkSetUp(linkObj); err != nil {
+		if err = linkSetUp(linkObj); err != nil {
 			return fmt.Errorf("cannot set link up: %w", err)
 		}
 
-		if err := setupPodRoute(linkObj, in.ContainerRoutes); err != nil {
+		if err := setupPodRoute(linkObj, in.ContainerRoutes, nonTargetIP); err != nil {
 			return fmt.Errorf("cannot setup routes: %w", err)
 		}
 

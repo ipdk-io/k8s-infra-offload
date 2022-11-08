@@ -30,6 +30,11 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+var (
+	getVFList          = utils.GetVFList
+	doSriovNetworkFunc = doSriovNetwork
+)
+
 type sriovPodInterface struct {
 	log  *logrus.Entry
 	pool pool.ResourcePool
@@ -59,59 +64,42 @@ func (pi *sriovPodInterface) setup() error {
 	varConfigurer := utils.NewOsVariableConfigurer()
 	ec := utils.NewEnvConfigurer(varConfigurer, types.DefaultCalicoConfig)
 
-	// try to release any address allocated for Infra Agent, ignore error just print
-	if err := utils.ReleaseIPFromIPAM(ec, ipam.ExecDel); err != nil {
+	// try to release any address allocated for IPU Agent, ignore error just print
+	if err := releaseIPFromIPAM(ec, ipam.ExecDel); err != nil {
 		pi.log.WithError(err).Error("Failed to release allocated address")
 	}
 
-	ipnet, err := utils.GetIPFromIPAM(ec, ipam.ExecAdd)
+	ipnet, err := getIPFromIPAM(ec, ipam.ExecAdd)
 	if err != nil {
 		return err
 	}
-	pi.log.Printf("Got address for host Infra interface %s", ipnet)
+	pi.log.Printf("Got address for host IPU interface %s", ipnet)
 
-	if err := netlink.AddrAdd(link, &netlink.Addr{IPNet: ipnet}); err != nil {
+	if err := addrAdd(link, &netlink.Addr{IPNet: ipnet}); err != nil {
 		pi.log.WithError(err).Error("Failed to set ip address for interface")
 		return err
 	}
-	if err := netlink.LinkSetUp(link); err != nil {
+	if err := linkSetUp(link); err != nil {
 		pi.log.WithError(err).Error("Failed to set interface up")
 		return err
 	}
 
-	if err := pi.configureRouting(link); err != nil {
+	if err := configureRoutingFunc(link, pi.log); err != nil {
 		pi.log.WithError(err).Error("Failed to configure routing")
 		return err
 	}
 
 	// set host interface name
 	types.NodeInfraHostInterfaceName = res.InterfaceInfo.InterfaceName
-	return nil
-}
 
-func (pi *sriovPodInterface) configureRouting(link netlink.Link) error {
-	// get first address from Pod CIDR
-	// TODO add ipv6 support
-	pi.log.Infof("Cluster CIDR %s", types.ClusterPodsCIDR)
-	clusterIP, err := netlink.ParseAddr(types.ClusterPodsCIDR)
-	if err != nil {
+	// dial inframmanger and setup host interface
+	request := &pb.SetupHostInterfaceRequest{
+		IfName:   types.NodeInfraHostInterfaceName,
+		Ipv4Addr: ipnet.String(),
+		MacAddr:  res.InterfaceInfo.MacAddr,
+	}
+	if err := sendSetupHostInterfaceFunc(request); err != nil {
 		return err
-	}
-
-	pi.log.Infof("Node Pods CIDR %s", types.NodePodsCIDR)
-	nodePodsIP, err := netlink.ParseAddr(types.NodePodsCIDR)
-	if err != nil {
-		return err
-	}
-
-	// setup routing from pods CIDR via VF[0]
-	// check if it exist already
-	if err := setupHostRoute(clusterIP.IPNet, link); err != nil {
-		return fmt.Errorf("Failed to setup route to Cluster CIDR: %w", err)
-	}
-
-	if err := setupHostRoute(nodePodsIP.IPNet, link); err != nil {
-		return fmt.Errorf("Failed to setup route to Pods CIDR: %w", err)
 	}
 
 	return nil
@@ -119,7 +107,7 @@ func (pi *sriovPodInterface) configureRouting(link netlink.Link) error {
 
 func (pi *sriovPodInterface) initializePool() error {
 	pi.log.Infof("Scanning for VF for interface %s", types.NodeInterfaceName)
-	vfs, err := utils.GetVFList(types.NodeInterfaceName, utils.SysClassNet)
+	vfs, err := getVFList(types.NodeInterfaceName, utils.SysClassNet)
 	if err != nil {
 		pi.log.Error("empty resource pool, Pod network interface will not be configured")
 		return err
@@ -128,32 +116,43 @@ func (pi *sriovPodInterface) initializePool() error {
 	if len(vfs) == 0 {
 		return fmt.Errorf("failed to discover VF on interface %s", types.NodeInterfaceName)
 	}
-	pool := pool.NewResourcePool(vfs)
+	pool := pool.NewResourcePool(vfs, utilsGetDataDirPath(types.SriovPodInterface))
 	pi.pool = pool
 	return nil
 }
 
 func (pi *sriovPodInterface) perepareInterface() (netlink.Link, *pool.Resource, error) {
 	// get first VF and assign first address
-	res, err := pi.pool.Get()
+	var res *pool.Resource
+	// check if we have config in cache
+	hostInterface, err := readInterfaceConf(utilsGetDataDirPath(types.TapInterface), types.HostInterfaceRefId, types.HostInterfaceRefId)
 	if err != nil {
-		pi.log.WithError(err).Error("Cannot initialize sriov pod interface")
-		return nil, nil, err
+		// get one interface for host networking and assign first address
+		res, err = pi.pool.Get()
+		if err != nil {
+			pi.log.WithError(err).Error("unable to allocate interface for host")
+			return nil, nil, err
+		}
+	} else {
+		res = &pool.Resource{
+			InterfaceInfo: hostInterface,
+			InUse:         true,
+		}
 	}
 
-	link, err := netlink.LinkByName(res.InterfaceInfo.InterfaceName)
+	link, err := linkByName(res.InterfaceInfo.InterfaceName)
 	if err != nil {
 		pi.log.WithError(err).Error("Error getting host interface")
 		return nil, nil, err
 	}
 	// delete any set address on interface
-	ips, err := netlink.AddrList(link, netlink.FAMILY_V4)
+	ips, err := addrList(link, netlink.FAMILY_V4)
 	if err != nil {
 		pi.log.WithError(err).Error("Failed to list IPs on interface")
 		return nil, nil, err
 	}
 	for _, ip := range ips {
-		if err := netlink.AddrDel(link, &ip); err != nil {
+		if err := addrDel(link, &ip); err != nil {
 			pi.log.WithError(err).Error("Failed to remove ip address")
 		}
 	}
@@ -169,10 +168,10 @@ func (pi *sriovPodInterface) CreatePodInterface(in *pb.AddRequest) (*types.Inter
 	}
 	pi.log.Infof("Pod got resources: %+v", res)
 
-	if err := DoSriovNetwork(in, res.InterfaceInfo); err != nil {
+	if err := doSriovNetworkFunc(in, res.InterfaceInfo); err != nil {
 		// if error occured after interface was already moved into containers netns move it back
 		if _, ok := err.(nsError); ok {
-			movePodInterfaceToHostNetns(in.Netns, in.InterfaceName, res.InterfaceInfo)
+			_ = movePodInterfaceToHostNetnsFunc(in.Netns, in.InterfaceName, res.InterfaceInfo)
 		}
 		pi.log.WithError(err).Error("failed to push interface to container")
 		pi.pool.Release(res.InterfaceInfo.InterfaceName) // if we failed to setup the allocated interfrace then release it
@@ -181,7 +180,7 @@ func (pi *sriovPodInterface) CreatePodInterface(in *pb.AddRequest) (*types.Inter
 	pi.log.Infof("Host interface name: %s interface mac %s", res.InterfaceInfo.InterfaceName, res.InterfaceInfo.MacAddr)
 
 	refid := filepath.Base(in.Netns)
-	if err = utils.SaveInterfaceConf(utils.GetDataDirPath(types.SriovPodInterface), refid, in.InterfaceName, res.InterfaceInfo); err != nil {
+	if err = saveInterfaceConf(utilsGetDataDirPath(types.SriovPodInterface), refid, in.InterfaceName, res.InterfaceInfo); err != nil {
 		pi.log.WithError(err).Error("storing cache failed")
 		return nil, err
 	}
@@ -190,13 +189,13 @@ func (pi *sriovPodInterface) CreatePodInterface(in *pb.AddRequest) (*types.Inter
 
 func (pi *sriovPodInterface) ReleasePodInterface(in *pb.DelRequest) error {
 	// release used VF
-	dataDir := utils.GetDataDirPath(types.SriovPodInterface)
+	dataDir := utilsGetDataDirPath(types.SriovPodInterface)
 	refid := filepath.Base(in.Netns)
-	conf, err := utils.ReadInterfaceConf(dataDir, refid, in.InterfaceName)
+	conf, err := readInterfaceConf(dataDir, refid, in.InterfaceName)
 	if err != nil {
 		return err
 	}
-	if err := movePodInterfaceToHostNetns(in.Netns, in.InterfaceName, conf); err != nil {
+	if err := movePodInterfaceToHostNetnsFunc(in.Netns, in.InterfaceName, conf); err != nil {
 		return err
 	}
 	pi.pool.Release(conf.InterfaceName)
@@ -227,7 +226,7 @@ func (pi *sriovPodInterface) ReleaseNetwork(ctx context.Context, c pb.InfraAgent
 	}
 	// get interface config from cache
 	refid := filepath.Base(in.Netns)
-	conf, err := utils.ReadInterfaceConf(utils.GetDataDirPath(types.SriovPodInterface), refid, in.InterfaceName)
+	conf, err := readInterfaceConf(utilsGetDataDirPath(types.SriovPodInterface), refid, in.InterfaceName)
 	if err != nil {
 		out.Successful = false
 		out.ErrorMessage = err.Error()
@@ -235,15 +234,16 @@ func (pi *sriovPodInterface) ReleaseNetwork(ctx context.Context, c pb.InfraAgent
 	}
 	var ip string = ""
 	// fetch interface IP
-	err = ns.WithNetNSPath(in.Netns, func(_ ns.NetNS) error {
-		linkObj, err := netlink.LinkByName(in.InterfaceName)
+	err = withNetNSPath(in.Netns, func(_ ns.NetNS) error {
+		linkObj, err := linkByName(in.InterfaceName)
 		if err != nil {
 			pi.log.WithError(err).Errorf("failed to find netlink device with name %s", in.InterfaceName)
 			return err
 		}
-		l, err := netlink.AddrList(linkObj, netlink.FAMILY_V4)
+		l, err := addrList(linkObj, netlink.FAMILY_V4)
 		if err != nil || len(l) == 0 {
 			pi.log.WithError(err).Error("Failed to fetch IP address from Pod interface or IP not set")
+			return err
 		}
 		ip = l[0].IPNet.String()
 		return nil

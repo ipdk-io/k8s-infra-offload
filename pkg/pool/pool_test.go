@@ -15,7 +15,7 @@
 package pool
 
 import (
-	"fmt"
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path"
@@ -108,7 +108,6 @@ var _ = Describe("pool", func() {
 
 	var _ = Context("Get() should", func() {
 		var _ = It("return first resource", func() {
-			fmt.Printf("Size of test pool %d content %+v\n", len(testPool), testPool)
 			rp := resourcePool{Pool: testPool}
 			r, err := rp.Get()
 			Expect(err).ToNot(HaveOccurred())
@@ -155,11 +154,35 @@ var _ = Describe("pool", func() {
 			t := []*types.InterfaceInfo{{
 				InterfaceName: "iface0",
 			}}
-			rp := NewResourcePool(t)
+			rp := NewResourcePool(t, "")
 			r, err := rp.Get()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(r.InterfaceInfo.InterfaceName).To(Equal("iface0"))
 			Expect(r.InUse).To(BeTrue())
+		})
+
+		var _ = It("return ResourcePool with one in use element and one available element", func() {
+			t := []*types.InterfaceInfo{
+				{InterfaceName: "iface0"},
+				{InterfaceName: "iface1"},
+			}
+			t1 := &types.InterfaceInfo{
+				InterfaceName: "iface1",
+			}
+			bs, err := json.Marshal(t1)
+			Expect(err).ToNot(HaveOccurred())
+			p := path.Join(testTempDir, "test-cache-1")
+			err = os.MkdirAll(p, 0700)
+			Expect(err).NotTo(HaveOccurred())
+			cache := path.Join(p, "test-t1")
+			err = os.WriteFile(cache, bs, 0755)
+			Expect(err).ToNot(HaveOccurred())
+
+			rp := NewResourcePool(t, p)
+			Expect(rp.(*resourcePool).Pool).ToNot(BeEmpty())
+			Expect(len(rp.(*resourcePool).Pool)).To(Equal(2))
+			res := rp.(*resourcePool).Pool[1]
+			Expect(res.InUse).To(BeTrue())
 		})
 	})
 })

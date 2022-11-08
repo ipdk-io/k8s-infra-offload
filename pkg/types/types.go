@@ -44,6 +44,9 @@ const (
 	ServiceRefreshTimeInSeconds = 60
 	ServerStatusOK              = "SERVING"
 	ServerStatusStopped         = "STOPPED"
+	InfraAgentLogDir            = "/var/log/infraagent"
+	InfraAgentCLIName           = "infraagent"
+	HostInterfaceRefId          = "hostInterface"
 )
 
 var (

@@ -22,10 +22,9 @@ import (
 	"time"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"gopkg.in/tomb.v2"
 )
 
@@ -85,27 +84,11 @@ func NewHealthCheckServer(l *logrus.Entry) (types.Server, error) {
 }
 
 func (s *healtServer) checkGrpcServerStatus(target string) bool {
-	s.log.Infof("Checking gRCP service at %s", target)
-	conn, err := grpcDial(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	defer func() {
-		if conn == nil {
-			return
-		}
-		if err := conn.Close(); err != nil {
-			s.log.WithError(err).Error("failed to close connection")
-		}
-	}()
+	status, err := utils.CheckGrpcServerStatus(target, s.log, grpcDial)
 	if err != nil {
-		s.log.WithError(err).Error("Failed to dial gRPC health server")
-		return false
+		s.log.Errorf("error while checking %s: %s", target, err.Error())
 	}
-	resp, err := healthpb.NewHealthClient(conn).Check(context.Background(), &healthpb.HealthCheckRequest{Service: ""})
-	if err != nil {
-		s.log.WithError(err).Error("Failed to check gRPC health")
-		return false
-	}
-	s.log.Infof("Status of gRPC service at %s is: %s", target, resp.GetStatus().String())
-	return resp.Status == healthpb.HealthCheckResponse_SERVING
+	return status
 }
 
 func (s *healtServer) checkInfraManagerLiveness() bool {

@@ -32,6 +32,13 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+var (
+	getTapInterfaces               = utils.GetTapInterfaces
+	configureHostInterfaceFunc     = configureHostInterface
+	getHostIPfromPodCIDRFunc       = getHostIPfromPodCIDR
+	setHostInterfaceInPodNetnsFunc = setHostInterfaceInPodNetns
+)
+
 type tapPodInterface struct {
 	log  *logrus.Entry
 	pool pool.ResourcePool
@@ -39,24 +46,29 @@ type tapPodInterface struct {
 
 func NewTapPodInterface(log *logrus.Entry) (types.PodInterface, error) {
 	pi := &tapPodInterface{log: log}
-	if err := pi.setup(); err != nil {
+	intfs, err := pi.configurePool()
+	if err != nil {
+		log.WithError(err).Error("failed to configure pool")
+		return nil, err
+	}
+	if err := pi.setup(intfs); err != nil {
 		log.WithError(err).Error("failed to setup tap interface")
 		return nil, err
 	}
 	return pi, nil
 }
 
-func (pi *tapPodInterface) setup() error {
+func (pi *tapPodInterface) configurePool() ([]*types.InterfaceInfo, error) {
 	tapPrefix := viper.GetString("tapPrefix")
 	pi.log.Infof("Scanning for Host Tap for interfaces using prefix %s", tapPrefix)
-	intfs, err := utils.GetTapInterfaces(tapPrefix)
+	intfs, err := getTapInterfaces(tapPrefix)
 	if err != nil {
 		pi.log.Error("empty resource pool, Pod network interface will not be configured")
-		return err
+		return nil, err
 	}
 	pi.log.Infof("Found %v of host Tap interfaces", len(intfs))
 	if len(intfs) == 0 {
-		return fmt.Errorf("failed to discover host Tap interfaces with prefix %s", tapPrefix)
+		return nil, fmt.Errorf("failed to discover host Tap interfaces with prefix %s", tapPrefix)
 	}
 
 	pi.log.Infof("Interface list:")
@@ -64,103 +76,104 @@ func (pi *tapPodInterface) setup() error {
 		pi.log.Infof("Interface Name: %s Mac: %s", intf.InterfaceName, intf.MacAddr)
 	}
 
-	pool := pool.NewResourcePool(intfs)
+	pool := pool.NewResourcePool(intfs, utilsGetDataDirPath(types.TapInterface))
 	pi.pool = pool
-	// get one interface for host networking and assign first address
-	res, err := pi.pool.Get()
+	return intfs, nil
+}
+
+func (pi *tapPodInterface) setup(intfs []*types.InterfaceInfo) error {
+	var res *pool.Resource
+	// check if we have config in cache
+	hostInterface, err := readInterfaceConf(utilsGetDataDirPath(types.TapInterface), types.HostInterfaceRefId, types.HostInterfaceRefId)
 	if err != nil {
-		pi.log.WithError(err).Error("unable to allocate interface for host")
-		return err
+		// get one interface for host networking and assign first address
+		res, err = pi.pool.Get()
+		if err != nil {
+			pi.log.WithError(err).Error("unable to allocate interface for host")
+			return err
+		}
+	} else {
+		res = &pool.Resource{
+			InterfaceInfo: hostInterface,
+			InUse:         true,
+		}
 	}
 
-	ipnet, err := pi.getHostIPfromPodCIDR()
+	varConfigurer := utils.NewOsVariableConfigurer()
+	ec := utils.NewEnvConfigurer(varConfigurer, types.DefaultCalicoConfig)
+
+	ipnet, err := getHostIPfromPodCIDRFunc(pi.log, ec)
 	if err != nil {
 		pi.log.WithError(err).Error("Failed to get IP for host interface")
 		return err
 	}
 	pi.log.Printf("Host IP address allocated: %s", ipnet)
 
-	if err := pi.configureHostInterface(res.InterfaceInfo.InterfaceName, ipnet, intfs); err != nil {
-		return fmt.Errorf("Failed to configure host interface %s with IP configurations", res.InterfaceInfo.InterfaceName)
+	if err := configureHostInterfaceFunc(res.InterfaceInfo.InterfaceName, ipnet, intfs, pi.log); err != nil {
+		return fmt.Errorf("Failed to configure host interface %s with IP configurations: %w", res.InterfaceInfo.InterfaceName, err)
 	}
 	// set host interface name
 	types.NodeInfraHostInterfaceName = res.InterfaceInfo.InterfaceName
+
+	// dial inframanager and setup host interface
+	request := &pb.SetupHostInterfaceRequest{
+		IfName:   types.NodeInfraHostInterfaceName,
+		Ipv4Addr: ipnet.String(),
+		MacAddr:  res.InterfaceInfo.MacAddr,
+	}
+	if err := sendSetupHostInterfaceFunc(request); err != nil {
+		return err
+	}
+	// save host interface setting in cache
+	if err := saveInterfaceConf(utilsGetDataDirPath(types.TapInterface), types.HostInterfaceRefId, types.HostInterfaceRefId, res.InterfaceInfo); err != nil {
+		return err
+	}
 	return nil
 }
 
-func (pi *tapPodInterface) configureHostInterface(ifName string, ipnet *net.IPNet, interfaces []*types.InterfaceInfo) error {
+func configureHostInterface(ifName string, ipnet *net.IPNet, interfaces []*types.InterfaceInfo, log *logrus.Entry) error {
 
-	link, err := netlink.LinkByName(ifName)
+	link, err := linkByName(ifName)
 	if err != nil {
-		pi.log.WithError(err).Errorf("error getting netlink object with inteface name: %s", ifName)
+		log.WithError(err).Errorf("error getting netlink object with inteface name: %s", ifName)
 		return err
 	}
 	// delete any set address on interface
-	ips, err := netlink.AddrList(link, netlink.FAMILY_V4)
+	ips, err := addrList(link, netlink.FAMILY_V4)
 	if err != nil {
-		pi.log.WithError(err).Error("Failed to list IPs on interface")
+		log.WithError(err).Error("Failed to list IPs on interface")
 		return err
 	}
 	for _, ip := range ips {
-		if err := netlink.AddrDel(link, &ip); err != nil {
-			pi.log.WithError(err).Error("Failed to remove ip address")
+		if err := addrDel(link, &ip); err != nil {
+			log.WithError(err).Error("Failed to remove ip address")
 		}
 	}
 
-	if err := netlink.AddrAdd(link, &netlink.Addr{IPNet: ipnet}); err != nil {
-		pi.log.WithError(err).Error("Failed to set ip address for interface")
+	if err := addrAdd(link, &netlink.Addr{IPNet: ipnet}); err != nil {
+		log.WithError(err).Error("Failed to set ip address for interface")
 		return err
 	}
-	if err := netlink.LinkSetUp(link); err != nil {
-		pi.log.WithError(err).Error("Failed to set interface up")
+	if err := linkSetUp(link); err != nil {
+		log.WithError(err).Error("Failed to set interface up")
 		return err
 	}
 	// setup routing from pods CIDR via host side tap interface
 	// check if it exist already
-	if err := pi.configureRouting(link); err != nil {
-		pi.log.WithError(err).Error("Failed to configure routing")
+	if err := configureRoutingFunc(link, log); err != nil {
+		log.WithError(err).Error("Failed to configure routing")
 		return err
 	}
 	return nil
 }
 
-func (pi *tapPodInterface) configureRouting(link netlink.Link) error {
-	// get first address from Pod CIDR
-	// TODO add ipv6 support
-	pi.log.Infof("Cluster CIDR %s", types.ClusterPodsCIDR)
-	clusterIP, err := netlink.ParseAddr(types.ClusterPodsCIDR)
-	if err != nil {
-		return err
+func getHostIPfromPodCIDR(log *logrus.Entry, ec *utils.EnvConfigurer) (*net.IPNet, error) {
+	// try to release any address allocated for IPU Agent, ignore error just print
+	if err := releaseIPFromIPAM(ec, ipam.ExecDel); err != nil {
+		log.WithError(err).Error("Failed to release allocated address")
 	}
 
-	pi.log.Infof("Node Pods CIDR %s", types.NodePodsCIDR)
-	nodePodsIP, err := netlink.ParseAddr(types.NodePodsCIDR)
-	if err != nil {
-		return err
-	}
-
-	// setup routing from pods CIDR via VF[0]
-	// check if it exist already
-	if err := setupHostRoute(clusterIP.IPNet, link); err != nil {
-		return fmt.Errorf("Failed to setup route to Cluster CIDR: %w", err)
-	}
-
-	if err := setupHostRoute(nodePodsIP.IPNet, link); err != nil {
-		return fmt.Errorf("Failed to setup route to Pods CIDR: %w", err)
-	}
-
-	return nil
-}
-
-func (pi *tapPodInterface) getHostIPfromPodCIDR() (*net.IPNet, error) {
-	varConfigurer := utils.NewOsVariableConfigurer()
-	ec := utils.NewEnvConfigurer(varConfigurer, types.DefaultCalicoConfig)
-	// try to release any address allocated for Infra Agent, ignore error just print
-	if err := utils.ReleaseIPFromIPAM(ec, ipam.ExecDel); err != nil {
-		pi.log.WithError(err).Error("Failed to release allocated address")
-	}
-
-	ipnet, err := utils.GetIPFromIPAM(ec, ipam.ExecAdd)
+	ipnet, err := getIPFromIPAM(ec, ipam.ExecAdd)
 	if err != nil {
 		return nil, err
 	}
@@ -176,9 +189,9 @@ func (pi *tapPodInterface) CreatePodInterface(in *pb.AddRequest) (*types.Interfa
 	}
 	pi.log.Infof("Interface allocated for Pod: %s", res.InterfaceInfo.InterfaceName)
 
-	if err := setHostInterfaceInPodNetns(in, res.InterfaceInfo); err != nil {
+	if err := setHostInterfaceInPodNetnsFunc(in, res.InterfaceInfo); err != nil {
 		if _, ok := err.(nsError); ok {
-			movePodInterfaceToHostNetns(in.Netns, in.InterfaceName, res.InterfaceInfo)
+			_ = movePodInterfaceToHostNetnsFunc(in.Netns, in.InterfaceName, res.InterfaceInfo)
 		}
 		pi.log.WithError(err).Error("failed to push interface to container")
 		pi.pool.Release(res.InterfaceInfo.InterfaceName) // if we failed to setup the allocated interface then release it
@@ -187,7 +200,7 @@ func (pi *tapPodInterface) CreatePodInterface(in *pb.AddRequest) (*types.Interfa
 	pi.log.Infof("Host interface name: %s interface mac %s", res.InterfaceInfo.InterfaceName, res.InterfaceInfo.MacAddr)
 
 	refid := filepath.Base(in.Netns)
-	if err = utils.SaveInterfaceConf(utils.GetDataDirPath(types.TapInterface), refid, in.InterfaceName, res.InterfaceInfo); err != nil {
+	if err = saveInterfaceConf(utilsGetDataDirPath(types.TapInterface), refid, in.InterfaceName, res.InterfaceInfo); err != nil {
 		pi.log.WithError(err).Error("storing cache failed")
 		return nil, err
 	}
@@ -197,7 +210,7 @@ func (pi *tapPodInterface) CreatePodInterface(in *pb.AddRequest) (*types.Interfa
 func (pi *tapPodInterface) ReleasePodInterface(in *pb.DelRequest) error {
 	// release used interface
 	refid := filepath.Base(in.Netns)
-	conf, err := utils.ReadInterfaceConf(utils.GetDataDirPath(types.TapInterface), refid, in.InterfaceName)
+	conf, err := readInterfaceConf(utilsGetDataDirPath(types.TapInterface), refid, in.InterfaceName)
 	if err != nil {
 		if os.IsNotExist(err) {
 			pi.log.WithError(err).Infof("interface config cache file for refid %s is not found", refid)
@@ -205,12 +218,12 @@ func (pi *tapPodInterface) ReleasePodInterface(in *pb.DelRequest) error {
 		}
 		return err
 	}
-	if err := movePodInterfaceToHostNetns(in.Netns, in.InterfaceName, conf); err != nil {
+	if err := movePodInterfaceToHostNetnsFunc(in.Netns, in.InterfaceName, conf); err != nil {
 		return err
 	}
 	pi.pool.Release(conf.InterfaceName)
 	// remove cache, ignore error
-	path := filepath.Join(utils.GetDataDirPath(types.TapInterface), refid+"-"+in.InterfaceName)
+	path := filepath.Join(utilsGetDataDirPath(types.TapInterface), refid+"-"+in.InterfaceName)
 	_ = os.Remove(path)
 	return nil
 }
@@ -236,7 +249,7 @@ func (pi *tapPodInterface) ReleaseNetwork(ctx context.Context, c pb.InfraAgentCl
 	}
 	// get interface config from cache
 	refid := filepath.Base(in.Netns)
-	conf, err := utils.ReadInterfaceConf(utils.GetDataDirPath(types.TapInterface), refid, in.InterfaceName)
+	conf, err := readInterfaceConf(utilsGetDataDirPath(types.TapInterface), refid, in.InterfaceName)
 	if err != nil {
 		if os.IsNotExist(err) {
 			pi.log.WithError(err).Infof("interface config cache file for refid %s is not found", refid)
@@ -249,15 +262,16 @@ func (pi *tapPodInterface) ReleaseNetwork(ctx context.Context, c pb.InfraAgentCl
 	}
 	var ip string = ""
 	// fetch interface IP
-	err = ns.WithNetNSPath(in.Netns, func(_ ns.NetNS) error {
-		linkObj, err := netlink.LinkByName(in.InterfaceName)
+	err = withNetNSPath(in.Netns, func(_ ns.NetNS) error {
+		linkObj, err := linkByName(in.InterfaceName)
 		if err != nil {
 			pi.log.WithError(err).Errorf("failed to find netlink device with name %s", in.InterfaceName)
 			return err
 		}
-		l, err := netlink.AddrList(linkObj, netlink.FAMILY_V4)
+		l, err := addrList(linkObj, netlink.FAMILY_V4)
 		if err != nil || len(l) == 0 {
 			pi.log.WithError(err).Error("Failed to fetch IP address from Pod interface or IP not set")
+			return err
 		}
 		ip = l[0].IPNet.String()
 		return nil

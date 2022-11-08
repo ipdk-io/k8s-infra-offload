@@ -21,7 +21,7 @@ import (
 type store interface {
 	WriteToStore() bool
 	DeleteFromStore() bool
-	GetFromStore() (store, error)
+	GetFromStore() store
 	UpdateToStore() bool
 }
 
