@@ -3,19 +3,18 @@
 Makefile       @nupurjai @ahalimx86 @vishala-r @Eoghan1232 @ahalimx86 @lpawlikx @ipatrykx
 go.mod       @nupurjai @ahalimx86 @vishala-r @Eoghan1232 @ahalimx86 @lpawlikx @ipatrykx
 go.sum       @nupurjai @ahalimx86 @vishala-r @Eoghan1232 @ahalimx86 @lpawlikx @ipatrykx
-README.md       @nupurjai @vishala-r @ahalimx86 @lpawlikx @ipatrykx
-proto/*       @nupurjai @vishala-r @ahalimx86 @lpawlikx @ipatrykx
-docs/*       @nupurjai @vishala-r @ahalimx86 @lpawlikx @ipatrykx
-.github/workflows/*       @nupurjai @vishala-r @ahalimx86 @lpawlikx @ipatrykx @mgaravin
+README.md       @nupurjai @vishala-r @ahalimx86 @lpawlikx @ipatrykx @Eoghan1232
+proto/*       @nupurjai @vishala-r @ahalimx86 @lpawlikx @ipatrykx @Eoghan1232
+docs/*       @nupurjai @vishala-r @ahalimx86 @lpawlikx @ipatrykx @Eoghan1232
+.github/workflows/*       @nupurjai @vishala-r @ahalimx86 @lpawlikx @ipatrykx @mgaravin @Eoghan1232
 
 # Cloud Native
-infraagent/*       @ahalimx86 @lpawlikx @ipatrykx
-pkg/*       @ahalimx86 @lpawlikx @ipatrykx
-deploy/*       @ahalimx86 @lpawlikx @ipatrykx
-images/Dockerfile.agent       @ahalimx86 @lpawlikx @ipatrykx
-docs/infraagent/*       @ahalimx86 @lpawlikx @ipatrykx
-hack/cicd/*       @ahalimx86 @lpawlikx @ipatrykx
-
+infraagent/*       @ahalimx86 @lpawlikx @ipatrykx @Eoghan1232
+pkg/*       @ahalimx86 @lpawlikx @ipatrykx @Eoghan1232
+deploy/*       @ahalimx86 @lpawlikx @ipatrykx @Eoghan1232
+images/Dockerfile.agent       @ahalimx86 @lpawlikx @ipatrykx @Eoghan1232
+docs/infraagent/*       @ahalimx86 @lpawlikx @ipatrykx @Eoghan1232
+hack/cicd/*       @ahalimx86 @lpawlikx @ipatrykx @Eoghan1232
 
 # EPG
 images/Dockerfile.manager       @nupurjai @vishala-r
