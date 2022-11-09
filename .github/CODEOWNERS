@@ -24,4 +24,4 @@ hack/scripts/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
 hack/k8s_dp/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
 infrmanager/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
 pkg/utils/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
-pkg/infrmanager/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
+pkg/inframanager/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
