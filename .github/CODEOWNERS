@@ -22,6 +22,6 @@ k8s_dp/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
 # scripts/ and k8s_dp/ dirs
 hack/scripts/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
 hack/k8s_dp/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
-infrmanager/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
+inframanager/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
 pkg/utils/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
 pkg/inframanager/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
