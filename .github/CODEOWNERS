@@ -1,1 +1,27 @@
+# Shared
 *       @nupurjai @ahalimx86 @vishala-r @Eoghan1232
+Makefile       @nupurjai @ahalimx86 @vishala-r @Eoghan1232 @ahalimx86 @lpawlikx @ipatrykx @venkateshpnv @dhruvpt
+go.mod       @nupurjai @ahalimx86 @vishala-r @Eoghan1232 @ahalimx86 @lpawlikx @ipatrykx @venkateshpnv @dhruvpt
+go.sum       @nupurjai @ahalimx86 @vishala-r @Eoghan1232 @ahalimx86 @lpawlikx @ipatrykx @venkateshpnv @dhruvpt
+README.md       @nupurjai @vishala-r @ahalimx86 @lpawlikx @ipatrykx @Eoghan1232 @venkateshpnv @dhruvpt
+proto/*       @nupurjai @vishala-r @ahalimx86 @lpawlikx @ipatrykx @Eoghan1232 @venkateshpnv @dhruvpt
+docs/*       @nupurjai @vishala-r @ahalimx86 @lpawlikx @ipatrykx @Eoghan1232 @venkateshpnv @dhruvpt
+.github/workflows/*       @nupurjai @vishala-r @ahalimx86 @lpawlikx @ipatrykx @mgaravin @Eoghan1232 @venkateshpnv @dhruvpt
+
+# Cloud Native
+infraagent/*       @ahalimx86 @lpawlikx @ipatrykx @Eoghan1232
+pkg/*       @ahalimx86 @lpawlikx @ipatrykx @Eoghan1232
+deploy/*       @ahalimx86 @lpawlikx @ipatrykx @Eoghan1232
+images/Dockerfile.agent       @ahalimx86 @lpawlikx @ipatrykx @Eoghan1232
+docs/infraagent/*       @ahalimx86 @lpawlikx @ipatrykx @Eoghan1232
+hack/cicd/*       @ahalimx86 @lpawlikx @ipatrykx @Eoghan1232
+
+# EPG
+images/Dockerfile.manager       @nupurjai @vishala-r @venkateshpnv @dhruvpt
+k8s_dp/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
+# scripts/ and k8s_dp/ dirs
+hack/scripts/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
+hack/k8s_dp/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
+inframanager/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
+pkg/utils/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
+pkg/inframanager/*       @nupurjai @vishala-r @venkateshpnv @dhruvpt
