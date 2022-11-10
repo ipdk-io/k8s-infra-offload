@@ -18,8 +18,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"reflect"
 	"os"
+	"reflect"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -37,44 +37,44 @@ func isServiceStoreEmpty() bool {
 }
 
 func InitServiceStore(setFwdPipe bool) bool {
-        flags := os.O_CREATE
+	flags := os.O_CREATE
 
-        /*
-                Initialize the store to empty while setting the
-                forwarding pipeline. It indicates that the p4-ovs
-                server has just started and pipeline is set.
-                And no stale forwarding rules should exist in the store.
-                Truncate if any entries from previous server runs.
-        */
-        if setFwdPipe {
-                flags = flags | os.O_TRUNC
-        }
+	/*
+	   Initialize the store to empty while setting the
+	   forwarding pipeline. It indicates that the p4-ovs
+	   server has just started and pipeline is set.
+	   And no stale forwarding rules should exist in the store.
+	   Truncate if any entries from previous server runs.
+	*/
+	if setFwdPipe {
+		flags = flags | os.O_TRUNC
+	}
 
-        /* Create the store file if it doesn't exist */
-        file, err := os.OpenFile(servicesFile, flags, 0600)
-        if err != nil {
-                log.Error("Failed to open", servicesFile)
-                return false
-        }
-        file.Close()
+	/* Create the store file if it doesn't exist */
+	file, err := os.OpenFile(servicesFile, flags, 0600)
+	if err != nil {
+		log.Error("Failed to open", servicesFile)
+		return false
+	}
+	file.Close()
 
-        data, err := os.ReadFile(servicesFile)
-        if err != nil {
-                log.Error("Error reading ", servicesFile, err)
-                return false
-        }
+	data, err := os.ReadFile(servicesFile)
+	if err != nil {
+		log.Error("Error reading ", servicesFile, err)
+		return false
+	}
 
-        if len(data) == 0 {
-                return true
-        }
+	if len(data) == 0 {
+		return true
+	}
 
-        err = json.Unmarshal(data, &ServiceSet.ServiceMap)
-        if err != nil {
-                log.Error("Error unmarshalling data from ", servicesFile, err)
-                return false
-        }
+	err = json.Unmarshal(data, &ServiceSet.ServiceMap)
+	if err != nil {
+		log.Error("Error unmarshalling data from ", servicesFile, err)
+		return false
+	}
 
-        return true
+	return true
 }
 
 func (s Service) WriteToStore() bool {

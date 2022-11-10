@@ -82,13 +82,13 @@ func valueToBytes(value uint32) []byte {
 }
 
 func valueToBytes16(value uint16) []byte {
-        buf := new(bytes.Buffer)
-        err := binary.Write(buf, binary.BigEndian, value)
-        if err != nil {
-                fmt.Println("binary.Write failed:", err)
-        }
-        fmt.Printf("% x", buf.Bytes())
-        return buf.Bytes()
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.BigEndian, value)
+	if err != nil {
+		fmt.Println("binary.Write failed:", err)
+	}
+	fmt.Printf("% x", buf.Bytes())
+	return buf.Bytes()
 }
 
 func IP4toInt(IPv4Address net.IP) int64 {
