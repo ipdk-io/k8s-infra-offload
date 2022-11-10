@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"reflect"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -28,36 +29,77 @@ const (
 )
 
 func isServiceStoreEmpty() bool {
-	if len(ServiceMap.ServiceMap) == 0 {
+	if len(ServiceSet.ServiceMap) == 0 {
 		return true
 	} else {
 		return false
 	}
 }
 
+func InitServiceStore(setFwdPipe bool) bool {
+        flags := os.O_CREATE
+
+        /*
+                Initialize the store to empty while setting the
+                forwarding pipeline. It indicates that the p4-ovs
+                server has just started and pipeline is set.
+                And no stale forwarding rules should exist in the store.
+                Truncate if any entries from previous server runs.
+        */
+        if setFwdPipe {
+                flags = flags | os.O_TRUNC
+        }
+
+        /* Create the store file if it doesn't exist */
+        file, err := os.OpenFile(servicesFile, flags, 0600)
+        if err != nil {
+                log.Error("Failed to open", servicesFile)
+                return false
+        }
+        file.Close()
+
+        data, err := os.ReadFile(servicesFile)
+        if err != nil {
+                log.Error("Error reading ", servicesFile, err)
+                return false
+        }
+
+        if len(data) == 0 {
+                return true
+        }
+
+        err = json.Unmarshal(data, &ServiceSet.ServiceMap)
+        if err != nil {
+                log.Error("Error unmarshalling data from ", servicesFile, err)
+                return false
+        }
+
+        return true
+}
+
 func (s Service) WriteToStore() bool {
 	//aquire lock before adding entry into the map
-	ServiceMap.ServiceLock.Lock()
+	ServiceSet.ServiceLock.Lock()
 	//append tmp entry to the map
-	ServiceMap.ServiceMap[s.ClusterIp] = s
+	ServiceSet.ServiceMap[s.ClusterIp] = s
 	//release lock after updating the map
-	ServiceMap.ServiceLock.Unlock()
+	ServiceSet.ServiceLock.Unlock()
 	return true
 }
 
 func (s Service) DeleteFromStore() bool {
 	//aquire lock before adding entry into the map
-	ServiceMap.ServiceLock.Lock()
+	ServiceSet.ServiceLock.Lock()
 	//delete tmp entry from the map
-	delete(ServiceMap.ServiceMap, s.ClusterIp)
+	delete(ServiceSet.ServiceMap, s.ClusterIp)
 	//release lock after updating the map
-	ServiceMap.ServiceLock.Unlock()
+	ServiceSet.ServiceLock.Unlock()
 	return true
 }
 
 func (s Service) GetFromStore() store {
 
-	res := ServiceMap.ServiceMap[s.ClusterIp]
+	res := ServiceSet.ServiceMap[s.ClusterIp]
 	if reflect.DeepEqual(res, Service{}) {
 		return nil
 	} else {
@@ -71,7 +113,7 @@ func (s Service) UpdateToStore() bool {
 }
 
 func RunSyncServiceInfo() bool {
-	jsonStr, err := json.MarshalIndent(ServiceMap.ServiceMap, "", " ")
+	jsonStr, err := json.MarshalIndent(ServiceSet.ServiceMap, "", " ")
 	if err != nil {
 		log.Errorf("Failed to marshal service entries map %s", err)
 		return false

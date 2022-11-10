@@ -22,36 +22,21 @@ import (
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
 	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
 	log "github.com/sirupsen/logrus"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
 	"net"
-	"sync"
 )
 
-type groupIDCollection struct {
-	groupIDMap     map[string]uint32
-	groupIDMapLock *sync.Mutex
-}
-
-var groupIDTracker *groupIDCollection
-var once sync.Once
-
-func newGroupIDCollection() {
-	once.Do(func() {
-		groupIDTracker = &groupIDCollection{groupIDMap: make(map[string]uint32),
-			groupIDMapLock: &sync.Mutex{}}
-	})
-}
-
-func WriteDestIpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []string, podMacAddr []string, portID []uint32, modBlobPtrDnat []uint32, flag bool) error {
-	if flag == true {
+func WriteDestIpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []string, podMacAddr []string, portID []uint16, modBlobPtrDnat []uint32, addEntry bool) error {
+	if addEntry {
 		for i := 0; i < len(modBlobPtrDnat); i++ {
 			dstMac, err := net.ParseMAC(podMacAddr[i])
 			if err != nil {
-				log.Errorf("Invalid mac address")
+				log.Errorf("Invalid mac address: %s, error: %v", podMacAddr[i], err)
 				return err
 			}
 
 			if net.ParseIP(podIpAddr[i]) == nil {
-				err = fmt.Errorf("Invalid IP address")
+				err = fmt.Errorf("Invalid IP address: %s", podIpAddr[i])
 				return err
 			}
 
@@ -64,7 +49,7 @@ func WriteDestIpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []str
 				},
 				p4RtC.NewTableActionDirect("k8s_dp_control.update_dst_ip_mac", [][]byte{dstMac,
 					Pack32BinaryIP4(podIpAddr[i]),
-					valueToBytes(portID[i])}),
+					valueToBytes16(portID[i])}),
 				nil,
 			)
 			if err := p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
@@ -93,7 +78,7 @@ func WriteDestIpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []str
 	return nil
 }
 
-func AsSl3TcpTable(ctx context.Context, p4RtC *client.Client, memberID []uint32, modBlobPtr []uint32, groupID uint32, flag bool) error {
+func AsSl3TcpTable(ctx context.Context, p4RtC *client.Client, memberID []uint32, modBlobPtr []uint32, groupID uint32, addEntry bool) error {
 	var err error
 	var memberList []*p4_v1.ActionProfileGroup_Member
 
@@ -109,7 +94,7 @@ func AsSl3TcpTable(ctx context.Context, p4RtC *client.Client, memberID []uint32,
 			"k8s_dp_control.set_default_lb_dest",
 			[][]byte{valueToBytes(modBlobPtr[i])},
 		)
-		if flag == true {
+		if addEntry {
 			if err = p4RtC.InsertActionProfileMember(ctx, entryMemberTcp); err != nil {
 				log.Errorf("Cannot insert member entry into 'as_sl3_tcp table': %v", err)
 				return err
@@ -128,7 +113,7 @@ func AsSl3TcpTable(ctx context.Context, p4RtC *client.Client, memberID []uint32,
 		memberList,
 		int32(124),
 	)
-	if flag == true {
+	if addEntry {
 		if err = p4RtC.InsertActionProfileGroup(ctx, entryGroupTcp); err != nil {
 			log.Errorf("Cannot insert group entry into 'as_sl3_tcp table': %v", err)
 			return err
@@ -143,7 +128,7 @@ func AsSl3TcpTable(ctx context.Context, p4RtC *client.Client, memberID []uint32,
 	return nil
 }
 
-func AsSl3UdpTable(ctx context.Context, p4RtC *client.Client, memberID []uint32, modBlobPtr []uint32, groupID uint32, flag bool) error {
+func AsSl3UdpTable(ctx context.Context, p4RtC *client.Client, memberID []uint32, modBlobPtr []uint32, groupID uint32, addEntry bool) error {
 	var err error
 	var memberList []*p4_v1.ActionProfileGroup_Member
 
@@ -159,7 +144,7 @@ func AsSl3UdpTable(ctx context.Context, p4RtC *client.Client, memberID []uint32,
 			"k8s_dp_control.set_default_lb_dest",
 			[][]byte{valueToBytes(modBlobPtr[i])},
 		)
-		if flag == true {
+		if addEntry {
 			if err = p4RtC.InsertActionProfileMember(ctx, entryMemberUdp); err != nil {
 				log.Errorf("Cannot insert member entry into 'as_sl3_udp table': %v", err)
 				return err
@@ -178,7 +163,7 @@ func AsSl3UdpTable(ctx context.Context, p4RtC *client.Client, memberID []uint32,
 		memberList,
 		int32(124),
 	)
-	if flag == true {
+	if addEntry {
 		if err = p4RtC.InsertActionProfileGroup(ctx, entryGroupUdp); err != nil {
 			log.Errorf("Cannot insert group entry into 'as_sl3_udp table': %v", err)
 			return err
@@ -193,9 +178,9 @@ func AsSl3UdpTable(ctx context.Context, p4RtC *client.Client, memberID []uint32,
 	return nil
 }
 
-func TxBalanceTcpTable(ctx context.Context, p4RtC *client.Client, serviceIpAddr string, servicePort uint32, groupID uint32, flag bool) error {
+func TxBalanceTcpTable(ctx context.Context, p4RtC *client.Client, serviceIpAddr string, servicePort uint16, groupID uint32, addEntry bool) error {
 	if net.ParseIP(serviceIpAddr) == nil {
-		err := fmt.Errorf("Invalid IP Address")
+		err := fmt.Errorf("Invalid IP Address: %s", serviceIpAddr)
 		return err
 	}
 
@@ -204,7 +189,7 @@ func TxBalanceTcpTable(ctx context.Context, p4RtC *client.Client, serviceIpAddr 
 			Value: Pack32BinaryIP4(serviceIpAddr),
 		},
 		"hdr.tcp.dst_port": &client.ExactMatch{
-			Value: valueToBytes(servicePort),
+			Value: valueToBytes16(servicePort),
 		},
 	}
 	entryTcp := p4RtC.NewTableEntry(
@@ -213,7 +198,7 @@ func TxBalanceTcpTable(ctx context.Context, p4RtC *client.Client, serviceIpAddr 
 		p4RtC.NewTableActionGroup(groupID),
 		nil,
 	)
-	if flag == true {
+	if addEntry {
 		if err := p4RtC.InsertTableEntry(ctx, entryTcp); err != nil {
 			log.Errorf("Cannot insert entry into 'tx_balance_tcp table': %v", err)
 			return err
@@ -227,9 +212,9 @@ func TxBalanceTcpTable(ctx context.Context, p4RtC *client.Client, serviceIpAddr 
 	return nil
 }
 
-func TxBalanceUdpTable(ctx context.Context, p4RtC *client.Client, serviceIpAddr string, servicePort uint32, groupID uint32, flag bool) error {
+func TxBalanceUdpTable(ctx context.Context, p4RtC *client.Client, serviceIpAddr string, servicePort uint16, groupID uint32, addEntry bool) error {
 	if net.ParseIP(serviceIpAddr) == nil {
-		err := fmt.Errorf("Invalid IP Address")
+		err := fmt.Errorf("Invalid IP Address: %s", serviceIpAddr)
 		return err
 	}
 
@@ -238,7 +223,7 @@ func TxBalanceUdpTable(ctx context.Context, p4RtC *client.Client, serviceIpAddr 
 			Value: Pack32BinaryIP4(serviceIpAddr),
 		},
 		"hdr.udp.dst_port": &client.ExactMatch{
-			Value: valueToBytes(servicePort),
+			Value: valueToBytes16(servicePort),
 		},
 	}
 	entryUdp := p4RtC.NewTableEntry(
@@ -247,7 +232,7 @@ func TxBalanceUdpTable(ctx context.Context, p4RtC *client.Client, serviceIpAddr 
 		p4RtC.NewTableActionGroup(groupID),
 		nil,
 	)
-	if flag == true {
+	if addEntry {
 		if err := p4RtC.InsertTableEntry(ctx, entryUdp); err != nil {
 			log.Errorf("Cannot insert entry into 'tx_balance_udp table': %v", err)
 			return err
@@ -261,16 +246,16 @@ func TxBalanceUdpTable(ctx context.Context, p4RtC *client.Client, serviceIpAddr 
 	return nil
 }
 
-func WriteSourceIpTable(ctx context.Context, p4RtC *client.Client, ModBlobPtrSnat uint32, serviceIpAddr string, serviceMacAddr string, servicePort uint32, flag bool) error {
-	if flag == true {
+func WriteSourceIpTable(ctx context.Context, p4RtC *client.Client, ModBlobPtrSnat uint32, serviceIpAddr string, serviceMacAddr string, servicePort uint16, addEntry bool) error {
+	if addEntry {
 		srcMac, err := net.ParseMAC(serviceMacAddr)
 		if err != nil {
-			log.Errorf("Failed to parse mac address")
+			log.Errorf("Failed to parse mac address: %s, error: %v", serviceMacAddr, err)
 			return err
 		}
 
 		if net.ParseIP(serviceIpAddr) == nil {
-			err = fmt.Errorf("Invalid IP Address")
+			err = fmt.Errorf("Invalid IP Address: %s", serviceIpAddr)
 			return err
 		}
 
@@ -283,7 +268,7 @@ func WriteSourceIpTable(ctx context.Context, p4RtC *client.Client, ModBlobPtrSna
 			},
 			p4RtC.NewTableActionDirect("k8s_dp_control.update_src_ip_mac", [][]byte{srcMac,
 				Pack32BinaryIP4(serviceIpAddr),
-				valueToBytes(servicePort)}),
+				valueToBytes16(servicePort)}),
 			nil,
 		)
 		if err = p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
@@ -310,11 +295,11 @@ func WriteSourceIpTable(ctx context.Context, p4RtC *client.Client, ModBlobPtrSna
 	return nil
 }
 
-func SetMetaTcpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []string, portID []uint32, ModBlobPtrSnat uint32, flag bool) error {
-	if flag == true {
+func SetMetaTcpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []string, portID []uint16, ModBlobPtrSnat uint32, addEntry bool) error {
+	if addEntry {
 		for i := 0; i < len(podIpAddr); i++ {
 			if net.ParseIP(podIpAddr[i]) == nil {
-				err := fmt.Errorf("Invalid IP Address")
+				err := fmt.Errorf("Invalid IP Address: %s", podIpAddr[i])
 				return err
 			}
 
@@ -325,7 +310,7 @@ func SetMetaTcpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []stri
 						Value: Pack32BinaryIP4(podIpAddr[i]),
 					},
 					"hdr.tcp.dst_port": &client.ExactMatch{
-						Value: valueToBytes(portID[i]),
+						Value: valueToBytes16(portID[i]),
 					},
 				},
 				p4RtC.NewTableActionDirect("k8s_dp_control.set_key_for_reverse_ct", [][]byte{valueToBytes(ModBlobPtrSnat)}),
@@ -339,7 +324,7 @@ func SetMetaTcpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []stri
 	} else {
 		for i := 0; i < len(podIpAddr); i++ {
 			if net.ParseIP(podIpAddr[i]) == nil {
-				err := fmt.Errorf("Invalid IP Address")
+				err := fmt.Errorf("Invalid IP Address: %s", podIpAddr[i])
 				return err
 			}
 
@@ -350,7 +335,7 @@ func SetMetaTcpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []stri
 						Value: Pack32BinaryIP4(podIpAddr[i]),
 					},
 					"hdr.tcp.dst_port": &client.ExactMatch{
-						Value: valueToBytes(portID[i]),
+						Value: valueToBytes16(portID[i]),
 					},
 				},
 				nil,
@@ -365,11 +350,11 @@ func SetMetaTcpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []stri
 	return nil
 }
 
-func SetMetaUdpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []string, portID []uint32, ModBlobPtrSnat uint32, flag bool) error {
-	if flag == true {
+func SetMetaUdpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []string, portID []uint16, ModBlobPtrSnat uint32, addEntry bool) error {
+	if addEntry {
 		for i := 0; i < len(podIpAddr); i++ {
 			if net.ParseIP(podIpAddr[i]) == nil {
-				err := fmt.Errorf("Invalid IP Address")
+				err := fmt.Errorf("Invalid IP Address: %s", podIpAddr[i])
 				return err
 			}
 
@@ -380,7 +365,7 @@ func SetMetaUdpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []stri
 						Value: Pack32BinaryIP4(podIpAddr[i]),
 					},
 					"hdr.udp.dst_port": &client.ExactMatch{
-						Value: valueToBytes(portID[i]),
+						Value: valueToBytes16(portID[i]),
 					},
 				},
 				p4RtC.NewTableActionDirect("k8s_dp_control.set_key_for_reverse_ct", [][]byte{valueToBytes(ModBlobPtrSnat)}),
@@ -394,7 +379,7 @@ func SetMetaUdpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []stri
 	} else {
 		for i := 0; i < len(podIpAddr); i++ {
 			if net.ParseIP(podIpAddr[i]) == nil {
-				err := fmt.Errorf("Invalid IP Address")
+				err := fmt.Errorf("Invalid IP Address: %s", podIpAddr[i])
 				return err
 			}
 
@@ -405,7 +390,7 @@ func SetMetaUdpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []stri
 						Value: Pack32BinaryIP4(podIpAddr[i]),
 					},
 					"hdr.udp.dst_port": &client.ExactMatch{
-						Value: valueToBytes(portID[i]),
+						Value: valueToBytes16(portID[i]),
 					},
 				},
 				nil,
@@ -420,16 +405,11 @@ func SetMetaUdpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []stri
 	return nil
 }
 
-func InsertServiceRules(ctx context.Context, p4RtC *client.Client, podIpAddr []string, podMacAddr []string, portID []uint32, serviceIpAddr string, serviceMacAddr string, servicePort uint32) error {
+func InsertServiceRules(ctx context.Context, p4RtC *client.Client, podIpAddr []string, podMacAddr []string, portID []uint16, serviceIpAddr string, serviceMacAddr string, servicePort uint16) error {
 	var err error
 	memberID := make([]uint32, len(podIpAddr))
 
 	groupID := uuidFactory.getUUID()
-
-	newGroupIDCollection()
-	groupIDTracker.groupIDMapLock.Lock()
-	groupIDTracker.groupIDMap[serviceIpAddr] = groupID
-	groupIDTracker.groupIDMapLock.Unlock()
 
 	for i := 0; i < len(podIpAddr); i++ {
 		memberID = append(memberID, uint32(i+1))
@@ -478,10 +458,22 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client, podIpAddr []s
 	return nil
 }
 
-func DeleteServiceRules(ctx context.Context, p4RtC *client.Client, podIpAddr []string, podMacAddr []string, portID []uint32, serviceIpAddr string, serviceMacAddr string, servicePort uint32) error {
+func DeleteServiceRules(ctx context.Context, p4RtC *client.Client, podIpAddr []string, podMacAddr []string, portID []uint16, serviceIpAddr string, serviceMacAddr string, servicePort uint16) error {
 	var err error
+	var groupID uint32
+
 	memberID := make([]uint32, len(podIpAddr))
-	groupID := groupIDTracker.groupIDMap[serviceIpAddr]
+	s := store.Service{
+		ClusterIp: serviceIpAddr,
+	}
+	res := s.GetFromStore()
+	if res != nil {
+		serviceEntry := res.(store.Service)
+		groupID = serviceEntry.GroupID
+	} else {
+		err = fmt.Errorf("No GroupID found")
+		return err
+	}
 
 	for i := 0; i < len(podIpAddr); i++ {
 		memberID = append(memberID, uint32(i+1))

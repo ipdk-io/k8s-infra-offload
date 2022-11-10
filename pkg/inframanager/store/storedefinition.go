@@ -54,7 +54,7 @@ type ServiceCollection struct {
 	ServiceLock *sync.Mutex
 }
 
-var ServiceMap *ServiceCollection
+var ServiceSet *ServiceCollection
 var EndPointSet *EndPointCollection
 var once sync.Once
 
@@ -65,7 +65,9 @@ func NewEndPoint() {
 	})
 }
 
-func NewServiceAddMap() {
-	ServiceMap = &ServiceCollection{ServiceMap: make(map[string]Service),
-		ServiceLock: &sync.Mutex{}}
+func NewService() {
+	once.Do(func() {
+		ServiceSet = &ServiceCollection{ServiceMap: make(map[string]Service),
+			ServiceLock: &sync.Mutex{}}
+	})
 }

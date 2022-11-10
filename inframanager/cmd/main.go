@@ -56,6 +56,7 @@ func main() {
 
 	api.NewApiServer()
 	store.NewEndPoint()
+	store.NewService()
 
 	if err := api.OpenP4RtC(ctx, 0, 1, stopCh); err != nil {
 		log.Errorf("Failed to open p4 runtime client connection")
@@ -73,6 +74,7 @@ func main() {
 			os.Exit(1)
 		}
 		store.InitEndPointStore(false)
+		store.InitServiceStore(false)
 	} else {
 		// Setting fwding pipeline
 		log.Infof("Setting the pipeline")
@@ -84,6 +86,7 @@ func main() {
 			os.Exit(1)
 		}
 		store.InitEndPointStore(true)
+		store.InitServiceStore(true)
 	}
 
 	// Starting inframanager gRPC server

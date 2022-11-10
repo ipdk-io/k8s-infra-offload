@@ -81,6 +81,16 @@ func valueToBytes(value uint32) []byte {
 	return buf.Bytes()
 }
 
+func valueToBytes16(value uint16) []byte {
+        buf := new(bytes.Buffer)
+        err := binary.Write(buf, binary.BigEndian, value)
+        if err != nil {
+                fmt.Println("binary.Write failed:", err)
+        }
+        fmt.Printf("% x", buf.Bytes())
+        return buf.Bytes()
+}
+
 func IP4toInt(IPv4Address net.IP) int64 {
 	IPv4Int := big.NewInt(0)
 	IPv4Int.SetBytes(IPv4Address.To4())
