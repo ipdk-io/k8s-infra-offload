@@ -41,8 +41,11 @@ import (
 )
 
 var (
-	newForConfig = utils.GetK8sClient
-	getK8sConfig = utils.GetK8sConfig
+	newForConfig          = utils.GetK8sClient
+	getK8sConfig          = utils.GetK8sConfig
+	getNodeIP             = utils.GetNodeIP
+	waitForCacheSync      = cache.WaitForCacheSync
+	splitMetaNamespaceKey = cache.SplitMetaNamespaceKey
 )
 
 type ServicesListWatchType int
@@ -209,7 +212,7 @@ func NewServiceServer(log *logrus.Entry, handler NatSettingsHandler, refreshTime
 		},
 	})
 
-	nodeIP, err := utils.GetNodeIP(k8sc, types.NodeName)
+	nodeIP, err := getNodeIP(k8sc, types.NodeName)
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +276,7 @@ func (s *serviceServer) Run(workers int, stopCh <-chan struct{}) error {
 
 	// Wait for the caches to be synced before starting workers
 	s.log.Info("Waiting for informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, s.serviceSynced, s.endpointSynced); !ok {
+	if ok := waitForCacheSync(stopCh, s.serviceSynced, s.endpointSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
@@ -352,7 +355,7 @@ func (s *serviceServer) processNextWorkItem() bool {
 // converge the two.
 func (s *serviceServer) syncHandler(key string) error {
 	// Convert the namespace/name string into a distinct namespace and name
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	namespace, name, err := splitMetaNamespaceKey(key)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
 		return nil

@@ -57,7 +57,7 @@ clean:
 	rm -rf ./bin
 
 test:
-	go test $(shell go list ./... | grep -v manager | grep -v proto | grep -v types) -coverprofile=./cover.out
+	./hack/cicd/run-tests.sh
 
 docker-build: docker-build-agent docker-build-manager
 

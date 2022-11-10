@@ -16,6 +16,7 @@ require (
 )
 
 require (
+	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
@@ -29,6 +30,7 @@ require (
 	github.com/subosito/gotenv v1.2.0 // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
+	k8s.io/apiextensions-apiserver v0.25.0 // indirect
 )
 
 require (
@@ -94,6 +96,7 @@ require (
 	github.com/mdlayher/socket v0.2.1 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
+	sigs.k8s.io/controller-runtime v0.13.1
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 )
 
