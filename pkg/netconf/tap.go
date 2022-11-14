@@ -75,16 +75,20 @@ func configureTapNamespace(in *pb.AddRequest, linkObj netlink.Link) error {
 			return err
 		}
 
-		if err = setLinkAddressFunc(linkObj, in.ContainerIps); err != nil {
-			return fmt.Errorf("Cannot set link address: %w", err)
-		}
-
 		if err = linkSetUp(linkObj); err != nil {
 			return fmt.Errorf("Cannot set link up: %w", err)
 		}
 
-		if err := setupPodRoute(linkObj, in.ContainerRoutes, nonTargetIP); err != nil {
+		if err := setupGwRoute(linkObj, types.DefaultRoute); err != nil {
 			return fmt.Errorf("Cannot setup routes: %w", err)
+		}
+
+		if err := setupPodRoute(linkObj, in.ContainerRoutes, types.DefaultRoute); err != nil {
+			return fmt.Errorf("Cannot setup routes: %w", err)
+		}
+
+		if err = setLinkAddressFunc(linkObj, in.ContainerIps); err != nil {
+			return fmt.Errorf("Cannot set link address: %w", err)
 		}
 
 		return nil

@@ -67,7 +67,7 @@ type nsError struct{ msg string }
 func (e nsError) Error() string { return e.msg }
 
 func newNsError(toWrap error) nsError {
-	return nsError{msg: fmt.Sprintf("Error in contaniers namespace: %s", toWrap.Error())}
+	return nsError{msg: fmt.Sprintf("Error in containers namespace: %s", toWrap.Error())}
 }
 
 func setupContainerRoutes(link netlink.Link, gw net.IP, containerRoutes []string) error {
@@ -118,6 +118,24 @@ func setupPodRoute(link netlink.Link, containerRoutes []string, gateway string) 
 	}
 
 	return setupContainerRoutes(link, gw.IP, containerRoutes)
+}
+
+func setupGwRoute(link netlink.Link, gateway string) error {
+	logger := log.WithField("func", "setupGwRoute")
+	gw, err := netlink.ParseAddr(gateway)
+	if err != nil {
+		logger.Errorf("cannot parse gateway: %s", gateway)
+		return err
+	}
+
+	gwNet := &net.IPNet{IP: gw.IP, Mask: gw.Mask}
+	route := &netlink.Route{
+		LinkIndex: link.Attrs().Index,
+		Scope:     netlink.SCOPE_LINK,
+		Dst:       gwNet,
+	}
+
+	return routeAdd(route)
 }
 
 func setupHostRoute(addr *net.IPNet, link netlink.Link) error {
