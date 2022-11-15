@@ -164,6 +164,11 @@ func CreateServer(log *log.Entry) *ApiServer {
 	return server
 }
 
+func InsertDefaultRule() {
+	server := NewApiServer()
+	p4.ArptToPortTable(context.Background(), server.p4RtC, types.DefaultRoute, 0, true)
+}
+
 func (s *ApiServer) Start(t *tomb.Tomb) {
 	logger := s.log.WithField("func", "startServer")
 	logger.Infof("Serving ApiServer gRPC")
