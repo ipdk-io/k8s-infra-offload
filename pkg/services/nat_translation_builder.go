@@ -135,7 +135,7 @@ func getDstPort(servicePort *v1.ServicePort, endpointPort *v1.EndpointPort) uint
 }
 
 func getVipDstPort(servicePort *v1.ServicePort, isNodePort bool) uint32 {
-	if !isNodePort {
+	if isNodePort {
 		return uint32(servicePort.NodePort)
 	}
 	return uint32(servicePort.Port)
