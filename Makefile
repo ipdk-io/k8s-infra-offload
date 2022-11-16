@@ -1,4 +1,4 @@
-IMAGE_REGISTRY?=ger-is-registry.caas.intel.com/cno/k8s-p4/
+IMAGE_REGISTRY?=localhost:5000/
 IMAGE_VERSION?=latest
 export INFRAAGENT_IMAGE?=$(IMAGE_REGISTRY)infraagent:$(IMAGE_VERSION)
 export INFRAMANAGER_IMAGE?=$(IMAGE_REGISTRY)inframanager:$(IMAGE_VERSION)
@@ -57,7 +57,7 @@ clean:
 	rm -rf ./bin
 
 test:
-	go test $(shell go list ./... | grep -v manager | grep -v proto | grep -v types) -coverprofile=./cover.out
+	./hack/cicd/run-tests.sh
 
 docker-build: docker-build-agent docker-build-manager
 

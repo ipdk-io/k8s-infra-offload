@@ -17,10 +17,12 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"time"
+
 	"errors"
 	"net"
 	"testing"
-	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/mock_proto"
@@ -32,12 +34,17 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
+	"gopkg.in/tomb.v2"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
 
 const (
@@ -46,8 +53,7 @@ const (
 	epListString   = `{"metadata":{"resourceVersion":"3102"},"items":[{"metadata":{"name":"kubernetes","namespace":"default","uid":"e5df8985-8b70-440d-97ae-83a8a38c6c50","resourceVersion":"212","creationTimestamp":"2022-07-26T12:30:51Z","labels":{"endpointslice.kubernetes.io/skip-mirror":"true"},"managedFields":[{"manager":"kube-apiserver","operation":"Update","apiVersion":"v1","time":"2022-07-26T12:30:51Z","fieldsType":"FieldsV1","fieldsV1":{"f:metadata":{"f:labels":{".":{},"f:endpointslice.kubernetes.io/skip-mirror":{}}},"f:subsets":{}}}]},"subsets":[{"addresses":[{"ip":"192.168.111.66"}],"ports":[{"name":"https","port":6443,"protocol":"TCP"}]}]},{"metadata":{"name":"nginx-service","namespace":"default","uid":"bd00dd32-64c8-4a36-8d9c-fa1743100587","resourceVersion":"2500","creationTimestamp":"2022-07-26T12:49:46Z","annotations":{"endpoints.kubernetes.io/last-change-trigger-time":"2022-07-26T12:50:00Z"},"managedFields":[{"manager":"kube-controller-manager","operation":"Update","apiVersion":"v1","time":"2022-07-26T12:50:00Z","fieldsType":"FieldsV1","fieldsV1":{"f:metadata":{"f:annotations":{".":{},"f:endpoints.kubernetes.io/last-change-trigger-time":{}}},"f:subsets":{}}}]},"subsets":[{"addresses":[{"ip":"10.244.0.28","nodeName":"dummyNode","targetRef":{"kind":"Pod","namespace":"default","name":"nginx","uid":"46b11a7f-bb3c-4c2c-9780-04da3fea7e0e"}}],"ports":[{"name":"name-of-service-port","port":80,"protocol":"TCP"}]}]},{"apiVersion": "v1","kind": "Endpoints","metadata": {"annotations": {"endpoints.kubernetes.io/last-change-trigger-time": "2022-08-01T08:36:55Z"},"creationTimestamp": "2022-08-01T08:36:55Z","name": "nginx-svc-cl","namespace": "default","resourceVersion": "2380","uid": "8de7b90c-5e02-45da-b8e1-e4dfdebfe04f"},"subsets": [{"addresses": [{"ip": "10.210.193.70","nodeName": "infratest","targetRef": {"kind": "Pod","name": "nginx-cl","namespace": "default","uid": "1b4aaa88-0d8a-4a1e-a4d9-3f5b2e14ac35"}}],"ports": [{"name": "http","port": 80,"protocol": "TCP"}]}]},{"apiVersion": "v1","kind": "Endpoints","metadata": {"annotations": {"endpoints.kubernetes.io/last-change-trigger-time": "2022-08-01T09:58:00Z"},"creationTimestamp": "2022-08-01T09:58:00Z","name": "nginx-svc-np","namespace": "default","resourceVersion": "13004","uid": "2ef245e6-7ca8-4dff-a3b3-ed228f7410fa"},"subsets": [{"addresses": [{"ip": "10.210.193.71","nodeName": "infratest","targetRef": {"kind": "Pod","name": "nginx-np","namespace": "default","uid": "9db2c098-283a-4827-83c0-961dd8345497"}}],"ports": [{"port": 80,"protocol": "TCP"}]}]},{"apiVersion": "v1","kind": "Endpoints","metadata": {"annotations": {"endpoints.kubernetes.io/last-change-trigger-time": "2022-08-01T13:22:49Z"},"creationTimestamp": "2022-08-01T13:22:49Z","name": "nginx-svc-lb","namespace": "default","resourceVersion": "39798","uid": "e794042d-3357-4c33-84a7-fa1fa6770c6a"},"subsets": [{"addresses": [{"ip": "10.210.193.72","nodeName": "infratest","targetRef": {"kind": "Pod","name": "nginx-lb","namespace": "default","uid": "8959ad46-cbe5-4450-97a7-813c0dec8509"}}],"ports": [{"port": 80,"protocol": "TCP"}]}]},{"apiVersion": "v1","kind": "Endpoints","metadata": {"annotations": {"endpoints.kubernetes.io/last-change-trigger-time": "2022-08-01T09:58:00Z"},"creationTimestamp": "2022-08-01T09:58:00Z","name": "nginx-svc-npA","namespace": "default","resourceVersion": "13004","uid": "2ef245e6-7ca8-4dff-a3b3-ed228f7410fb"},"subsets": [{"addresses": [{"ip": "10.210.193.71","nodeName": "infratest","targetRef": {"kind": "Pod","name": "nginx-np","namespace": "default","uid": "9db2c098-283a-4827-83c0-961dd8345497"}}],"ports": [{"port": 80,"protocol": "TCP"}]}]}]}`
 	bufSize        = 1024 * 1024
 
-	unsupportedWatchType = 42
-	nomberOfNatAddCalls  = 8
+	testNamespace = "default"
 )
 
 var (
@@ -58,6 +64,11 @@ var (
 	mockClient    *mock_proto.MockInfraAgentClient
 	listener      *bufconn.Listener
 	fakeClient    *fake.Clientset
+	testEnv       *envtest.Environment
+	testEnvCfg    *rest.Config
+	testEnvClient *kubernetes.Clientset
+	svcTest       string
+	epTest        string
 )
 
 func bufDialer(context.Context, string) (net.Conn, error) {
@@ -67,6 +78,9 @@ func bufDialer(context.Context, string) (net.Conn, error) {
 func TestServices(t *testing.T) {
 	mockCrtl = gomock.NewController(t)
 	mockClient = mock_proto.NewMockInfraAgentClient(mockCrtl)
+	testEnv = &envtest.Environment{
+		// CRDDirectoryPaths: []string{filepath.Join("..", "config", "crd", "bases")},
+	}
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Services Test Suite")
 }
@@ -82,14 +96,45 @@ var _ = BeforeSuite(func() {
 	err = json.Unmarshal([]byte(nodeListString), nodeList)
 	Expect(err).ShouldNot(HaveOccurred())
 	listener = bufconn.Listen(bufSize)
+	//start testEnv
+	testEnvCfg, err = testEnv.Start()
+	testEnvClient = kubernetes.NewForConfigOrDie(testEnvCfg)
+	Expect(err).ShouldNot(HaveOccurred())
+
+	epTest = `apiVersion: v1
+kind: Endpoints
+metadata:
+  name: my-service
+  labels:
+    test: test
+subsets:
+  - addresses:
+    - ip: 192.0.2.42
+ports:
+  - port: 9376`
+
+	svcTest = `apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+  labels:
+    test: test
+spec:
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 9376`
 })
 
 var _ = AfterSuite(func() {
+	//stop testEnv
+	err := testEnv.Stop()
+	Expect(err).ToNot(HaveOccurred())
 	mockCrtl.Finish()
 	listener.Close()
 })
 
-var _ = Describe("services", func() {
+var _ = Describe("proxy", func() {
 	var _ = BeforeEach(func() {
 		grpcDial = func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
 			return grpc.DialContext(context.TODO(), "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -97,66 +142,332 @@ var _ = Describe("services", func() {
 		newInfraAgentClient = func(cc *grpc.ClientConn) proto.InfraAgentClient {
 			return mockClient
 		}
-		fakeClient = fake.NewSimpleClientset(nodeList, servicesList, endpointsList)
-		newForConfig = func(c *rest.Config) (kubernetes.Interface, error) {
-			return fakeClient, nil
-		}
-		getK8sConfig = func() (*rest.Config, error) { return &rest.Config{}, nil }
 	})
 
 	var _ = Context("NewServiceServer() should", func() {
-		var _ = It("create new service server without error", func() {
+		var _ = It("create new proxy server without error", func() {
+			getK8sConfig = fakeGetK8sConfig
+			newForConfig = fakeNewForConfig
+			getNodeIP = fakeGetNodeIP
 			types.NodeName = "dummyNode"
-			server, err := NewServiceServer(logrus.NewEntry(logrus.StandardLogger()), NewNatServiceHandler(logrus.NewEntry(logrus.StandardLogger())), types.ServiceRefreshTimeInSeconds)
-			Expect(err).ShouldNot(HaveOccurred())
+			server, err := NewServiceServer(logrus.NewEntry(logrus.StandardLogger()), NewNatServiceHandler(logrus.NewEntry(logrus.StandardLogger())), 0)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(server).NotTo(BeNil())
-			Expect(server.(*ServiceServer).nodeAddress).NotTo(BeEmpty())
+			Expect(server.(*serviceServer).nodeAddress).NotTo(BeEmpty())
 			Expect(server.GetName()).To(Equal("services-server"))
 		})
+
+		var _ = It("return error if cannot get k8s config", func() {
+			getK8sConfig = fakeGetK8sConfigErr
+			types.NodeName = "dummyNode"
+			_, err := NewServiceServer(logrus.NewEntry(logrus.StandardLogger()), NewNatServiceHandler(logrus.NewEntry(logrus.StandardLogger())), 0)
+			Expect(err).Should(HaveOccurred())
+		})
+
+		var _ = It("return error if cannot get k8s client", func() {
+			getK8sConfig = fakeGetK8sConfig
+			newForConfig = fakeNewForConfigErr
+			types.NodeName = "dummyNode"
+			_, err := NewServiceServer(logrus.NewEntry(logrus.StandardLogger()), NewNatServiceHandler(logrus.NewEntry(logrus.StandardLogger())), 0)
+			Expect(err).Should(HaveOccurred())
+		})
+
+		var _ = It("return error if cannot get node IP", func() {
+			getK8sConfig = fakeGetK8sConfig
+			newForConfig = fakeNewForConfig
+			getNodeIP = fakeGetNodeIPErr
+			types.NodeName = "dummyNode"
+			_, err := NewServiceServer(logrus.NewEntry(logrus.StandardLogger()), NewNatServiceHandler(logrus.NewEntry(logrus.StandardLogger())), 0)
+			Expect(err).Should(HaveOccurred())
+		})
 	})
 
-	var _ = Context("Serve() should", func() {
-		var _ = It("run ServiceServer without error", func() {
-			// for given input we should create six gRPC calls
-			var calls [](*gomock.Call)
-			for i := 0; i < nomberOfNatAddCalls; i++ {
-				calls = append(calls, mockClient.EXPECT().NatTranslationAdd(gomock.Any(), gomock.Any()).Return(&proto.Reply{Successful: true}, nil))
-			}
-
-			gomock.InOrder(calls...)
+	var _ = Context("Service proxy controller should", func() {
+		var _ = It("return if cannot sync cache", func() {
+			getK8sConfig = fakeGetK8sConfig
+			newForConfig = fakeNewForConfig
+			getNodeIP = fakeGetNodeIP
+			waitForCacheSync = fakeWaitForCacheSyncFalse
 			types.NodeName = "dummyNode"
-			server, err := NewServiceServer(logrus.NewEntry(logrus.StandardLogger()), NewNatServiceHandler(logrus.NewEntry(logrus.StandardLogger())), types.ServiceRefreshTimeInSeconds)
+			server, err := NewServiceServer(logrus.NewEntry(logrus.StandardLogger()), NewNatServiceHandler(logrus.NewEntry(logrus.StandardLogger())), 0)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(server).NotTo(BeNil())
-			Expect(server.(*ServiceServer).nodeAddress).NotTo(BeEmpty())
+			Expect(server.(*serviceServer).nodeAddress).NotTo(BeEmpty())
+			Expect(server.GetName()).To(Equal("services-server"))
 
-			go func() {
-				defer GinkgoRecover()
-				_ = server.(*ServiceServer).serve()
-			}()
+			testTomb := &tomb.Tomb{}
+			go func() { _ = server.Start(testTomb) }()
+			s := server.(*serviceServer)
+			<-s.t.Dying()
+			testTomb.Kill(fmt.Errorf("Fake kill"))
+		})
+		var _ = It("run add handlers without errors", func() {
+			getK8sConfig = fakeGetK8sConfig
+			newForConfig = fakeNewForConfig
+			getNodeIP = fakeGetNodeIP
+			waitForCacheSync = fakeWaitForCacheSync
+			types.NodeName = "dummyNode"
+			server, err := NewServiceServer(logrus.NewEntry(logrus.StandardLogger()), NewNatServiceHandler(logrus.NewEntry(logrus.StandardLogger())), 0)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(server).NotTo(BeNil())
+			Expect(server.(*serviceServer).nodeAddress).NotTo(BeEmpty())
+			Expect(server.GetName()).To(Equal("services-server"))
 
-			// check status of flag
-			Eventually(func() string {
-				return types.ServiceServerStatus
-			}).Should(Equal(types.ServerStatusOK))
-			// stop service eventually
-			server.StopServer()
-			Eventually(func() string {
-				return types.ServiceServerStatus
-			}).Should(Equal(types.ServerStatusStopped))
+			var calls [](*gomock.Call)
+			calls = append(calls, mockClient.EXPECT().NatTranslationAdd(gomock.Any(), gomock.Any()).Return(&proto.Reply{Successful: true}, nil))
+			gomock.InOrder(calls...)
+
+			testTomb := &tomb.Tomb{}
+			go func() { _ = server.Start(testTomb) }()
+
+			// add handler test - service
+			svc := decodeSvc(svcTest)
+			Expect(svc).ToNot(BeNil())
+			_, err = testEnvClient.CoreV1().Services("default").Create(context.TODO(), svc, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			time.Sleep(10 * time.Millisecond)
+			// kill server
+			testTomb.Kill(fmt.Errorf("Fake kill"))
+		})
+
+		var _ = It("run service del handlers without errors", func() {
+			getK8sConfig = fakeGetK8sConfig
+			newForConfig = fakeNewForConfig
+			getNodeIP = fakeGetNodeIP
+			waitForCacheSync = fakeWaitForCacheSync
+			types.NodeName = "dummyNode"
+			server, err := NewServiceServer(logrus.NewEntry(logrus.StandardLogger()), NewNatServiceHandler(logrus.NewEntry(logrus.StandardLogger())), 0)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(server).NotTo(BeNil())
+			Expect(server.(*serviceServer).nodeAddress).NotTo(BeEmpty())
+			Expect(server.GetName()).To(Equal("services-server"))
+
+			var calls [](*gomock.Call)
+
+			calls = append(calls, mockClient.EXPECT().NatTranslationAdd(gomock.Any(), gomock.Any()).Return(&proto.Reply{Successful: true}, nil))
+
+			gomock.InOrder(calls...)
+
+			testTomb := &tomb.Tomb{}
+			go func() { _ = server.Start(testTomb) }()
+
+			svc := decodeSvc(svcTest)
+			Expect(svc).ToNot(BeNil())
+			err = testEnvClient.CoreV1().Services(testNamespace).Delete(context.TODO(), svc.Name, metav1.DeleteOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			time.Sleep(10 * time.Millisecond)
+			// kill server
+			testTomb.Kill(fmt.Errorf("Fake kill"))
+		})
+
+		var _ = It("run endpoint add handlers without errors", func() {
+			getK8sConfig = fakeGetK8sConfig
+			newForConfig = fakeNewForConfig
+			getNodeIP = fakeGetNodeIP
+			waitForCacheSync = fakeWaitForCacheSync
+			types.NodeName = "dummyNode"
+			server, err := NewServiceServer(logrus.NewEntry(logrus.StandardLogger()), NewNatServiceHandler(logrus.NewEntry(logrus.StandardLogger())), 0)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(server).NotTo(BeNil())
+			Expect(server.(*serviceServer).nodeAddress).NotTo(BeEmpty())
+			Expect(server.GetName()).To(Equal("services-server"))
+
+			var calls [](*gomock.Call)
+
+			calls = append(calls, mockClient.EXPECT().NatTranslationAdd(gomock.Any(), gomock.Any()).Return(&proto.Reply{Successful: true}, nil))
+			calls = append(calls, mockClient.EXPECT().NatTranslationDelete(gomock.Any(), gomock.Any()).Return(&proto.Reply{Successful: true}, nil))
+
+			gomock.InOrder(calls...)
+
+			testTomb := &tomb.Tomb{}
+			go func() { _ = server.Start(testTomb) }()
+
+			// add handler test - service
+			svc := decodeSvc(svcTest)
+			Expect(svc).ToNot(BeNil())
+			ep := decodeEp(epTest)
+			Expect(ep).ToNot(BeNil())
+			_, err = testEnvClient.CoreV1().Services(testNamespace).Create(context.TODO(), svc, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			_, err = testEnvClient.CoreV1().Endpoints(testNamespace).Create(context.TODO(), ep, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			err = testEnvClient.CoreV1().Endpoints(testNamespace).Delete(context.TODO(), ep.Name, metav1.DeleteOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			err = testEnvClient.CoreV1().Services(testNamespace).Delete(context.TODO(), svc.Name, metav1.DeleteOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			time.Sleep(10 * time.Millisecond)
+			// kill server
+			testTomb.Kill(fmt.Errorf("Fake kill"))
+		})
+
+		var _ = It("run service update handlers without errors", func() {
+			getK8sConfig = fakeGetK8sConfig
+			newForConfig = fakeNewForConfig
+			getNodeIP = fakeGetNodeIP
+			waitForCacheSync = fakeWaitForCacheSync
+			types.NodeName = "dummyNode"
+			server, err := NewServiceServer(logrus.NewEntry(logrus.StandardLogger()), NewNatServiceHandler(logrus.NewEntry(logrus.StandardLogger())), 0)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(server).NotTo(BeNil())
+			Expect(server.(*serviceServer).nodeAddress).NotTo(BeEmpty())
+			Expect(server.GetName()).To(Equal("services-server"))
+
+			var calls [](*gomock.Call)
+
+			calls = append(calls, mockClient.EXPECT().NatTranslationAdd(gomock.Any(), gomock.Any()).Return(&proto.Reply{Successful: true}, nil))
+			calls = append(calls, mockClient.EXPECT().NatTranslationDelete(gomock.Any(), gomock.Any()).Return(&proto.Reply{Successful: true}, nil))
+
+			gomock.InOrder(calls...)
+
+			testTomb := &tomb.Tomb{}
+			go func() { _ = server.Start(testTomb) }()
+
+			// add handler test - service
+			svc := decodeSvc(svcTest)
+			Expect(svc).ToNot(BeNil())
+			ep := decodeEp(epTest)
+			Expect(ep).ToNot(BeNil())
+
+			currentSvc, err := testEnvClient.CoreV1().Services(testNamespace).Create(context.TODO(), svc, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			_, err = testEnvClient.CoreV1().Endpoints(testNamespace).Create(context.TODO(), ep, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			currentSvc.ObjectMeta.Labels["test"] = "modified"
+			_, err = testEnvClient.CoreV1().Services(testNamespace).Update(context.TODO(), currentSvc, metav1.UpdateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			err = testEnvClient.CoreV1().Endpoints("default").Delete(context.TODO(), ep.Name, metav1.DeleteOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			err = testEnvClient.CoreV1().Services("default").Delete(context.TODO(), svc.Name, metav1.DeleteOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			time.Sleep(10 * time.Millisecond)
+			// kill server
+			testTomb.Kill(fmt.Errorf("Fake kill"))
+		})
+
+		var _ = It("run endpoint update handlers without errors", func() {
+			getK8sConfig = fakeGetK8sConfig
+			newForConfig = fakeNewForConfig
+			getNodeIP = fakeGetNodeIP
+			waitForCacheSync = fakeWaitForCacheSync
+			types.NodeName = "dummyNode"
+			server, err := NewServiceServer(logrus.NewEntry(logrus.StandardLogger()), NewNatServiceHandler(logrus.NewEntry(logrus.StandardLogger())), 0)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(server).NotTo(BeNil())
+			Expect(server.(*serviceServer).nodeAddress).NotTo(BeEmpty())
+			Expect(server.GetName()).To(Equal("services-server"))
+
+			var calls [](*gomock.Call)
+
+			calls = append(calls, mockClient.EXPECT().NatTranslationAdd(gomock.Any(), gomock.Any()).Return(&proto.Reply{Successful: true}, nil))
+			calls = append(calls, mockClient.EXPECT().NatTranslationDelete(gomock.Any(), gomock.Any()).Return(&proto.Reply{Successful: true}, nil))
+
+			gomock.InOrder(calls...)
+
+			testTomb := &tomb.Tomb{}
+			go func() { _ = server.Start(testTomb) }()
+
+			// add handler test - service
+			svc := decodeSvc(svcTest)
+			Expect(svc).ToNot(BeNil())
+			ep := decodeEp(epTest)
+			Expect(ep).ToNot(BeNil())
+
+			_, err = testEnvClient.CoreV1().Services(testNamespace).Create(context.TODO(), svc, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			currentEp, err := testEnvClient.CoreV1().Endpoints(testNamespace).Create(context.TODO(), ep, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			currentEp.ObjectMeta.Labels["test"] = "modified"
+			_, err = testEnvClient.CoreV1().Endpoints(testNamespace).Update(context.TODO(), currentEp, metav1.UpdateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			err = testEnvClient.CoreV1().Endpoints(testNamespace).Delete(context.TODO(), ep.Name, metav1.DeleteOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			err = testEnvClient.CoreV1().Services(testNamespace).Delete(context.TODO(), svc.Name, metav1.DeleteOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			time.Sleep(10 * time.Millisecond)
+			// kill server
+			testTomb.Kill(fmt.Errorf("Fake kill"))
+		})
+
+		var _ = It("run add handler without errors when Manager fails", func() {
+			getK8sConfig = fakeGetK8sConfig
+			newForConfig = fakeNewForConfig
+			getNodeIP = fakeGetNodeIP
+			waitForCacheSync = fakeWaitForCacheSync
+			types.NodeName = "dummyNode"
+			server, err := NewServiceServer(logrus.NewEntry(logrus.StandardLogger()), newFakeNatServiceHandler(logrus.NewEntry(logrus.StandardLogger()), fakeNatTranslationErr, fakeNatTranslation), 0)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(server).NotTo(BeNil())
+			Expect(server.(*serviceServer).nodeAddress).NotTo(BeEmpty())
+			Expect(server.GetName()).To(Equal("services-server"))
+
+			testTomb := &tomb.Tomb{}
+			go func() { _ = server.Start(testTomb) }()
+
+			// add handler test - service
+			svc := decodeSvc(svcTest)
+			Expect(svc).ToNot(BeNil())
+			_, err = testEnvClient.CoreV1().Services(testNamespace).Create(context.TODO(), svc, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			err = testEnvClient.CoreV1().Services(testNamespace).Delete(context.TODO(), svc.Name, metav1.DeleteOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			time.Sleep(10 * time.Millisecond)
+			// kill server
+			testTomb.Kill(fmt.Errorf("Fake kill"))
+		})
+
+		var _ = It("run add handler without errors when Manager fails", func() {
+			getK8sConfig = fakeGetK8sConfig
+			newForConfig = fakeNewForConfig
+			getNodeIP = fakeGetNodeIP
+			waitForCacheSync = fakeWaitForCacheSync
+			types.NodeName = "dummyNode"
+			server, err := NewServiceServer(logrus.NewEntry(logrus.StandardLogger()), newFakeNatServiceHandler(logrus.NewEntry(logrus.StandardLogger()), fakeNatTranslation, fakeNatTranslationErr), 0)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(server).NotTo(BeNil())
+			Expect(server.(*serviceServer).nodeAddress).NotTo(BeEmpty())
+			Expect(server.GetName()).To(Equal("services-server"))
+
+			testTomb := &tomb.Tomb{}
+			go func() { _ = server.Start(testTomb) }()
+
+			// add handler test - service
+			svc := decodeSvc(svcTest)
+			Expect(svc).ToNot(BeNil())
+			_, err = testEnvClient.CoreV1().Services(testNamespace).Create(context.TODO(), svc, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			time.Sleep(time.Second)
+			err = testEnvClient.CoreV1().Services(testNamespace).Delete(context.TODO(), svc.Name, metav1.DeleteOptions{})
+			Expect(err).ToNot(HaveOccurred())
+
+			time.Sleep(10 * time.Millisecond)
+			// kill server
+			testTomb.Kill(fmt.Errorf("Fake kill"))
 		})
 	})
-
-	var _ = Context("NewServiceListWatch created for unsupported type ", func() {
-		var _ = It("should return error when List is called", func() {
-			w := NewServiceListWatch(fakeClient, unsupportedWatchType)
-			_, err := w.List(metav1.ListOptions{})
-			Expect(err).To(HaveOccurred())
-		})
-		var _ = It("should return error when Watch is called", func() {
-			w := NewServiceListWatch(fakeClient, unsupportedWatchType)
-			_, err := w.Watch(metav1.ListOptions{})
-			Expect(err).To(HaveOccurred())
+	var _ = Context("NewServiceServer() should", func() {
+		var _ = It("return no error if key splitting failed", func() {
+			getK8sConfig = fakeGetK8sConfig
+			newForConfig = fakeNewForConfig
+			getNodeIP = fakeGetNodeIP
+			types.NodeName = "dummyNode"
+			server, err := NewServiceServer(logrus.NewEntry(logrus.StandardLogger()), NewNatServiceHandler(logrus.NewEntry(logrus.StandardLogger())), 0)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(server).NotTo(BeNil())
+			Expect(server.(*serviceServer).nodeAddress).NotTo(BeEmpty())
+			Expect(server.GetName()).To(Equal("services-server"))
+			splitMetaNamespaceKey = fakeSplitMetaNamespaceKeyErr
+			err = server.(*serviceServer).syncHandler("")
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 })
@@ -303,68 +614,93 @@ var _ = Describe("NAT translation builter utilities", func() {
 	})
 })
 
-var _ = Describe("service deletion", func() {
-	var _ = BeforeEach(func() {
-		grpcDial = func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
-			return grpc.DialContext(context.TODO(), "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
-		}
-		newInfraAgentClient = func(cc *grpc.ClientConn) proto.InfraAgentClient {
-			return mockClient
-		}
-		fakeClient = fake.NewSimpleClientset(nodeList, servicesList, endpointsList)
-		newForConfig = func(c *rest.Config) (kubernetes.Interface, error) {
-			return fakeClient, nil
-		}
-		getK8sConfig = func() (*rest.Config, error) { return &rest.Config{}, nil }
-	})
+func decode(object string) interface{} {
+	decode := scheme.Codecs.UniversalDeserializer().Decode
+	obj, _, err := decode([]byte(object), nil, nil)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(obj).ToNot(BeNil())
+	return obj
+}
 
-	var _ = Context("Service deletion should", func() {
-		var _ = It("be successfull", func() {
-			// for given input we should create six gRPC calls
-			var calls [](*gomock.Call)
-			for i := 0; i < nomberOfNatAddCalls; i++ {
-				calls = append(calls, mockClient.EXPECT().NatTranslationAdd(gomock.Any(), gomock.Any()).Return(&proto.Reply{Successful: true}, nil))
-			}
+func decodeSvc(svc string) *v1.Service {
+	return decode(svc).(*v1.Service)
+}
 
-			calls = append(calls, mockClient.EXPECT().NatTranslationDelete(gomock.Any(), gomock.Any()).Return(&proto.Reply{Successful: true}, nil))
+func decodeEp(ep string) *v1.Endpoints {
+	return decode(ep).(*v1.Endpoints)
+}
 
-			gomock.InOrder(calls...)
-			types.NodeName = "dummyNode"
-			server, err := NewServiceServer(logrus.NewEntry(logrus.StandardLogger()), NewNatServiceHandler(logrus.NewEntry(logrus.StandardLogger())), 1)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(server).NotTo(BeNil())
-			Expect(server.(*ServiceServer).nodeAddress).NotTo(BeEmpty())
+func fakeGetNodeIP(client kubernetes.Interface, nodeName string) (string, error) {
+	return "127.0.0.1", nil
+}
 
-			go func() {
-				defer GinkgoRecover()
-				_ = server.(*ServiceServer).serve()
-			}()
+func fakeGetNodeIPErr(client kubernetes.Interface, nodeName string) (string, error) {
+	return "", fmt.Errorf("Fake error on getNodeIP")
+}
 
-			// check status of flag
-			Eventually(func() string {
-				return types.ServiceServerStatus
-			}).Should(Equal(types.ServerStatusOK))
+func fakeGetK8sConfig() (*rest.Config, error) {
+	return testEnvCfg, nil
+}
 
-			serviceListWatch := NewServiceListWatch(fakeClient, SERVICES_LIST_WATCH)
-			svc, err := serviceListWatch.List(metav1.ListOptions{})
-			Expect(err).ToNot(HaveOccurred())
-			preDel := len(svc.(*v1.ServiceList).Items)
+func fakeGetK8sConfigErr() (*rest.Config, error) {
+	return nil, fmt.Errorf("Fake error on getK8sConfig")
+}
 
-			err = fakeClient.CoreV1().Services("default").Delete(context.TODO(), "kubernetes", metav1.DeleteOptions{})
-			Expect(err).ToNot(HaveOccurred())
-			time.Sleep(2 * time.Second)
+func fakeNewForConfig(config *rest.Config) (kubernetes.Interface, error) {
+	return testEnvClient, nil
+}
 
-			svc, err = serviceListWatch.List(metav1.ListOptions{})
-			Expect(err).ToNot(HaveOccurred())
-			postDel := len(svc.(*v1.ServiceList).Items)
+func fakeNewForConfigErr(config *rest.Config) (kubernetes.Interface, error) {
+	return nil, fmt.Errorf("Fake error on newForConfig")
+}
 
-			Expect(preDel - postDel).To(Equal(1))
+func fakeWaitForCacheSync(stopCh <-chan struct{}, cacheSyncs ...cache.InformerSynced) bool {
+	return true
+}
 
-			// stop service eventually
-			server.StopServer()
-			Eventually(func() string {
-				return types.ServiceServerStatus
-			}).Should(Equal(types.ServerStatusStopped))
-		})
-	})
-})
+func fakeWaitForCacheSyncFalse(stopCh <-chan struct{}, cacheSyncs ...cache.InformerSynced) bool {
+	return false
+}
+
+type fakeServiceHandler struct {
+	log                      *logrus.Entry
+	natTranslationAddFunc    func(translation *proto.NatTranslation, name string) error
+	natTranslationDeleteFunc func(translation *proto.NatTranslation, name string) error
+}
+
+func newFakeNatServiceHandler(log *logrus.Entry, natTranslationAddFunc func(*proto.NatTranslation, string) error,
+	natTranslationDeleteFunc func(*proto.NatTranslation, string) error) *fakeServiceHandler {
+	return &fakeServiceHandler{
+		log:                      log,
+		natTranslationAddFunc:    natTranslationAddFunc,
+		natTranslationDeleteFunc: natTranslationDeleteFunc,
+	}
+}
+
+func (fsh *fakeServiceHandler) NatTranslationAdd(translation *proto.NatTranslation) error {
+	return fsh.natTranslationAddFunc(translation, "NatTranslationAdd")
+}
+
+func (fsh *fakeServiceHandler) NatTranslationDelete(translation *proto.NatTranslation) error {
+	return fsh.natTranslationDeleteFunc(translation, "NatTranslationDelete")
+}
+
+func (fsh *fakeServiceHandler) SetSnatAddress(ip string) error {
+	return nil
+}
+
+func (fsh *fakeServiceHandler) AddDelSnatPrefix(ip string, isAdd bool) error {
+	return nil
+}
+
+func fakeNatTranslationErr(translation *proto.NatTranslation, name string) error {
+	return errors.New("Fake error on " + name)
+}
+
+func fakeNatTranslation(translation *proto.NatTranslation, name string) error {
+	return nil
+}
+
+func fakeSplitMetaNamespaceKeyErr(key string) (namespace string, name string, err error) {
+	return "", "", errors.New("Fake error on SplitMetaNamespaceKey")
+}
