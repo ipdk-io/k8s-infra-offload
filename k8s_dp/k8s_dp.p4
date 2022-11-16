@@ -164,28 +164,28 @@ parser packet_parser(
 	state start {
 		pkt.extract(hdr.ethernet);
 		transition select(hdr.ethernet.ether_type) {
-			    ETHERTYPE_TPID:  parse_vlan_tag;
-			    ETHERTYPE_IPV4:  parse_ipv4;
-			    ETHERTYPE_ARP :  parse_arp;
-			    default       :  accept;
+			ETHERTYPE_TPID:  parse_vlan_tag;
+			ETHERTYPE_IPV4:  parse_ipv4;
+			ETHERTYPE_ARP :  parse_arp;
+			default       :  accept;
 		}
 	}
 
 	state parse_vlan_tag {
 		pkt.extract(hdr.vlan_tag);
 		transition select(hdr.vlan_tag.ether_type) {
-			    ETHERTYPE_IPV4:  parse_ipv4;
-		    	    ETHERTYPE_ARP :  parse_arp;
-			    default       :  accept;
+			ETHERTYPE_IPV4:  parse_ipv4;
+			ETHERTYPE_ARP :  parse_arp;
+			default       :  accept;
 		}
 	}
 
 	state parse_ipv4 {
 		pkt.extract(hdr.ipv4);
 		transition select(hdr.ipv4.protocol) {
-			    IP_PROTO_TCP:   parse_tcp;
-			    IP_PROTO_UDP:   parse_udp;
-			    default     :   accept;
+			IP_PROTO_TCP:   parse_tcp;
+			IP_PROTO_UDP:   parse_udp;
+			default     :   accept;
 		}
 	}
 
@@ -232,9 +232,9 @@ control k8s_dp_control(
 		} else {
 			if (IS_IPV4_UDP) {
 				ck1.subtract(hdr.udp.checksum);
-			    	ck1.subtract(hdr.ipv4.src_addr);
-			        ck1.subtract(hdr.udp.src_port);
-		        	hdr.udp.src_port = new_port;
+				ck1.subtract(hdr.ipv4.src_addr);
+				ck1.subtract(hdr.udp.src_port);
+				hdr.udp.src_port = new_port;
 			}
 		}
 
@@ -250,8 +250,8 @@ control k8s_dp_control(
 		} else {
 			if (IS_IPV4_UDP) {
 				ck1.add(hdr.ipv4.src_addr);
-		        	ck1.add(hdr.udp.src_port);
-		        	hdr.udp.checksum = ck1.get();
+				ck1.add(hdr.udp.src_port);
+				hdr.udp.checksum = ck1.get();
 			}
 		}
 	}
@@ -265,7 +265,7 @@ control k8s_dp_control(
 	}
 
 	action set_dest_mac_vport(PortId_t p, bit<48> new_dmac) {
-        	/* Replace DMAC if supplied and if needed */
+		/* Replace DMAC if supplied and if needed */
 		if ((new_dmac != (bit<48>) 0) && (new_dmac != hdr.ethernet.dst_mac)) {
 			hdr.ethernet.src_mac = hdr.ethernet.dst_mac;
 			hdr.ethernet.dst_mac = new_dmac;
@@ -335,8 +335,8 @@ control k8s_dp_control(
 		} else {
 			if (IS_IPV4_UDP) {
 				ck1.subtract(hdr.udp.checksum);
-			        ck1.subtract(hdr.ipv4.dst_addr);
-		        	ck1.subtract(hdr.udp.dst_port);
+				ck1.subtract(hdr.ipv4.dst_addr);
+				ck1.subtract(hdr.udp.dst_port);
 				hdr.udp.dst_port = new_port;
 			}
 		}
@@ -354,7 +354,7 @@ control k8s_dp_control(
 			if (IS_IPV4_UDP) {
 				ck1.add(hdr.ipv4.dst_addr);
 				ck1.add(hdr.udp.dst_port);
-			        hdr.udp.checksum = ck1.get();
+				hdr.udp.checksum = ck1.get();
 			}
 		}
 	}
@@ -411,28 +411,28 @@ control k8s_dp_control(
 		if (create_reverse_ct && meta.mod_blob_ptr_snat != 0) {
 			new_expire_time_profile_id = EXPIRE_TIME_CT;
 			add_succeeded =
-		        add_entry(action_name = "pinned_flows_reverse_hit",
-			action_params = (clb_pinned_flows_reverse_hit_params_t) {
-		        	ptr = meta.mod_blob_ptr_snat
-		        },
-		        expire_time_profile_id = new_expire_time_profile_id);
+				add_entry(action_name = "pinned_flows_reverse_hit",
+				action_params = (clb_pinned_flows_reverse_hit_params_t) {
+					ptr = meta.mod_blob_ptr_snat
+				},
+				expire_time_profile_id = new_expire_time_profile_id);
 		}
 	}
 
 	table pinned_flows_reverse {
-	key = {
-		meta.src_ip : exact;
-		meta.dst_ip : exact;
-		hdr.ipv4.protocol : exact;
-		meta.src_port : exact;
-		meta.dst_port : exact;
-	}
-	actions = {
-		@tableonly pinned_flows_reverse_hit;
-		@defaultonly pinned_flows_reverse_miss;
-	}
-	add_on_miss = true;
-	const default_action = pinned_flows_reverse_miss;
+		key = {
+			meta.src_ip : exact;
+			meta.dst_ip : exact;
+			hdr.ipv4.protocol : exact;
+			meta.src_port : exact;
+			meta.dst_port : exact;
+		}
+		actions = {
+			@tableonly pinned_flows_reverse_hit;
+			@defaultonly pinned_flows_reverse_miss;
+		}
+		add_on_miss = true;
+		const default_action = pinned_flows_reverse_miss;
 	}
 
 	action set_default_lb_dest (bit<24> ptr) {
@@ -465,14 +465,14 @@ control k8s_dp_control(
 
 	table tx_balance_udp {
 		key = {
-		        hdr.ipv4.dst_addr : exact;
-		        hdr.udp.dst_port : exact;
-		        hdr.ipv4.src_addr : selector;
-		        hdr.udp.src_port : selector;
+	        hdr.ipv4.dst_addr : exact;
+	        hdr.udp.dst_port : exact;
+	        hdr.ipv4.src_addr : selector;
+	        hdr.udp.src_port : selector;
 		}
 		actions = {
-		        set_default_lb_dest;
-		        NoAction;
+	        set_default_lb_dest;
+	        NoAction;
 		}
 		pna_implementation = as_sl3_udp;
 		const default_action = NoAction();
@@ -494,27 +494,27 @@ control k8s_dp_control(
 	}
 
 	table set_meta_tcp {
-	key = {
-		hdr.ipv4.dst_addr : exact;
-		hdr.tcp.dst_port : exact;
-	}
-	actions = {
-		set_key_for_reverse_ct;
-		NoAction;
-	}
-	const default_action = NoAction();
+		key = {
+			hdr.ipv4.dst_addr : exact;
+			hdr.tcp.dst_port : exact;
+		}
+		actions = {
+			set_key_for_reverse_ct;
+			NoAction;
+		}
+		const default_action = NoAction();
 	}
 
 	table set_meta_udp {
-	key = {
-		hdr.ipv4.dst_addr : exact;
-	        hdr.udp.dst_port : exact;
-	}
-	actions = {
-	        set_key_for_reverse_ct;
-	        NoAction;
-	}
-	const default_action = NoAction();
+		key = {
+			hdr.ipv4.dst_addr : exact;
+		    hdr.udp.dst_port : exact;
+		}
+		actions = {
+		    set_key_for_reverse_ct;
+			NoAction;
+		}
+		const default_action = NoAction();
 	}
 	
 
@@ -531,11 +531,11 @@ control k8s_dp_control(
 
 		if (IS_IPV4_TCP) {
 			if (tcp_syn_flag_set(hdr.tcp.flags)) {
-			        if (tx_balance_tcp.apply().hit) {
-		        		do_clb_pinned_flows_add_on_miss = true;
+				if (tx_balance_tcp.apply().hit) {
+					do_clb_pinned_flows_add_on_miss = true;
 					create_reverse_ct = true;
 					save_to_meta_tcp(hdr, meta);
-				        pinned_flows.apply();
+					pinned_flows.apply();
 				}
 			} else {
 				save_to_meta_tcp(hdr, meta);
@@ -560,11 +560,11 @@ control k8s_dp_control(
 		/* Perform the SNAT or DNAT if enabled by above TCP processing */
 		switch (meta.mod_action) {
 			WRITE_SRC_IP: {
-		        	write_source_ip_table.apply();
-		    	}
+				write_source_ip_table.apply();
+			}
 
 			WRITE_DEST_IP: {
-		        	write_dest_ip_table.apply();
+				write_dest_ip_table.apply();
 				if (create_reverse_ct) {
 					if (IS_IPV4_TCP) {
 						set_meta_tcp.apply();
@@ -575,7 +575,7 @@ control k8s_dp_control(
 					}
 					pinned_flows_reverse.apply();		
 				}
-		    	}
+			}
 
 		    default: {
 		    }
