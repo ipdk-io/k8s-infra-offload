@@ -83,6 +83,8 @@ func Run(stopCh <-chan struct{}, waitCh chan<- struct{}) {
 
 	manager.createAndStartServer()
 
+	api.InsertDefaultRule()
+
 	<-stopCh
 
 	manager.stopServer()
