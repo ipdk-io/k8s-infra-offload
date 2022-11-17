@@ -149,12 +149,6 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
    99d9b2ede2ea        registry:2          "/entrypoint.sh /etc…"   36 seconds ago      Up 35 seconds       0.0.0.0:5000->5000/tcp   registry
   ```
   
-  Export following environment variables to point to this private repository, which is used later during p4-k8s setup.
-  ```bash
-  # export IMAGE_REGISTRY=localhost:5000/
-  # export IMAGE_VERSION=latest
-  ```
-
 ### Install, configure and run containerd
   Create /etc/crictl.yaml with following contents.
   ```bash
@@ -386,6 +380,17 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   root       25054       1 99 07:15 ?        00:09:03 ovs-vswitchd --pidfile --detach --no-chdir --mlockall --log-file=/tmp/logs/ovs-vswitchd.log
   ```
 
+  Move first TAP interface into a different namespace and run ARP-Proxy on it.
+  ```bash
+  ip netns add arpns
+  ip link set P4TAP_0 netns arpns
+  ip netns exec arpns bash
+  ip link set P4TAP_0 up
+  ip addr add 169.254.1.1/32 dev P4TAP_0
+  ARP_PROXY_IF=P4TAP_0 ./bin/arp_proxy &
+  exit
+  ```
+
   Start the containerd services
   ```bash
   # systemctl start containerd.service
@@ -419,7 +424,7 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   ```
 
 ### Simple Pod-to-Pod Ping Test
-  To run a simple ping test from one pod to another, create two test pods as below. Note that, before creating the second test pod, edit the test_pod.yaml file to configure a different name for the second pod.
+  To run a simple ping test from one pod to another, create two test pods as below. Note that, before creating the second test pod, edit the test_pod.yaml file to configure a different name (test-pod2) for the second pod.
   ```bash
   # kubectl create -f example/test_pod.yaml
   ```
@@ -451,7 +456,8 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   make undeploy-calico
   kubeadm reset -f
   rm -rf /etc/cni /etc/kubernetes
-  rm -rf /var/lib/etcd /var/lib/kubelet /var/lib/cni
+  rm -rf /var/lib/etcd /var/lib/kubelet /var/lib/cni /var/lib/dockershim
+  rm -rf /var/run/kubernetes
   rm -rf $HOME/.kube
   ```
     
@@ -469,7 +475,10 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   systemctl stop containerd
   ```
 
-  Stop the OVS process running in the background. This will also remove all the TAP interfaces that were configured earlier.
+  Stop the ARP proxy and OVS processes running in the background. This will also remove all the TAP interfaces that were configured earlier.
   ```bash
-  pkill ovs
+  pkill arp_proxy
+  ip netns exec arpns ip link set P4TAP_0 netns 1
+  pkill ovsdb-server
+  pkill ovs-vswitchd
   ```
