@@ -380,15 +380,12 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   root       25054       1 99 07:15 ?        00:09:03 ovs-vswitchd --pidfile --detach --no-chdir --mlockall --log-file=/tmp/logs/ovs-vswitchd.log
   ```
 
-  Move first TAP interface into a different namespace and run ARP-Proxy on it.
+  Rename first TAP interface and run ARP-Proxy on it.
   ```bash
-  ip netns add arpns
-  ip link set P4TAP_0 netns arpns
-  ip netns exec arpns bash
-  ip link set P4TAP_0 up
-  ip addr add 169.254.1.1/32 dev P4TAP_0
-  ARP_PROXY_IF=P4TAP_0 ./bin/arp_proxy &
-  exit
+  ip link set P4TAP_0 name TAP0
+  ip link set TAP0 up
+  ip addr add 169.254.1.1/32 dev TAP0
+  ARP_PROXY_IF=TAP0 ./bin/arp_proxy &
   ```
 
   Start the containerd services
@@ -478,7 +475,6 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   Stop the ARP proxy and OVS processes running in the background. This will also remove all the TAP interfaces that were configured earlier.
   ```bash
   pkill arp_proxy
-  ip netns exec arpns ip link set P4TAP_0 netns 1
   pkill ovsdb-server
   pkill ovs-vswitchd
   ```
