@@ -342,14 +342,21 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 	var podMac string
 	var groupID uint32
 
-	logger := log.WithField("func", "NatTranslationAdd")
-	logger.Infof("Incoming NatTranslationAdd %+v", in)
-	logger.Infof("Service ip %v and port %v proto %v", in.Endpoint.Ipv4Addr, in.Endpoint.Port, in.Proto)
-	logger.Infof("Endpoints num %v", len(in.Backends))
-
 	out := &proto.Reply{
 		Successful: true,
 	}
+
+	logger := log.WithField("func", "NatTranslationAdd")
+
+	if in == nil || in.Endpoint == nil {
+		logger.Errorf("Invalid service request")
+		out.Successful = false
+		return out, nil
+	}
+
+	logger.Infof("Incoming NatTranslationAdd %+v", in)
+	logger.Infof("Service ip %v and port %v proto %v", in.Endpoint.Ipv4Addr, in.Endpoint.Port, in.Proto)
+	logger.Infof("Endpoints num %v", len(in.Backends))
 
 	/*
 		If there are no backend endpoints for the service,
@@ -357,6 +364,7 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 		the function call.
 	*/
 	if len(in.Backends) == 0 {
+		logger.Errorf("No endpoints in the service. No rules inserted")
 		return out, nil
 	}
 
@@ -386,7 +394,12 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 			PodIpAddress: ipAddr,
 		}
 
-		// kube-api server service
+		/* The backends of the kube-api service runs on the
+		host network. So, they use the same IP as the host network.
+		For such cases, use host management interface to route all
+		non pod traffic. As the input request does not provide the
+		service name, identify the service using its port 443.
+		*/
 		if servicePort == 443 {
 			podMac = hostInterfaceMac
 		} else {
@@ -618,8 +631,6 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 
 	ipAddr := strings.Split(in.Ipv4Addr, "/")[0]
 	macAddr := in.MacAddr
-	//TODO: Extract the portId from mac.
-	// Temporary: Always send to port 0
 	portName := in.IfName
 	tmpName := strings.Split(portName, "_")
 	portIDStr := tmpName[1]
