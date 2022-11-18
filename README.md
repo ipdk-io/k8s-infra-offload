@@ -382,10 +382,10 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
 
   Rename first TAP interface and run ARP-Proxy on it.
   ```bash
-  ip link set P4TAP_0 name TAP0
-  ip link set TAP0 up
-  ip addr add 169.254.1.1/32 dev TAP0
-  ARP_PROXY_IF=TAP0 ./bin/arp_proxy &
+  ip link set P4TAP_0 name TAP_0
+  ip link set TAP_0 up
+  ip addr add 169.254.1.1/32 dev TAP_0
+  ARP_PROXY_IF=TAP_0 ./bin/arp_proxy &
   ```
 
   Start the containerd services
@@ -421,9 +421,22 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   ```
 
 ### Simple Pod-to-Pod Ping Test
-  To run a simple ping test from one pod to another, create two test pods as below. Note that, before creating the second test pod, edit the test_pod.yaml file to configure a different name (test-pod2) for the second pod.
+  To run a simple ping test from one pod to another, create two test pods. Note that, the yaml file in the package is to create a single test pod and so, copy and modify it to create pod with different name. For example, copy it as test-pod2.yaml and change the metadata name and container name to be test-pod2. The .yaml file for test-pod2 should look as below.
+  ```bash
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: test-pod2
+  spec:
+    containers:
+    - name: test-pod2
+      image: quay.io/quay/busybox:latest
+      ...
+  ```
+  Now, create both the test pods
   ```bash
   # kubectl create -f example/test_pod.yaml
+  # kubectl create -f example/test_pod2.yaml
   ```
     
   Check that the two test pods are ready and running.
