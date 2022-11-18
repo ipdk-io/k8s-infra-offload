@@ -11,14 +11,15 @@
   - [Setup P4-K8s](#setup-p4-k8s)
   - [P4-K8s Deployment](#p4-k8s-deployment)
   - [Simple Pod-to-Pod Ping Test](#simple-pod-to-pod-ping-test)
+  - [Service deployment Test](#service-deployment-test)
   - [Cleanup All](#cleanup-all)
 
 ## General requirements
 - For Infra Agent and Infra Manager to work, Kernel 5.4 or greater is required.
 - The recommended OS to be used is Fedora 33
 - The recommended Kubernetes version to be used is 1.25.0
-- TAP interfaces should be created and available on the host system before Infra Agent is deployed. The default prefix for TAP interfaces names is "P4TAP_".
-- The number of TAP interfaces created must be a power of 2. For example, it can be 2, 4, 8, 16, and so on.
+- TAP interfaces should be created and available on the host system before Infra Agent is deployed. The default prefix for TAP interfaces names, as required by InfraAgent is "P4TAP_".
+- The number of TAP interfaces created must be a power of 2 and more than 4. For example, it can be 8, 16, 32 and so on.
 - The P4 data plane program (k8s_dp.p4) and the configuration file (k8s_dp.conf), must not be modified as the k8s control plane software is tightly coupled with the pipeline. The P4 compiler generated artifacts are available in the container and must be used as is.
 - The firewall, if enabled in host OS, should either be disabled or configured to allow required traffic to flow through.
 
@@ -370,7 +371,7 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
 ## P4-K8s Deployment
   Run create_interfaces.sh script which, in addition to creating specified number of TAP interfaces, sets up the huge pages and starts P4-OVS.
   ```bash
-  # ./p4-k8s/scripts/create_interfaces.sh <4/8/16/...> [OVS_DEP_INSTALL_PATH]
+  # ./p4-k8s/scripts/create_interfaces.sh <8/16/32/...> [OVS_DEP_INSTALL_PATH]
   ```
     
   After running the above script, verify that P4-OVS is running in the background.
@@ -417,7 +418,6 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   Note that, for single node deployment, the node must be untainted to allow worker pods to share the node with control plane. This can be done as below.
   ```bash
   # kubectl taint node <node-name> node-role.kubernetes.io/control-plane-
-  # kubectl taint node <node-name> node-role.kubernetes.io/master-
   ```
 
 ### Simple Pod-to-Pod Ping Test
@@ -441,10 +441,10 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
     
   Check that the two test pods are ready and running.
   ```bash
-  # kubectl get pods
-  NAME        READY   STATUS    RESTARTS   AGE
-  test-pod    1/1     Running   0          10m
-  test-pod2   1/1     Running   0          9m33s
+  # kubectl get pods -o wide
+  NAME        READY   STATUS    RESTARTS   AGE    IP               NODE    NOMINATED NODE   READINESS GATES
+  test-pod    1/1     Running   0          10m    10.244.0.6       ins21   <none>           <none>
+  test-pod2   1/1     Running   0          9m33s  10.244.0.7       ins21   <none>           <none>
   ```
     
   Get the IP address assigned to one of the pods using ifconfig. Then, ping that address from the other pod.
@@ -459,35 +459,53 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   ...
   ```
 
+### Service deployment Test
+  To test simple service deployment, user can use iperf based server available in https://github.com/Pharb/kubernetes-iperf3.git repository. Clone this repository and deploy the service as below:
+  ```bash
+  # git clone https://github.com/Pharb/kubernetes-iperf3.git
+  # cd kubernetes-iperf3
+  # ./steps/setup.sh
+  # kubectl get svc -o wide
+  NAME            TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE     SELECTOR
+  iperf3-server   ClusterIP   10.111.123.3   <none>        5201/TCP   6m56s   app=iperf3-server
+  kubernetes      ClusterIP   10.96.0.1      <none>        443/TCP    15m     <none>
+  # kubectl get pods -o wide
+  NAME                                        READY   STATUS    RESTARTS   AGE   IP           NODE    NOMINATED NODE   READINESS GATES
+  iperf3-clients-8gkv7                        1/1     Running   0          18m   10.244.0.9   ins21   <none>           <none>
+  iperf3-server-deployment-59bf4754f9-4hp4c   1/1     Running   0          18m   10.244.0.8   ins21   <none>           <none>
+  test-pod                                    1/1     Running   0          25m   10.244.0.6   ins21   <none>           <none>
+  test-pod2                                   1/1     Running   0          25m   10.244.0.7   ins21   <none>           <none>  
+  ```
+
 ## Cleanup All  
   Reset kubernetes which would stop and remove all pods. Then, remove all k8s runtime configurations and other files
   ```bash
-  make undeploy
-  make undeploy-calico
-  kubeadm reset -f
-  rm -rf /etc/cni /etc/kubernetes
-  rm -rf /var/lib/etcd /var/lib/kubelet /var/lib/cni /var/lib/dockershim
-  rm -rf /var/run/kubernetes
-  rm -rf $HOME/.kube
+  # make undeploy
+  # make undeploy-calico
+  # kubeadm reset -f
+  # rm -rf /etc/cni /etc/kubernetes
+  # rm -rf /var/lib/etcd /var/lib/kubelet /var/lib/cni
+  # rm -rf /var/run/kubernetes
+  # rm -rf $HOME/.kube
   ```
     
   Check if there are pods that are still running. If so, stop and remove them
   ```bash
-  crictl ps -a
-  crictl pods ls -a
-  crictl stopp <pod_id>
-  crictl rmp <pod_id>
+  # crictl ps -a
+  # crictl pods ls -a
+  # crictl stopp <pod_id>
+  # crictl rmp <pod_id>
   ```
     
   Stop the system services
   ```bash
-  systemctl stop kubelet
-  systemctl stop containerd
+  # systemctl stop kubelet
+  # systemctl stop containerd
   ```
 
-  Stop the ARP proxy and OVS processes running in the background. This will also remove all the TAP interfaces that were configured earlier.
+  Stop the ARP proxy and OVS processes running in the background. This will also remove all the TAP interfaces that were configured earlier including the renamed one.
   ```bash
-  pkill arp_proxy
-  pkill ovsdb-server
-  pkill ovs-vswitchd
+  # pkill arp_proxy
+  # pkill ovsdb-server
+  # pkill ovs-vswitchd
   ```
