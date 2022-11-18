@@ -42,6 +42,7 @@ import (
 )
 
 var config *conf.Configuration
+var hostInterfaceMac string
 
 func PutConf(c *conf.Configuration) {
 	config = c
@@ -166,7 +167,8 @@ func CreateServer(log *log.Entry) *ApiServer {
 
 func InsertDefaultRule() {
 	server := NewApiServer()
-	p4.ArptToPortTable(context.Background(), server.p4RtC, types.DefaultRoute, 0, true)
+	p4.ArptToPortTable(context.Background(), server.p4RtC, types.DefaultRoute,
+		types.ArpProxyDefaultPort, true)
 }
 
 func (s *ApiServer) Start(t *tomb.Tomb) {
@@ -254,7 +256,7 @@ func (s *ApiServer) CreateNetwork(ctx context.Context, in *proto.CreateNetworkRe
 	var err error
 
 	logger := s.log.WithField("func", "CreateNetwork")
-	logger.Infof("Incoming Add reqest %s", in.String())
+	logger.Infof("Incoming Add request %s", in.String())
 
 	out := &proto.AddReply{
 		HostInterfaceName: in.AddRequest.DesiredHostInterfaceName,
@@ -287,7 +289,7 @@ func (s *ApiServer) DeleteNetwork(ctx context.Context, in *proto.DeleteNetworkRe
 	var err error
 
 	logger := s.log.WithField("func", "DeleteNetwork")
-	logger.Infof("Incoming Del reqest %s", in.String())
+	logger.Infof("Incoming Del request %s", in.String())
 
 	out := &proto.DelReply{
 		Successful: true,
@@ -333,14 +335,105 @@ func (s *ApiServer) SetSnatAddress(ctx context.Context, in *proto.SetSnatAddress
 }
 
 func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslation) (*proto.Reply, error) {
-	logger := log.WithField("func", "NatTranslationUpdate")
-	logger.Infof("Incomming NatTranslationUpdate %+v", in)
+	var err error
+	var podPortIDs []uint16
+	var podIpAddrs []string
+	var podMacAddrs []string
+	var podMac string
+	var groupID uint32
+
+	logger := log.WithField("func", "NatTranslationAdd")
+	logger.Infof("Incoming NatTranslationAdd %+v", in)
 	logger.Infof("Service ip %v and port %v proto %v", in.Endpoint.Ipv4Addr, in.Endpoint.Port, in.Proto)
 	logger.Infof("Endpoints num %v", len(in.Backends))
-	for i, e := range in.Backends {
-		logger.Infof("Endpoint %v, src ip: %v dst ip %v", i, e.SrcEp, e.DstEp)
+
+	out := &proto.Reply{
+		Successful: true,
 	}
-	return &proto.Reply{Successful: true}, nil
+
+	/*
+		If there are no backend endpoints for the service,
+		nothing to program the pipeline. Simply return from
+		the function call.
+	*/
+	if len(in.Backends) == 0 {
+		return out, nil
+	}
+
+	if len(hostInterfaceMac) == 0 {
+		logger.Errorf("Host Interface is not yet setup. Cannot program rules for service ip %s",
+			in.Endpoint.Ipv4Addr)
+		err = fmt.Errorf("Host Interface is not yet setup. Cannot program rules for service ip %s",
+			in.Endpoint.Ipv4Addr)
+		out.Successful = false
+		return out, err
+	}
+	/*
+		Use Host Interface MAC address for service
+	*/
+	serviceMacAddr := hostInterfaceMac
+	serviceIpAddr := in.Endpoint.Ipv4Addr
+	servicePort := uint16(in.Endpoint.Port)
+	serviceEndPointMap := map[string]store.ServiceEndPoint{}
+
+	server := NewApiServer()
+
+	for i, e := range in.Backends {
+		logger.Infof("Endpoint %v:  %v", i, e.DstEp)
+
+		ipAddr := e.DstEp.Ipv4Addr
+		ep := store.EndPoint{
+			PodIpAddress: ipAddr,
+		}
+
+		// kube-api server service
+		if servicePort == 443 {
+			podMac = hostInterfaceMac
+		} else {
+			entry := ep.GetFromStore()
+			if entry == nil {
+				err = fmt.Errorf("Entry for %s does not exist in the store", ipAddr)
+				out.Successful = false
+				return out, err
+			}
+			epEntry := entry.(store.EndPoint)
+			podMac = epEntry.PodMacAddress
+		}
+		podMacAddrs = append(podMacAddrs, podMac)
+		podIpAddrs = append(podIpAddrs, ipAddr)
+		podPortIDs = append(podPortIDs, uint16(e.DstEp.Port))
+
+		endPoint := store.ServiceEndPoint{
+			IpAddress: ipAddr,
+			Port:      e.DstEp.Port,
+			MemberID:  uint32(i + 1),
+		}
+		serviceEndPointMap[ipAddr] = endPoint
+
+	}
+
+	if err, groupID = p4.InsertServiceRules(ctx, server.p4RtC, podIpAddrs, podMacAddrs, podPortIDs, serviceIpAddr, serviceMacAddr, servicePort); err != nil {
+		logger.Errorf("Failed to insert the service entry %s into the pipeline", serviceIpAddr)
+		out.Successful = false
+		return out, err
+	}
+
+	service := store.Service{
+		ClusterIp:       serviceIpAddr,
+		ClusterPort:     uint32(servicePort),
+		GroupID:         uint32(groupID),
+		ServiceEndPoint: serviceEndPointMap,
+	}
+
+	if service.WriteToStore() != true {
+		logger.Errorf("Failed to insert service entry %s into the store", serviceIpAddr)
+		err = fmt.Errorf("Failed to insert service %s into the store", serviceIpAddr)
+		out.Successful = false
+		return out, err
+	}
+	logger.Infof("Inserted the service entry %s into the store", serviceIpAddr)
+
+	return out, err
 }
 
 func (s *ApiServer) AddDelSnatPrefix(ctx context.Context, in *proto.AddDelSnatPrefixRequest) (*proto.Reply, error) {
@@ -515,7 +608,7 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 	var err error
 
 	logger := s.log.WithField("func", "SetupHostInterface")
-	logger.Infof("Incoming SetupHostInterface reqest %s", in.String())
+	logger.Infof("Incoming SetupHostInterface request %s", in.String())
 
 	out := &proto.Reply{
 		Successful: true,
@@ -540,6 +633,9 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 	status, err := insertRule(s.log, ctx, server.p4RtC, macAddr,
 		ipAddr, int(portID), p4.HOST)
 	out.Successful = status
+
+	hostInterfaceMac = macAddr
+
 	return out, err
 }
 

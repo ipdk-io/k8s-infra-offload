@@ -1142,11 +1142,11 @@
     }
   ],
   "learn_filters" : []
-}Æô
-pipe˜à{
+}Áô
+pipe†à{
   "program_name" : "k8s_dp",
-  "build_date" : "Fri Nov 11 09:01:24 2022",
-  "compile_command" : "./p4c-dpdk --arch pna -o /root/to_venkatesh/pipe/k8s_dp.spec /root/to_venkatesh/k8s_dp.p4 --p4runtime-files /root/to_venkatesh/p4info.txt --bf-rt-schema /root/to_venkatesh/bfrt.json --context /root/to_venkatesh/pipe/context.json",
+  "build_date" : "Wed Nov 16 07:37:42 2022",
+  "compile_command" : "p4c-dpdk --arch pna -o ./pipe/k8s_dp.spec --p4runtime-files ./p4Info.txt --bf-rt-schema ./bfrt.json --context ./pipe/context.json ./k8s_dp.p4",
   "compiler_version" : "0.1 (SHA: bad00d940 BUILD: RELEASE)",
   "schema_version" : "0.1",
   "target" : "DPDK",
@@ -2301,7 +2301,7 @@
     }
   ],
   "externs" : []
-}£ê
+}≥ë
 
 
 
@@ -2455,6 +2455,8 @@ struct main_metadata_t {
 	bit<16> k8s_dp_control_set_meta_tcp_tcp_dst_port
 	bit<32> k8s_dp_control_set_meta_udp_ipv4_dst_addr
 	bit<16> k8s_dp_control_set_meta_udp_udp_dst_port
+	bit<24> MainControlT_tmp
+	bit<24> MainControlT_tmp_0
 	bit<8> MainControlT_do_clb_pinned_flows_add_on_miss
 	bit<8> MainControlT_create_reverse_ct
 	bit<32> MainControlT_as_sl3_tcp_group_id
@@ -2564,8 +2566,9 @@ action pinned_flows_hit args instanceof pinned_flows_hit_arg_t {
 action pinned_flows_miss args none {
 	jmpneq LABEL_END_23 m.MainControlT_do_clb_pinned_flows_add_on_miss 0x1
 	jmpeq LABEL_END_23 m.local_metadata_mod_blob_ptr_dnat 0x0
+	mov m.MainControlT_tmp m.local_metadata_mod_blob_ptr_dnat
 	mov m.timeout_id 0x2
-	learn pinned_flows_hit m.local_metadata_mod_blob_ptr_dnat m.timeout_id
+	learn pinned_flows_hit m.MainControlT_tmp m.timeout_id
 	LABEL_END_23 :	return
 }
 
@@ -2578,8 +2581,9 @@ action pinned_flows_reverse_hit args instanceof pinned_flows_reverse_hit_arg_t {
 action pinned_flows_reverse_miss args none {
 	jmpneq LABEL_END_24 m.MainControlT_create_reverse_ct 0x1
 	jmpeq LABEL_END_24 m.local_metadata_mod_blob_ptr_snat 0x0
+	mov m.MainControlT_tmp_0 m.local_metadata_mod_blob_ptr_snat
 	mov m.timeout_id_0 0x2
-	learn pinned_flows_reverse_hit m.local_metadata_mod_blob_ptr_snat m.timeout_id_0
+	learn pinned_flows_reverse_hit m.MainControlT_tmp_0 m.timeout_id_0
 	LABEL_END_24 :	return
 }
 

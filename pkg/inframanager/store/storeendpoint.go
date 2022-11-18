@@ -73,7 +73,6 @@ func InitEndPointStore(setFwdPipe bool) bool {
 		return false
 	}
 
-	log.Infof("Map: " + fmt.Sprint(EndPointSet.EndPointMap))
 	return true
 }
 

@@ -45,7 +45,7 @@ type Service struct {
 
 type ServiceEndPoint struct {
 	IpAddress string
-	port      uint32
+	Port      uint32
 	MemberID  uint32
 }
 
@@ -57,6 +57,7 @@ type ServiceCollection struct {
 var ServiceSet *ServiceCollection
 var EndPointSet *EndPointCollection
 var once sync.Once
+var onceService sync.Once
 
 func NewEndPoint() {
 	once.Do(func() {
@@ -66,7 +67,7 @@ func NewEndPoint() {
 }
 
 func NewService() {
-	once.Do(func() {
+	onceService.Do(func() {
 		ServiceSet = &ServiceCollection{ServiceMap: make(map[string]Service),
 			ServiceLock: &sync.Mutex{}}
 	})

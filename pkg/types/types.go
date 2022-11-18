@@ -48,6 +48,7 @@ const (
 	InfraAgentCLIName           = "infraagent"
 	HostInterfaceRefId          = "hostInterface"
 	DefaultRoute                = "169.254.1.1/32"
+	ArpProxyDefaultPort         = 0
 )
 
 var (
