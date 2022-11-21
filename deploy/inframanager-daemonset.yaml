@@ -34,7 +34,7 @@ spec:
       containers:
       - name: manager
         image: inframanager:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         volumeMounts:
         - name: log
           mountPath: /var/log
