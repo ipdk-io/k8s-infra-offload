@@ -15,12 +15,8 @@
 package test
 
 import (
-	"bytes"
 	"context"
-	"encoding/binary"
 	"flag"
-	"fmt"
-	"math/big"
 	"net"
 	"path/filepath"
 	"time"
@@ -34,56 +30,17 @@ import (
 	"github.com/antoninbas/p4runtime-go-client/pkg/signals"
 )
 
-const (
-	defaultDeviceID = 1
-)
-
-var (
-	defaultAddr = fmt.Sprintf("127.0.0.1:%d", client.P4RuntimePort)
-)
-
 var (
 	ipAddress = [2]string{"10.10.10.1", "10.10.10.2"}
 )
 
 var (
-	port = [2]int{0, 1}
+	port = [2]uint32{0, 1}
 )
 
 var (
 	macAddress = [2]string{"00:09:00:08:c5:50", "00:0a:00:09:c5:50"}
 )
-
-func valueToBytesInt(value int) []byte {
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.BigEndian, uint32(value))
-	if err != nil {
-		fmt.Println("binary.Write failed:", err)
-	}
-	fmt.Printf("% x", buf.Bytes())
-	return buf.Bytes()
-}
-
-func IP4toInt(IPv4Address net.IP) int64 {
-	IPv4Int := big.NewInt(0)
-	IPv4Int.SetBytes(IPv4Address.To4())
-	return IPv4Int.Int64()
-}
-
-func Pack32BinaryIP4(ip4Address string) []byte {
-	ipv4Decimal := IP4toInt(net.ParseIP(ip4Address))
-
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.BigEndian, uint32(ipv4Decimal))
-
-	if err != nil {
-		fmt.Println("Unable to write to buffer:", err)
-	}
-
-	// present in hexadecimal format
-	//fmt.Sprintf("%x", buf.Bytes())
-	return buf.Bytes()
-}
 
 func insertMacToPortTableEntry(ctx context.Context, p4RtC *client.Client) error {
 	for i := 0; i < 2; i++ {
@@ -95,7 +52,7 @@ func insertMacToPortTableEntry(ctx context.Context, p4RtC *client.Client) error 
 					Value: mac,
 				},
 			},
-			p4RtC.NewTableActionDirect("k8s_dp_control.set_dest_vport", [][]byte{valueToBytesInt(port[i])}),
+			p4RtC.NewTableActionDirect("k8s_dp_control.set_dest_vport", [][]byte{valueToBytes(port[i])}),
 			nil,
 		)
 		if err := p4RtC.InsertTableEntry(ctx, entry1); err != nil {
@@ -116,7 +73,7 @@ func insertIpv4ToPortTableEntry(ctx context.Context, p4RtC *client.Client) error
 					PLen:  int32(32),
 				},
 			},
-			p4RtC.NewTableActionDirect("k8s_dp_control.set_dest_vport", [][]byte{valueToBytesInt(port[i])}),
+			p4RtC.NewTableActionDirect("k8s_dp_control.set_dest_vport", [][]byte{valueToBytes(port[i])}),
 			nil,
 		)
 		if err := p4RtC.InsertTableEntry(ctx, entry1); err != nil {
