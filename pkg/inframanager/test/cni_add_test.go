@@ -54,7 +54,7 @@ var (
 	macAddress = [2]string{"00:09:00:08:c5:50", "00:0a:00:09:c5:50"}
 )
 
-func valueToBytes(value int) []byte {
+func valueToBytesInt(value int) []byte {
 	buf := new(bytes.Buffer)
 	err := binary.Write(buf, binary.BigEndian, uint32(value))
 	if err != nil {
@@ -95,7 +95,7 @@ func insertMacToPortTableEntry(ctx context.Context, p4RtC *client.Client) error 
 					Value: mac,
 				},
 			},
-			p4RtC.NewTableActionDirect("k8s_dp_control.set_dest_vport", [][]byte{valueToBytes(port[i])}),
+			p4RtC.NewTableActionDirect("k8s_dp_control.set_dest_vport", [][]byte{valueToBytesInt(port[i])}),
 			nil,
 		)
 		if err := p4RtC.InsertTableEntry(ctx, entry1); err != nil {
@@ -116,7 +116,7 @@ func insertIpv4ToPortTableEntry(ctx context.Context, p4RtC *client.Client) error
 					PLen:  int32(32),
 				},
 			},
-			p4RtC.NewTableActionDirect("k8s_dp_control.set_dest_vport", [][]byte{valueToBytes(port[i])}),
+			p4RtC.NewTableActionDirect("k8s_dp_control.set_dest_vport", [][]byte{valueToBytesInt(port[i])}),
 			nil,
 		)
 		if err := p4RtC.InsertTableEntry(ctx, entry1); err != nil {

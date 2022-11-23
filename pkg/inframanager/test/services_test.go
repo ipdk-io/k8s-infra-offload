@@ -14,7 +14,7 @@
 
 //go:build dpdk
 
-package services_test
+package test
 
 import (
 	"bytes"
@@ -25,7 +25,6 @@ import (
 	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"math/big"
 	"net"
 	"path/filepath"
 	"time"
@@ -46,14 +45,6 @@ const (
 const (
 	MAXUINT32              = 4294967295
 	DEFAULT_UUID_CNT_CACHE = 512
-)
-
-const (
-	defaultDeviceID = 1
-)
-
-var (
-	defaultAddr = fmt.Sprintf("127.0.0.1:%d", client.P4RuntimePort)
 )
 
 var (
@@ -129,7 +120,7 @@ var uuidFactory = newUUIDGenerator()
 
 func valueToBytes(value uint32) []byte {
 	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.BigEndian, value)
+	err := binary.Write(buf, binary.BigEndian, uint32(value))
 	if err != nil {
 		fmt.Println("binary.Write failed:", err)
 	}
@@ -144,27 +135,6 @@ func valueToBytes16(value uint16) []byte {
 		fmt.Println("binary.Write failed:", err)
 	}
 	fmt.Printf("% x", buf.Bytes())
-	return buf.Bytes()
-}
-
-func IP4toInt(IPv4Address net.IP) int64 {
-	IPv4Int := big.NewInt(0)
-	IPv4Int.SetBytes(IPv4Address.To4())
-	return IPv4Int.Int64()
-}
-
-func Pack32BinaryIP4(ip4Address string) []byte {
-	ipv4Decimal := IP4toInt(net.ParseIP(ip4Address))
-
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.BigEndian, uint32(ipv4Decimal))
-
-	if err != nil {
-		fmt.Println("Unable to write to buffer:", err)
-	}
-
-	// present in hexadecimal format
-	//fmt.Sprintf("%x", buf.Bytes())
 	return buf.Bytes()
 }
 
@@ -417,13 +387,13 @@ func AsSl3TcpTable(ctx context.Context, p4RtC *client.Client, memberID []uint32,
 		)
 		if addEntry {
 			if err = p4RtC.InsertActionProfileMember(ctx, entryMemberTcp); err != nil {
-				fmt.Errorf("Cannot insert member entry into 'as_sl3_tcp table': %v", err)
+				log.Errorf("Cannot insert member entry into 'as_sl3_tcp table': %v", err)
 				return err
 			}
 			fmt.Println("AsSl3TcpTable inserted")
 		} else {
 			if err = p4RtC.DeleteActionProfileMember(ctx, entryMemberTcp); err != nil {
-				fmt.Errorf("Cannot delete member entry from 'as_sl3_tcp table': %v", err)
+				log.Errorf("Cannot delete member entry from 'as_sl3_tcp table': %v", err)
 				return err
 			}
 		}
@@ -473,13 +443,13 @@ func TxBalanceTcpTable(ctx context.Context, p4RtC *client.Client, serviceIpAddr 
 	)
 	if addEntry {
 		if err := p4RtC.InsertTableEntry(ctx, entryTcp); err != nil {
-			fmt.Errorf("Cannot insert entry into 'tx_balance_tcp table': %v", err)
+			log.Errorf("Cannot insert entry into 'tx_balance_tcp table': %v", err)
 			return err
 		}
 		fmt.Println("TxBalanceTcpTable inserted")
 	} else {
 		if err := p4RtC.DeleteTableEntry(ctx, entryTcp); err != nil {
-			fmt.Errorf("Cannot delete entry from 'tx_balance_tcp table': %v", err)
+			log.Errorf("Cannot delete entry from 'tx_balance_tcp table': %v", err)
 			return err
 		}
 	}
@@ -741,13 +711,13 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client, podIpAddr []s
 	modblobPtrDNAT := make([]uint32, 0, len(podIpAddr))
 
 	groupID := uuidFactory.getUUID()
-	fmt.Println("group id: %d", groupID)
+	fmt.Println("group id: ", groupID)
 
 	for i := 0; i < len(podIpAddr); i++ {
 		val := uint32((groupID << 16) | uint32(i+1))
 		memberID = append(memberID, val)
 		modblobPtrDNAT = append(modblobPtrDNAT, val)
-		fmt.Println("modblobPtrDNAT: %d memberid: %d, pod ip: %s, pod mac: %s, portID: %d", modblobPtrDNAT[i], memberID[i], podIpAddr[i], podMacAddr[i], portID[i])
+		fmt.Println("modblobPtrDNAT:  ,memberid: , pod ip: , pod mac: , portID: ", modblobPtrDNAT[i], memberID[i], podIpAddr[i], podMacAddr[i], portID[i])
 	}
 
 	err = WriteDestIpTable(ctx, p4RtC, podIpAddr, podMacAddr, portID, modblobPtrDNAT, true)
@@ -801,7 +771,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client, podIpAddr []s
 	return nil
 }
 
-func main() {
+func SerivicesTest() {
 	ctx := context.Background()
 
 	p4InfoPath, _ := filepath.Abs("k8s_dp/p4info.txt")
