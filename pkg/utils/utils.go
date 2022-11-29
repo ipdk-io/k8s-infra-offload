@@ -168,10 +168,6 @@ func GetNodeNetInterface(k8sclient kubernetes.Interface, nodeName string, ifGett
 }
 
 func GetK8sConfig() (*rest.Config, error) {
-	clusterConfig, err := restInClusterConfig()
-	if err == nil {
-		return clusterConfig, nil
-	}
 	var kubeconfig string
 	if home := homedir.HomeDir(); home != "" {
 		kubeconfig = filepath.Join(home, ".kube", "config")
