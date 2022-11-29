@@ -206,16 +206,7 @@ var _ = Describe("utils", func() {
 	})
 
 	var _ = Context("GetK8sConfig() should", func() {
-		var _ = It("return no error when inCluster config is available", func() {
-			restInClusterConfigBackup := restInClusterConfig
-			restInClusterConfig = func() (*rest.Config, error) { return &rest.Config{}, nil }
-			_, err := GetK8sConfig()
-			Expect(err).ToNot(HaveOccurred())
-			restInClusterConfig = restInClusterConfigBackup
-		})
-		var _ = It("return no error when can build config from file", func() {
-			restInClusterConfigBackup := restInClusterConfig
-			restInClusterConfig = func() (*rest.Config, error) { return nil, errors.New("InClusterConfig unavailable") }
+		var _ = It("return no error when it can build config from file", func() {
 			t := testing.T{}
 			t.Setenv("HOME", tempDir)
 			_, tearDown, err := prepareKubeConfig(tempDir, exampleConfig)
@@ -223,12 +214,9 @@ var _ = Describe("utils", func() {
 			defer tearDown()
 			_, err = GetK8sConfig()
 			Expect(err).ToNot(HaveOccurred())
-			restInClusterConfig = restInClusterConfigBackup
 		})
 
 		var _ = It("return error if config file is invalid", func() {
-			restInClusterConfigBackup := restInClusterConfig
-			restInClusterConfig = func() (*rest.Config, error) { return nil, errors.New("InClusterConfig unavailable") }
 			t := testing.T{}
 			t.Setenv("HOME", tempDir)
 			_, tearDown, err := prepareKubeConfig(tempDir, "BrokenConfig")
@@ -236,7 +224,6 @@ var _ = Describe("utils", func() {
 			defer tearDown()
 			_, err = GetK8sConfig()
 			Expect(err).To(HaveOccurred())
-			restInClusterConfig = restInClusterConfigBackup
 		})
 	})
 
