@@ -32,7 +32,7 @@ spec:
       hostNetwork: true
       serviceAccountName: infraagent-sa
       initContainers:
-      - name: init
+      - name: install-felix-proxy
         image: infraagent:latest
         imagePullPolicy: Always
         volumeMounts:
@@ -97,6 +97,8 @@ spec:
           mountPath: /var/lib/cni/infraagent
         - name: cni-cache
           mountPath: /var/lib/cni/networks
+        - name: kubeconfig
+          mountPath: /root/.kube
         command:
         - /infraagent
       volumes:
@@ -122,6 +124,9 @@ spec:
       - name: config-volume
         configMap:
           name: infraagent-config
+      - name: kubeconfig
+        configMap:
+          name: infra-kubeconfig
       - name: cache
         hostPath:
           path: /var/lib/cni/infraagent

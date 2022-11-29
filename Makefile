@@ -1,5 +1,10 @@
 IMAGE_REGISTRY?=localhost:5000/
 IMAGE_VERSION?=latest
+KUBECONFIG?=$(HOME)/.kube/config
+# KUBECONFIG_CM: ConfigMap with kubeconfig used by Infra Agent.
+# If you change the ConfigMap name here dont forget to update the configMap
+# volume reference in deploy/infraagent-daemonset.yaml
+KUBECONFIG_CM=infra-kubeconfig
 export INFRAAGENT_IMAGE?=$(IMAGE_REGISTRY)infraagent:$(IMAGE_VERSION)
 export INFRAMANAGER_IMAGE?=$(IMAGE_REGISTRY)inframanager:$(IMAGE_VERSION)
 
@@ -77,11 +82,11 @@ docker-push-agent:
 docker-push-manager:
 	docker push $(INFRAMANAGER_IMAGE)
 
-deploy: kustomize
+deploy: kustomize create-kubeconfig-cm
 	cd deploy && $(KUSTOMIZE) edit set image infraagent:latest=$(INFRAAGENT_IMAGE) && $(KUSTOMIZE) edit set image inframanager:latest=$(INFRAMANAGER_IMAGE)
 	$(KUSTOMIZE) build --load-restrictor LoadRestrictionsNone deploy | envsubst | kubectl apply -f -
 
-undeploy: kustomize
+undeploy: kustomize delete-kubeconfig-cm
 	cd deploy
 	$(KUSTOMIZE) build --load-restrictor LoadRestrictionsNone deploy | envsubst | kubectl delete -f -
 
@@ -92,6 +97,12 @@ deploy-calico:
 undeploy-calico: 
 	kubectl delete -f deploy/felix-configuration.yaml
 	kubectl delete -f deploy/calico-with-grpc.yaml
+
+create-kubeconfig-cm:
+	@echo "Using kubeconfig file:$(KUBECONFIG)"
+	kubectl -n kube-system create configmap $(KUBECONFIG_CM) --from-file=config=$(KUBECONFIG)
+delete-kubeconfig-cm:
+	kubectl -n kube-system delete configmap $(KUBECONFIG_CM)
 
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
