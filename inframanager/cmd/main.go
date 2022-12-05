@@ -69,7 +69,7 @@ func main() {
 	if err == nil {
 		log.Infof("pipeline is already set")
 		if pipelineConfig.P4Info == nil {
-			log.Errorf("p4info is null")
+			log.Errorf("p4Info is null")
 			api.CloseCon()
 			os.Exit(1)
 		}

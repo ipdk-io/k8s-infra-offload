@@ -138,9 +138,9 @@ func GetFwdPipe(ctx context.Context,
 }
 
 func SetFwdPipe(ctx context.Context, binPath string,
-	p4infoPath string, cookie uint64) (*client.FwdPipeConfig, error) {
+	p4InfoPath string, cookie uint64) (*client.FwdPipeConfig, error) {
 	server := NewApiServer()
-	return server.p4RtC.SetFwdPipe(ctx, binPath, p4infoPath, cookie)
+	return server.p4RtC.SetFwdPipe(ctx, binPath, p4InfoPath, cookie)
 }
 
 func CreateServer(log *log.Entry) *ApiServer {

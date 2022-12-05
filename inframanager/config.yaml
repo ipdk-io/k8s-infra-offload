@@ -4,7 +4,7 @@ server:
 client:
   addr: localhost:9559
 
-P4InfoPath: k8s_dp/p4info.txt
+P4InfoPath: k8s_dp/p4Info.txt
 p4BinPath: k8s_dp/k8s_dp.pb.bin
 DeviceId: 1
 P4ProgConf: k8s_dp/k8s_dp.conf
