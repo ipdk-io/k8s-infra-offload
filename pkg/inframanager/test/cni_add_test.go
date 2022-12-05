@@ -96,12 +96,12 @@ func CniAddTest() {
 	flag.Uint64Var(&deviceID, "device-id", defaultDeviceID, "Device id")
 	var binPath string
 	flag.StringVar(&binPath, "bin", p4BinPath, "Path to P4 bin")
-	var p4InfoPath string
-	flag.StringVar(&p4InfoPath, "p4Info", p4InfoPath, "Path to p4Info")
+	var infoPath string
+	flag.StringVar(&infoPath, "p4Info", p4InfoPath, "Path to p4Info")
 
 	flag.Parse()
 
-	if binPath == "" || p4InfoPath == "" {
+	if binPath == "" || infoPath == "" {
 		log.Fatalf("Missing .bin or p4Info")
 	}
 
@@ -156,7 +156,7 @@ func CniAddTest() {
 	}()
 
 	log.Info("Setting forwarding pipe")
-	if _, err := p4RtC.SetFwdPipe(ctx, binPath, p4InfoPath, 0); err != nil {
+	if _, err := p4RtC.SetFwdPipe(ctx, binPath, infoPath, 0); err != nil {
 		log.Fatalf("Error when setting forwarding pipe: %v", err)
 	}
 
