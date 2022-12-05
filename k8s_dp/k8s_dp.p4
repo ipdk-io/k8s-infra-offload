@@ -308,20 +308,6 @@ control k8s_dp_control(
 		const default_action = set_dest_mac_vport(DEFAULT_HOST_PORT, 0);
 	}
 
-	/* The DMAC based forwarding table. Used for all traffic except ARP
-	 * request broadcasts */
-	table mac_to_port_table {
-		key = {
-			hdr.ethernet.dst_mac : exact;
-		}
-
-		actions = {
-			set_dest_vport;
-		}
-
-		const default_action = set_dest_vport(DEFAULT_HOST_PORT);
-	}
-
 	action update_dst_ip_mac(bit<48> new_dmac, bit<32> new_ip, bit<16> new_port) {
 		ck.clear();
 		ck1.clear();
@@ -581,17 +567,17 @@ control k8s_dp_control(
 		    }
 		}
 
-		/* The brodcast ARP Request pkts are forwarded based upon target IP
-		* address. All IP packets are forwarded based upon DIP and all
-		* non-IP packets are forwarded based upon DMAC */
-		if (hdr.arp.isValid() && hdr.arp.oper == ARP_REQUEST) {
-			arpt_to_port_table.apply();
-		} else if (hdr.ipv4.isValid()) {
-			ipv4_to_port_table.apply();
-		} else {
-			mac_to_port_table.apply();
-		}
-	}
+                /* All ARP pkts are forwarded based upon target IP address and
+                 * all IP packets are forwarded based upon DIP. All other
+                 * packets, by default, are sent to host */
+                if (hdr.arp.isValid()) {
+                        arpt_to_port_table.apply();
+                } else if (hdr.ipv4.isValid()) {
+                        ipv4_to_port_table.apply();
+                } else {
+                        send_to_port(DEFAULT_HOST_PORT);
+                }
+        }
 }
 
 control packet_deparser(

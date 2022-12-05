@@ -17,7 +17,6 @@ package test
 import (
 	"context"
 	"flag"
-	"net"
 	"path/filepath"
 	"time"
 
@@ -41,27 +40,6 @@ var (
 var (
 	macAddress = [2]string{"00:09:00:08:c5:50", "00:0a:00:09:c5:50"}
 )
-
-func insertMacToPortTableEntry(ctx context.Context, p4RtC *client.Client) error {
-	for i := 0; i < 2; i++ {
-		mac, _ := net.ParseMAC(macAddress[i])
-		entry1 := p4RtC.NewTableEntry(
-			"k8s_dp_control.mac_to_port_table",
-			map[string]client.MatchInterface{
-				"hdr.ethernet.dst_mac": &client.ExactMatch{
-					Value: mac,
-				},
-			},
-			p4RtC.NewTableActionDirect("k8s_dp_control.set_dest_vport", [][]byte{valueToBytes(port[i])}),
-			nil,
-		)
-		if err := p4RtC.InsertTableEntry(ctx, entry1); err != nil {
-			log.Errorf("Cannot insert entry in 'mac_to_port_table': %v", err)
-		}
-	}
-
-	return nil
-}
 
 func insertIpv4ToPortTableEntry(ctx context.Context, p4RtC *client.Client) error {
 	for i := 0; i < 2; i++ {
@@ -162,9 +140,6 @@ func CniAddTest() {
 
 	log.Info("installing the entries to the table")
 	if err := insertIpv4ToPortTableEntry(ctx, p4RtC); err != nil {
-		log.Fatalf("Error when installing entry %v", err)
-	}
-	if err := insertMacToPortTableEntry(ctx, p4RtC); err != nil {
 		log.Fatalf("Error when installing entry %v", err)
 	}
 

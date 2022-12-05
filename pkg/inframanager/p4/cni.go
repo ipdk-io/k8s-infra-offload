@@ -24,53 +24,6 @@ import (
 	"net"
 )
 
-func MacToPortTable(ctx context.Context, p4RtC *client.Client, macAddr string, port uint32, flag bool) error {
-	var err error
-
-	mac, err := net.ParseMAC(macAddr)
-	if err != nil {
-		log.Errorf("Invalid Mac Address %s", macAddr)
-		return err
-	}
-
-	if flag == true {
-		entryAdd := p4RtC.NewTableEntry(
-			"k8s_dp_control.mac_to_port_table",
-			map[string]client.MatchInterface{
-				"hdr.ethernet.dst_mac": &client.ExactMatch{
-					Value: mac,
-				},
-			},
-			p4RtC.NewTableActionDirect("k8s_dp_control.set_dest_vport", [][]byte{valueToBytes(port)}),
-			nil,
-		)
-
-		if err = p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
-			log.Errorf("Cannot insert entry into 'mac_to_port_table': %v", err)
-			return err
-		}
-
-	} else {
-		entryDelete := p4RtC.NewTableEntry(
-			"k8s_dp_control.mac_to_port_table",
-			map[string]client.MatchInterface{
-				"hdr.ethernet.dst_mac": &client.ExactMatch{
-					Value: mac,
-				},
-			},
-			nil,
-			nil,
-		)
-
-		if err = p4RtC.DeleteTableEntry(ctx, entryDelete); err != nil {
-			log.Errorf("Cannot delete entry from 'mac_to_port_table': %v", err)
-			return err
-		}
-	}
-
-	return nil
-}
-
 func ArptToPortTable(ctx context.Context, p4RtC *client.Client, arpTpa string, port uint32, flag bool) error {
 	var err error
 
@@ -179,11 +132,6 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, macAddr string, i
 		return err
 	}
 
-	err = MacToPortTable(ctx, p4RtC, macAddr, uint32(portId), true)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -194,11 +142,6 @@ func DeleteCniRules(ctx context.Context, p4RtC *client.Client, macAddr string, i
 	}
 
 	err = Ipv4ToPortTable(ctx, p4RtC, ipAddr, "", 0, false)
-	if err != nil {
-		return err
-	}
-
-	err = MacToPortTable(ctx, p4RtC, macAddr, 0, false)
 	if err != nil {
 		return err
 	}

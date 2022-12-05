@@ -1,5 +1,5 @@
 
-k8s_dp€ß{
+k8s_dpºÕ{
   "schema_version" : "1.0.0",
   "tables" : [
     {
@@ -184,54 +184,6 @@
               "type" : {
                 "type" : "bytes",
                 "width" : 48
-              }
-            }
-          ]
-        }
-      ],
-      "data" : [],
-      "supported_operations" : [],
-      "attributes" : ["EntryScope"]
-    },
-    {
-      "name" : "pipe.k8s_dp_control.mac_to_port_table",
-      "id" : 40521021,
-      "table_type" : "MatchAction_Direct",
-      "size" : 1024,
-      "annotations" : [],
-      "depends_on" : [],
-      "has_const_default_action" : true,
-      "key" : [
-        {
-          "id" : 1,
-          "name" : "hdr.ethernet.dst_mac",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Exact",
-          "type" : {
-            "type" : "bytes",
-            "width" : 48
-          }
-        }
-      ],
-      "action_specs" : [
-        {
-          "id" : 24323121,
-          "name" : "k8s_dp_control.set_dest_vport",
-          "action_scope" : "TableAndDefault",
-          "annotations" : [],
-          "data" : [
-            {
-              "id" : 1,
-              "name" : "p",
-              "repeated" : false,
-              "mandatory" : true,
-              "read_only" : false,
-              "annotations" : [],
-              "type" : {
-                "type" : "bytes",
-                "width" : 32
               }
             }
           ]
@@ -1142,10 +1094,10 @@
     }
   ],
   "learn_filters" : []
-}ç™
-pipe ˆ{
+}«ˆ
+pipeÁù{
   "program_name" : "k8s_dp",
-  "build_date" : "Mon Dec  5 00:33:20 2022",
+  "build_date" : "Mon Dec  5 05:23:48 2022",
   "compile_command" : "p4c-dpdk --arch pna -o ./pipe/k8s_dp.spec --p4runtime-files ./p4Info.txt --bf-rt-schema ./bfrt.json --context ./pipe/context.json ./k8s_dp.p4",
   "compiler_version" : "0.1 (SHA: bad00d940 BUILD: RELEASE)",
   "schema_version" : "0.1",
@@ -1401,76 +1353,10 @@
       "default_action_handle" : 131075
     },
     {
-      "name" : "k8s_dp_control.mac_to_port_table",
-      "target_name" : "k8s_dp_control.mac_to_port_table",
-      "direction" : "",
-      "handle" : 65539,
-      "table_type" : "match",
-      "size" : 65536,
-      "p4_hidden" : false,
-      "add_on_miss" : false,
-      "idle_timeout_with_auto_delete" : false,
-      "stateful_table_refs" : [],
-      "statistics_table_refs" : [],
-      "meter_table_refs" : [],
-      "match_key_fields" : [
-        {
-          "name" : "hdr.ethernet.dst_mac",
-          "instance_name" : "hdr.ethernet",
-          "field_name" : "dst_mac",
-          "match_type" : "exact",
-          "start_bit" : 0,
-          "bit_width" : 48,
-          "bit_width_full" : 48,
-          "position" : 0
-        }
-      ],
-      "actions" : [
-        {
-          "name" : "k8s_dp_control.set_dest_vport",
-          "target_name" : "k8s_dp_control.set_dest_vport_1",
-          "handle" : 131076,
-          "constant_default_action" : true,
-          "is_compiler_added_action" : false,
-          "allowed_as_hit_action" : true,
-          "allowed_as_default_action" : true,
-          "p4_parameters" : [
-            {
-              "name" : "p",
-              "start_bit" : 0,
-              "bit_width" : 32,
-              "position" : 0,
-              "byte_array_index" : 0
-            }
-          ]
-        }
-      ],
-      "match_attributes" : {
-        "stage_tables" : [
-          {
-            "action_format" : [
-              {
-                "action_name" : "k8s_dp_control.set_dest_vport",
-                "action_handle" : 131076,
-                "immediate_fields" : [
-                  {
-                    "param_name" : "p",
-                    "dest_start" : 0,
-                    "dest_width" : 32
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      "default_action_handle" : 131076
-    },
-    {
       "name" : "k8s_dp_control.write_dest_ip_table",
       "target_name" : "k8s_dp_control.write_dest_ip_table",
       "direction" : "",
-      "handle" : 65540,
+      "handle" : 65539,
       "table_type" : "match",
       "size" : 1024,
       "p4_hidden" : false,
@@ -1495,7 +1381,7 @@
         {
           "name" : "k8s_dp_control.update_dst_ip_mac",
           "target_name" : "k8s_dp_control.update_dst_ip_mac",
-          "handle" : 131077,
+          "handle" : 131076,
           "constant_default_action" : false,
           "is_compiler_added_action" : false,
           "allowed_as_hit_action" : true,
@@ -1527,7 +1413,7 @@
         {
           "name" : "NoAction",
           "target_name" : "NoAction",
-          "handle" : 131078,
+          "handle" : 131077,
           "constant_default_action" : false,
           "is_compiler_added_action" : false,
           "allowed_as_hit_action" : true,
@@ -1541,7 +1427,7 @@
             "action_format" : [
               {
                 "action_name" : "k8s_dp_control.update_dst_ip_mac",
-                "action_handle" : 131077,
+                "action_handle" : 131076,
                 "immediate_fields" : [
                   {
                     "param_name" : "new_dmac",
@@ -1562,20 +1448,20 @@
               },
               {
                 "action_name" : "NoAction",
-                "action_handle" : 131078,
+                "action_handle" : 131077,
                 "immediate_fields" : []
               }
             ]
           }
         ]
       },
-      "default_action_handle" : 131078
+      "default_action_handle" : 131077
     },
     {
       "name" : "k8s_dp_control.pinned_flows",
       "target_name" : "k8s_dp_control.pinned_flows",
       "direction" : "",
-      "handle" : 65541,
+      "handle" : 65540,
       "table_type" : "match",
       "size" : 65536,
       "p4_hidden" : false,
@@ -1640,7 +1526,7 @@
         {
           "name" : "k8s_dp_control.pinned_flows_hit",
           "target_name" : "k8s_dp_control.pinned_flows_hit",
-          "handle" : 131079,
+          "handle" : 131078,
           "constant_default_action" : false,
           "is_compiler_added_action" : false,
           "allowed_as_hit_action" : true,
@@ -1658,7 +1544,7 @@
         {
           "name" : "k8s_dp_control.pinned_flows_miss",
           "target_name" : "k8s_dp_control.pinned_flows_miss",
-          "handle" : 131080,
+          "handle" : 131079,
           "constant_default_action" : true,
           "is_compiler_added_action" : false,
           "allowed_as_hit_action" : true,
@@ -1672,7 +1558,7 @@
             "action_format" : [
               {
                 "action_name" : "k8s_dp_control.pinned_flows_hit",
-                "action_handle" : 131079,
+                "action_handle" : 131078,
                 "immediate_fields" : [
                   {
                     "param_name" : "ptr",
@@ -1683,20 +1569,20 @@
               },
               {
                 "action_name" : "k8s_dp_control.pinned_flows_miss",
-                "action_handle" : 131080,
+                "action_handle" : 131079,
                 "immediate_fields" : []
               }
             ]
           }
         ]
       },
-      "default_action_handle" : 131080
+      "default_action_handle" : 131079
     },
     {
       "name" : "k8s_dp_control.pinned_flows_reverse",
       "target_name" : "k8s_dp_control.pinned_flows_reverse",
       "direction" : "",
-      "handle" : 65542,
+      "handle" : 65541,
       "table_type" : "match",
       "size" : 65536,
       "p4_hidden" : false,
@@ -1761,7 +1647,7 @@
         {
           "name" : "k8s_dp_control.pinned_flows_reverse_hit",
           "target_name" : "k8s_dp_control.pinned_flows_reverse_hit",
-          "handle" : 131081,
+          "handle" : 131080,
           "constant_default_action" : false,
           "is_compiler_added_action" : false,
           "allowed_as_hit_action" : true,
@@ -1779,7 +1665,7 @@
         {
           "name" : "k8s_dp_control.pinned_flows_reverse_miss",
           "target_name" : "k8s_dp_control.pinned_flows_reverse_miss",
-          "handle" : 131082,
+          "handle" : 131081,
           "constant_default_action" : true,
           "is_compiler_added_action" : false,
           "allowed_as_hit_action" : true,
@@ -1793,7 +1679,7 @@
             "action_format" : [
               {
                 "action_name" : "k8s_dp_control.pinned_flows_reverse_hit",
-                "action_handle" : 131081,
+                "action_handle" : 131080,
                 "immediate_fields" : [
                   {
                     "param_name" : "ptr",
@@ -1804,20 +1690,20 @@
               },
               {
                 "action_name" : "k8s_dp_control.pinned_flows_reverse_miss",
-                "action_handle" : 131082,
+                "action_handle" : 131081,
                 "immediate_fields" : []
               }
             ]
           }
         ]
       },
-      "default_action_handle" : 131082
+      "default_action_handle" : 131081
     },
     {
       "name" : "k8s_dp_control.tx_balance_tcp",
       "target_name" : "k8s_dp_control.tx_balance_tcp",
       "direction" : "",
-      "handle" : 65543,
+      "handle" : 65542,
       "table_type" : "match",
       "size" : 65536,
       "p4_hidden" : false,
@@ -1829,13 +1715,13 @@
       "action_data_table_refs" : [
         {
           "name" : "k8s_dp_control.as_sl3_tcp",
-          "handle" : 65545
+          "handle" : 65544
         }
       ],
       "selection_table_refs" : [
         {
           "name" : "k8s_dp_control.as_sl3_tcp_sel",
-          "handle" : 65544
+          "handle" : 65543
         }
       ],
       "action_profile" : "as_sl3_tcp",
@@ -1865,7 +1751,7 @@
         {
           "name" : "k8s_dp_control.set_default_lb_dest",
           "target_name" : "k8s_dp_control.set_default_lb_dest",
-          "handle" : 131083,
+          "handle" : 131082,
           "constant_default_action" : false,
           "is_compiler_added_action" : false,
           "allowed_as_hit_action" : true,
@@ -1883,7 +1769,7 @@
         {
           "name" : "NoAction",
           "target_name" : "NoAction",
-          "handle" : 131084,
+          "handle" : 131083,
           "constant_default_action" : false,
           "is_compiler_added_action" : false,
           "allowed_as_hit_action" : true,
@@ -1897,7 +1783,7 @@
             "action_format" : [
               {
                 "action_name" : "k8s_dp_control.set_default_lb_dest",
-                "action_handle" : 131083,
+                "action_handle" : 131082,
                 "immediate_fields" : [
                   {
                     "param_name" : "ptr",
@@ -1908,20 +1794,20 @@
               },
               {
                 "action_name" : "NoAction",
-                "action_handle" : 131084,
+                "action_handle" : 131083,
                 "immediate_fields" : []
               }
             ]
           }
         ]
       },
-      "default_action_handle" : 131084
+      "default_action_handle" : 131083
     },
     {
       "name" : "k8s_dp_control.tx_balance_udp",
       "target_name" : "k8s_dp_control.tx_balance_udp",
       "direction" : "",
-      "handle" : 65546,
+      "handle" : 65545,
       "table_type" : "match",
       "size" : 65536,
       "p4_hidden" : false,
@@ -1933,13 +1819,13 @@
       "action_data_table_refs" : [
         {
           "name" : "k8s_dp_control.as_sl3_udp",
-          "handle" : 65548
+          "handle" : 65547
         }
       ],
       "selection_table_refs" : [
         {
           "name" : "k8s_dp_control.as_sl3_udp_sel",
-          "handle" : 65547
+          "handle" : 65546
         }
       ],
       "action_profile" : "as_sl3_udp",
@@ -1969,7 +1855,7 @@
         {
           "name" : "k8s_dp_control.set_default_lb_dest",
           "target_name" : "k8s_dp_control.set_default_lb_dest_1",
-          "handle" : 131085,
+          "handle" : 131084,
           "constant_default_action" : false,
           "is_compiler_added_action" : false,
           "allowed_as_hit_action" : true,
@@ -1987,7 +1873,7 @@
         {
           "name" : "NoAction",
           "target_name" : "NoAction",
-          "handle" : 131086,
+          "handle" : 131085,
           "constant_default_action" : false,
           "is_compiler_added_action" : false,
           "allowed_as_hit_action" : true,
@@ -2001,7 +1887,7 @@
             "action_format" : [
               {
                 "action_name" : "k8s_dp_control.set_default_lb_dest",
-                "action_handle" : 131085,
+                "action_handle" : 131084,
                 "immediate_fields" : [
                   {
                     "param_name" : "ptr",
@@ -2012,20 +1898,20 @@
               },
               {
                 "action_name" : "NoAction",
-                "action_handle" : 131086,
+                "action_handle" : 131085,
                 "immediate_fields" : []
               }
             ]
           }
         ]
       },
-      "default_action_handle" : 131086
+      "default_action_handle" : 131085
     },
     {
       "name" : "k8s_dp_control.set_meta_tcp",
       "target_name" : "k8s_dp_control.set_meta_tcp",
       "direction" : "",
-      "handle" : 65549,
+      "handle" : 65548,
       "table_type" : "match",
       "size" : 65536,
       "p4_hidden" : false,
@@ -2060,7 +1946,7 @@
         {
           "name" : "k8s_dp_control.set_key_for_reverse_ct",
           "target_name" : "k8s_dp_control.set_key_for_reverse_ct",
-          "handle" : 131087,
+          "handle" : 131086,
           "constant_default_action" : false,
           "is_compiler_added_action" : false,
           "allowed_as_hit_action" : true,
@@ -2078,7 +1964,7 @@
         {
           "name" : "NoAction",
           "target_name" : "NoAction",
-          "handle" : 131088,
+          "handle" : 131087,
           "constant_default_action" : true,
           "is_compiler_added_action" : false,
           "allowed_as_hit_action" : true,
@@ -2092,7 +1978,7 @@
             "action_format" : [
               {
                 "action_name" : "k8s_dp_control.set_key_for_reverse_ct",
-                "action_handle" : 131087,
+                "action_handle" : 131086,
                 "immediate_fields" : [
                   {
                     "param_name" : "ptr",
@@ -2103,20 +1989,20 @@
               },
               {
                 "action_name" : "NoAction",
-                "action_handle" : 131088,
+                "action_handle" : 131087,
                 "immediate_fields" : []
               }
             ]
           }
         ]
       },
-      "default_action_handle" : 131088
+      "default_action_handle" : 131087
     },
     {
       "name" : "k8s_dp_control.set_meta_udp",
       "target_name" : "k8s_dp_control.set_meta_udp",
       "direction" : "",
-      "handle" : 65550,
+      "handle" : 65549,
       "table_type" : "match",
       "size" : 65536,
       "p4_hidden" : false,
@@ -2151,7 +2037,7 @@
         {
           "name" : "k8s_dp_control.set_key_for_reverse_ct",
           "target_name" : "k8s_dp_control.set_key_for_reverse_ct_1",
-          "handle" : 131089,
+          "handle" : 131088,
           "constant_default_action" : false,
           "is_compiler_added_action" : false,
           "allowed_as_hit_action" : true,
@@ -2169,7 +2055,7 @@
         {
           "name" : "NoAction",
           "target_name" : "NoAction",
-          "handle" : 131090,
+          "handle" : 131089,
           "constant_default_action" : true,
           "is_compiler_added_action" : false,
           "allowed_as_hit_action" : true,
@@ -2183,7 +2069,7 @@
             "action_format" : [
               {
                 "action_name" : "k8s_dp_control.set_key_for_reverse_ct",
-                "action_handle" : 131089,
+                "action_handle" : 131088,
                 "immediate_fields" : [
                   {
                     "param_name" : "ptr",
@@ -2194,20 +2080,20 @@
               },
               {
                 "action_name" : "NoAction",
-                "action_handle" : 131090,
+                "action_handle" : 131089,
                 "immediate_fields" : []
               }
             ]
           }
         ]
       },
-      "default_action_handle" : 131090
+      "default_action_handle" : 131089
     },
     {
       "name" : "k8s_dp_control.as_sl3_tcp_sel",
       "target_name" : "k8s_dp_control.as_sl3_tcp_sel",
       "direction" : "",
-      "handle" : 65544,
+      "handle" : 65543,
       "table_type" : "selection",
       "size" : 65536,
       "p4_hidden" : true,
@@ -2215,13 +2101,13 @@
       "idle_timeout_with_auto_delete" : false,
       "max_n_groups" : 128,
       "max_n_members_per_group" : 1024,
-      "bound_to_action_data_table_handle" : 65545
+      "bound_to_action_data_table_handle" : 65544
     },
     {
       "name" : "k8s_dp_control.as_sl3_udp_sel",
       "target_name" : "k8s_dp_control.as_sl3_udp_sel",
       "direction" : "",
-      "handle" : 65547,
+      "handle" : 65546,
       "table_type" : "selection",
       "size" : 65536,
       "p4_hidden" : true,
@@ -2229,13 +2115,13 @@
       "idle_timeout_with_auto_delete" : false,
       "max_n_groups" : 128,
       "max_n_members_per_group" : 1024,
-      "bound_to_action_data_table_handle" : 65548
+      "bound_to_action_data_table_handle" : 65547
     },
     {
       "name" : "k8s_dp_control.as_sl3_tcp",
       "target_name" : "k8s_dp_control.as_sl3_tcp",
       "direction" : "",
-      "handle" : 65545,
+      "handle" : 65544,
       "table_type" : "action",
       "size" : 65536,
       "p4_hidden" : true,
@@ -2245,7 +2131,7 @@
         {
           "name" : "k8s_dp_control.set_default_lb_dest",
           "target_name" : "k8s_dp_control.set_default_lb_dest",
-          "handle" : 131083,
+          "handle" : 131082,
           "p4_parameters" : [
             {
               "name" : "ptr",
@@ -2259,17 +2145,17 @@
         {
           "name" : "NoAction",
           "target_name" : "NoAction",
-          "handle" : 131084,
+          "handle" : 131083,
           "p4_parameters" : []
         }
       ],
-      "default_action_handle" : 131084
+      "default_action_handle" : 131083
     },
     {
       "name" : "k8s_dp_control.as_sl3_udp",
       "target_name" : "k8s_dp_control.as_sl3_udp",
       "direction" : "",
-      "handle" : 65548,
+      "handle" : 65547,
       "table_type" : "action",
       "size" : 65536,
       "p4_hidden" : true,
@@ -2279,7 +2165,7 @@
         {
           "name" : "k8s_dp_control.set_default_lb_dest",
           "target_name" : "k8s_dp_control.set_default_lb_dest_1",
-          "handle" : 131085,
+          "handle" : 131084,
           "p4_parameters" : [
             {
               "name" : "ptr",
@@ -2293,15 +2179,15 @@
         {
           "name" : "NoAction",
           "target_name" : "NoAction",
-          "handle" : 131086,
+          "handle" : 131085,
           "p4_parameters" : []
         }
       ],
-      "default_action_handle" : 131086
+      "default_action_handle" : 131085
     }
   ],
   "externs" : []
-}³‘
+}ÖŽ
 
 
 
@@ -2385,10 +2271,6 @@ struct set_default_lb_dest_arg_t {
 struct set_dest_mac_vport_arg_t {
 	bit<32> p
 	bit<48> new_dmac
-}
-
-struct set_dest_vport_1_arg_t {
-	bit<32> p
 }
 
 struct set_dest_vport_arg_t {
@@ -2516,11 +2398,6 @@ action set_dest_mac_vport args instanceof set_dest_mac_vport_arg_t {
 }
 
 action set_dest_vport args instanceof set_dest_vport_arg_t {
-	mov m.pna_main_output_metadata_output_port t.p
-	return
-}
-
-action set_dest_vport_1 args instanceof set_dest_vport_1_arg_t {
 	mov m.pna_main_output_metadata_output_port t.p
 	return
 }
@@ -2670,18 +2547,6 @@ table ipv4_to_port_table {
 		set_dest_mac_vport
 	}
 	default_action set_dest_mac_vport args p 0x0 new_dmac 0x0 const
-	size 0x10000
-}
-
-
-table mac_to_port_table {
-	key {
-		h.ethernet.dst_mac exact
-	}
-	actions {
-		set_dest_vport_1
-	}
-	default_action set_dest_vport_1 args p 0x0 const
 	size 0x10000
 }
 
@@ -2987,13 +2852,12 @@ apply {
 	LABEL_END_10 :	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
 	table pinned_flows_reverse
 	LABEL_ENDSWITCH :	jmpnv LABEL_FALSE_12 h.arp
-	jmpneq LABEL_FALSE_12 h.arp.oper 0x1
 	table arpt_to_port_table
 	jmp LABEL_END_12
 	LABEL_FALSE_12 :	jmpnv LABEL_FALSE_13 h.ipv4
 	table ipv4_to_port_table
 	jmp LABEL_END_12
-	LABEL_FALSE_13 :	table mac_to_port_table
+	LABEL_FALSE_13 :	mov m.pna_main_output_metadata_output_port 0x0
 	LABEL_END_12 :	emit h.ethernet
 	emit h.vlan_tag
 	emit h.ipv4
