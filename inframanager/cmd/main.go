@@ -62,7 +62,13 @@ func main() {
 		log.Errorf("Failed to open p4 runtime client connection")
 		os.Exit(1)
 	}
-	defer api.CloseCon()
+	defer api.CloseP4RtCCon()
+
+	if err := api.OpenGNMICCon(); err != nil {
+		log.Errorf("Failed to open gNMI client connection")
+		os.Exit(1)
+	}
+	defer api.CloseGNMIConn()
 
 	log.Infof("getting pipeline if already set")
 	pipelineConfig, err := api.GetFwdPipe(ctx, client.GetFwdPipeAll)
@@ -70,7 +76,8 @@ func main() {
 		log.Infof("pipeline is already set")
 		if pipelineConfig.P4Info == nil {
 			log.Errorf("p4Info is null")
-			api.CloseCon()
+			api.CloseP4RtCCon()
+			api.CloseGNMIConn()
 			os.Exit(1)
 		}
 		store.InitEndPointStore(false)
@@ -82,7 +89,8 @@ func main() {
 		if _, err := api.SetFwdPipe(ctx, p4BinPath, p4InfoPath,
 			0); err != nil {
 			log.Errorf("Error when setting forwarding pipe: %v", err)
-			api.CloseCon()
+			api.CloseP4RtCCon()
+			api.CloseGNMIConn()
 			os.Exit(1)
 		}
 		store.InitEndPointStore(true)

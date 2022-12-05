@@ -16,6 +16,7 @@ package config
 
 import (
 	"fmt"
+
 	"github.com/spf13/viper"
 )
 
@@ -48,6 +49,7 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 	// Reading variables without using the model
 	fmt.Println("Client Addr:\t", viper.GetString("Client.Addr"))
 	fmt.Println("Server Addr:\t", viper.GetString("Server.Addr"))
+	fmt.Println("gNMI Server Addr:\t", viper.GetString("GNMIServer.Addr"))
 	fmt.Println("Log Level:\t", viper.GetString("LogLevel"))
 	fmt.Println("P4 prog config file \t", viper.GetString("P4ProgConf"))
 	fmt.Println("P4Info path \t", viper.GetString("P4InfoPath"))

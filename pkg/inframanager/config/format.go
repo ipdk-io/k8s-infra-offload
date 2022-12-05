@@ -18,6 +18,7 @@ package config
 type Configuration struct {
 	Server        ServerConf
 	Client        ClientConf
+	GNMIServer    ServerConf
 	HostName      string
 	LogLevel      string
 	P4ProgConf    string
