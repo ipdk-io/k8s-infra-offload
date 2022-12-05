@@ -27,19 +27,12 @@ import (
 )
 
 func WriteDestIpTable(ctx context.Context, p4RtC *client.Client,
-	podIpAddr []string, podMacAddr []string,
-	portID []uint16, modBlobPtrDnat []uint32,
+	podIpAddr []string, portID []uint16, modBlobPtrDnat []uint32,
 	addEntry bool) error {
 	if addEntry {
 		for i := 0; i < len(modBlobPtrDnat); i++ {
-			dstMac, err := net.ParseMAC(podMacAddr[i])
-			if err != nil {
-				log.Errorf("Invalid mac address: %s, error: %v", podMacAddr[i], err)
-				return err
-			}
-
 			if net.ParseIP(podIpAddr[i]) == nil {
-				err = fmt.Errorf("Invalid IP address: %s", podIpAddr[i])
+				err := fmt.Errorf("Invalid IP address: %s", podIpAddr[i])
 				return err
 			}
 
@@ -50,9 +43,9 @@ func WriteDestIpTable(ctx context.Context, p4RtC *client.Client,
 						Value: valueToBytes(modBlobPtrDnat[i]),
 					},
 				},
-				p4RtC.NewTableActionDirect("k8s_dp_control.update_dst_ip_mac", [][]byte{dstMac,
-					Pack32BinaryIP4(podIpAddr[i]),
-					valueToBytes16(portID[i])}),
+				p4RtC.NewTableActionDirect("k8s_dp_control.update_dst_ip",
+					[][]byte{Pack32BinaryIP4(podIpAddr[i]),
+						valueToBytes16(portID[i])}),
 				nil,
 			)
 			if err := p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
@@ -258,18 +251,11 @@ func TxBalanceUdpTable(ctx context.Context, p4RtC *client.Client,
 }
 
 func WriteSourceIpTable(ctx context.Context, p4RtC *client.Client,
-	ModBlobPtrSnat uint32, serviceIpAddr string,
-	serviceMacAddr string, servicePort uint16,
+	ModBlobPtrSnat uint32, serviceIpAddr string, servicePort uint16,
 	addEntry bool) error {
 	if addEntry {
-		srcMac, err := net.ParseMAC(serviceMacAddr)
-		if err != nil {
-			log.Errorf("Failed to parse mac address: %s, error: %v", serviceMacAddr, err)
-			return err
-		}
-
 		if net.ParseIP(serviceIpAddr) == nil {
-			err = fmt.Errorf("Invalid IP Address: %s", serviceIpAddr)
+			err := fmt.Errorf("Invalid IP Address: %s", serviceIpAddr)
 			return err
 		}
 
@@ -280,12 +266,12 @@ func WriteSourceIpTable(ctx context.Context, p4RtC *client.Client,
 					Value: valueToBytes(ModBlobPtrSnat),
 				},
 			},
-			p4RtC.NewTableActionDirect("k8s_dp_control.update_src_ip_mac", [][]byte{srcMac,
-				Pack32BinaryIP4(serviceIpAddr),
-				valueToBytes16(servicePort)}),
+			p4RtC.NewTableActionDirect("k8s_dp_control.update_src_ip",
+				[][]byte{Pack32BinaryIP4(serviceIpAddr),
+					valueToBytes16(servicePort)}),
 			nil,
 		)
-		if err = p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
+		if err := p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
 			log.Errorf("Cannot insert entry into 'write_source_ip_table table': %v", err)
 			return err
 		}
@@ -445,7 +431,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 
 	log.Infof("group id: %d, service ip: %s,service mac: %s, service port: %d", groupID, serviceIpAddr, serviceMacAddr, servicePort)
 
-	if err = WriteDestIpTable(ctx, p4RtC, podIpAddr, podMacAddr, portID,
+	if err = WriteDestIpTable(ctx, p4RtC, podIpAddr, portID,
 		modblobPtrDNAT, true); err != nil {
 		log.Errorf("Failed to WriteDestIpTable")
 		return
@@ -476,8 +462,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	}
 
 	if err = WriteSourceIpTable(ctx, p4RtC, groupID,
-		serviceIpAddr, serviceMacAddr, servicePort,
-		true); err != nil {
+		serviceIpAddr, servicePort, true); err != nil {
 		log.Errorf("Failed to WriteSourceIpTable")
 		return
 	}
@@ -521,7 +506,7 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client, podIpAddr []s
 		log.Infof("modblobPtrDNAT: %d memberid: %d, pod ip: %s, pod mac: %s,portID: %d", modblobPtrDNAT[i], memberID[i], podIpAddr[i], podMacAddr[i], portID[i])
 	}
 
-	err = WriteDestIpTable(ctx, p4RtC, nil, nil, nil, modblobPtrDNAT, false)
+	err = WriteDestIpTable(ctx, p4RtC, nil, nil, modblobPtrDNAT, false)
 	if err != nil {
 		return err
 	}
@@ -546,7 +531,7 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client, podIpAddr []s
 		return nil
 	}
 
-	err = WriteSourceIpTable(ctx, p4RtC, groupID, "", "", 0, false)
+	err = WriteSourceIpTable(ctx, p4RtC, groupID, "", 0, false)
 	if err != nil {
 		return nil
 	}

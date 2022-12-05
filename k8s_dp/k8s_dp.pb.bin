@@ -1,5 +1,5 @@
 
-k8s_dp∫’{
+k8s_dp†–{
   "schema_version" : "1.0.0",
   "tables" : [
     {
@@ -26,25 +26,13 @@
       ],
       "action_specs" : [
         {
-          "id" : 29330140,
-          "name" : "k8s_dp_control.update_src_ip_mac",
+          "id" : 29740405,
+          "name" : "k8s_dp_control.update_src_ip",
           "action_scope" : "TableAndDefault",
           "annotations" : [],
           "data" : [
             {
               "id" : 1,
-              "name" : "new_smac",
-              "repeated" : false,
-              "mandatory" : true,
-              "read_only" : false,
-              "annotations" : [],
-              "type" : {
-                "type" : "bytes",
-                "width" : 48
-              }
-            },
-            {
-              "id" : 2,
               "name" : "new_ip",
               "repeated" : false,
               "mandatory" : true,
@@ -56,7 +44,7 @@
               }
             },
             {
-              "id" : 3,
+              "id" : 2,
               "name" : "new_port",
               "repeated" : false,
               "mandatory" : true,
@@ -217,25 +205,13 @@
       ],
       "action_specs" : [
         {
-          "id" : 24750436,
-          "name" : "k8s_dp_control.update_dst_ip_mac",
+          "id" : 33155327,
+          "name" : "k8s_dp_control.update_dst_ip",
           "action_scope" : "TableAndDefault",
           "annotations" : [],
           "data" : [
             {
               "id" : 1,
-              "name" : "new_dmac",
-              "repeated" : false,
-              "mandatory" : true,
-              "read_only" : false,
-              "annotations" : [],
-              "type" : {
-                "type" : "bytes",
-                "width" : 48
-              }
-            },
-            {
-              "id" : 2,
               "name" : "new_ip",
               "repeated" : false,
               "mandatory" : true,
@@ -247,7 +223,7 @@
               }
             },
             {
-              "id" : 3,
+              "id" : 2,
               "name" : "new_port",
               "repeated" : false,
               "mandatory" : true,
@@ -1094,10 +1070,10 @@
     }
   ],
   "learn_filters" : []
-}´à
-pipe¡˘{
+}πÅ
+pipeŸÛ{
   "program_name" : "k8s_dp",
-  "build_date" : "Mon Dec  5 05:23:48 2022",
+  "build_date" : "Mon Dec  5 06:57:44 2022",
   "compile_command" : "p4c-dpdk --arch pna -o ./pipe/k8s_dp.spec --p4runtime-files ./p4Info.txt --bf-rt-schema ./bfrt.json --context ./pipe/context.json ./k8s_dp.p4",
   "compiler_version" : "0.1 (SHA: bad00d940 BUILD: RELEASE)",
   "schema_version" : "0.1",
@@ -1130,8 +1106,8 @@
       ],
       "actions" : [
         {
-          "name" : "k8s_dp_control.update_src_ip_mac",
-          "target_name" : "k8s_dp_control.update_src_ip_mac",
+          "name" : "k8s_dp_control.update_src_ip",
+          "target_name" : "k8s_dp_control.update_src_ip",
           "handle" : 131072,
           "constant_default_action" : false,
           "is_compiler_added_action" : false,
@@ -1139,25 +1115,18 @@
           "allowed_as_default_action" : true,
           "p4_parameters" : [
             {
-              "name" : "new_smac",
-              "start_bit" : 0,
-              "bit_width" : 48,
-              "position" : 0,
-              "byte_array_index" : 0
-            },
-            {
               "name" : "new_ip",
               "start_bit" : 0,
               "bit_width" : 32,
-              "position" : 1,
-              "byte_array_index" : 6
+              "position" : 0,
+              "byte_array_index" : 0
             },
             {
               "name" : "new_port",
               "start_bit" : 0,
               "bit_width" : 16,
-              "position" : 2,
-              "byte_array_index" : 10
+              "position" : 1,
+              "byte_array_index" : 4
             }
           ]
         },
@@ -1177,22 +1146,17 @@
           {
             "action_format" : [
               {
-                "action_name" : "k8s_dp_control.update_src_ip_mac",
+                "action_name" : "k8s_dp_control.update_src_ip",
                 "action_handle" : 131072,
                 "immediate_fields" : [
                   {
-                    "param_name" : "new_smac",
-                    "dest_start" : 0,
-                    "dest_width" : 48
-                  },
-                  {
                     "param_name" : "new_ip",
-                    "dest_start" : 6,
+                    "dest_start" : 0,
                     "dest_width" : 32
                   },
                   {
                     "param_name" : "new_port",
-                    "dest_start" : 10,
+                    "dest_start" : 4,
                     "dest_width" : 16
                   }
                 ]
@@ -1379,8 +1343,8 @@
       ],
       "actions" : [
         {
-          "name" : "k8s_dp_control.update_dst_ip_mac",
-          "target_name" : "k8s_dp_control.update_dst_ip_mac",
+          "name" : "k8s_dp_control.update_dst_ip",
+          "target_name" : "k8s_dp_control.update_dst_ip",
           "handle" : 131076,
           "constant_default_action" : false,
           "is_compiler_added_action" : false,
@@ -1388,25 +1352,18 @@
           "allowed_as_default_action" : true,
           "p4_parameters" : [
             {
-              "name" : "new_dmac",
-              "start_bit" : 0,
-              "bit_width" : 48,
-              "position" : 0,
-              "byte_array_index" : 0
-            },
-            {
               "name" : "new_ip",
               "start_bit" : 0,
               "bit_width" : 32,
-              "position" : 1,
-              "byte_array_index" : 6
+              "position" : 0,
+              "byte_array_index" : 0
             },
             {
               "name" : "new_port",
               "start_bit" : 0,
               "bit_width" : 16,
-              "position" : 2,
-              "byte_array_index" : 10
+              "position" : 1,
+              "byte_array_index" : 4
             }
           ]
         },
@@ -1426,22 +1383,17 @@
           {
             "action_format" : [
               {
-                "action_name" : "k8s_dp_control.update_dst_ip_mac",
+                "action_name" : "k8s_dp_control.update_dst_ip",
                 "action_handle" : 131076,
                 "immediate_fields" : [
                   {
-                    "param_name" : "new_dmac",
-                    "dest_start" : 0,
-                    "dest_width" : 48
-                  },
-                  {
                     "param_name" : "new_ip",
-                    "dest_start" : 6,
+                    "dest_start" : 0,
                     "dest_width" : 32
                   },
                   {
                     "param_name" : "new_port",
-                    "dest_start" : 10,
+                    "dest_start" : 4,
                     "dest_width" : 16
                   }
                 ]
@@ -2187,7 +2139,7 @@
     }
   ],
   "externs" : []
-}÷é
+}Ãç
 
 
 
@@ -2248,8 +2200,8 @@ struct arp_t {
 }
 
 struct cksum_state_t {
-	bit<16> state_1
 	bit<16> state_0
+	bit<16> state_1
 }
 
 struct pinned_flows_hit_arg_t {
@@ -2293,14 +2245,12 @@ struct tx_balance_udp_set_group_id_arg_t {
 	bit<32> group_id
 }
 
-struct update_dst_ip_mac_arg_t {
-	bit<48> new_dmac
+struct update_dst_ip_arg_t {
 	bit<32> new_ip
 	bit<16> new_port
 }
 
-struct update_src_ip_mac_arg_t {
-	bit<48> new_smac
+struct update_src_ip_arg_t {
 	bit<32> new_ip
 	bit<16> new_port
 }
@@ -2356,7 +2306,7 @@ action NoAction args none {
 	return
 }
 
-action update_src_ip_mac args instanceof update_src_ip_mac_arg_t {
+action update_src_ip args instanceof update_src_ip_arg_t {
 	mov h.cksum_state.state_0 0x0
 	mov h.cksum_state.state_1 0x0
 	cksub h.cksum_state.state_0 h.ipv4.header_checksum
@@ -2372,8 +2322,7 @@ action update_src_ip_mac args instanceof update_src_ip_mac_arg_t {
 	cksub h.cksum_state.state_1 h.ipv4.src_addr
 	cksub h.cksum_state.state_1 h.udp.src_port
 	mov h.udp.src_port t.new_port
-	LABEL_END_14 :	mov h.ethernet.src_mac t.new_smac
-	mov h.ipv4.src_addr t.new_ip
+	LABEL_END_14 :	mov h.ipv4.src_addr t.new_ip
 	ckadd h.cksum_state.state_0 h.ipv4.src_addr
 	mov h.ipv4.header_checksum h.cksum_state.state_0
 	jmpneq LABEL_FALSE_16 h.ipv4.protocol 0x6
@@ -2402,7 +2351,7 @@ action set_dest_vport args instanceof set_dest_vport_arg_t {
 	return
 }
 
-action update_dst_ip_mac args instanceof update_dst_ip_mac_arg_t {
+action update_dst_ip args instanceof update_dst_ip_arg_t {
 	mov h.cksum_state.state_0 0x0
 	mov h.cksum_state.state_1 0x0
 	cksub h.cksum_state.state_0 h.ipv4.header_checksum
@@ -2419,7 +2368,6 @@ action update_dst_ip_mac args instanceof update_dst_ip_mac_arg_t {
 	cksub h.cksum_state.state_1 h.udp.dst_port
 	mov h.udp.dst_port t.new_port
 	LABEL_END_19 :	mov h.ipv4.dst_addr t.new_ip
-	mov h.ethernet.dst_mac t.new_dmac
 	ckadd h.cksum_state.state_0 h.ipv4.dst_addr
 	mov h.ipv4.header_checksum h.cksum_state.state_0
 	jmpneq LABEL_FALSE_21 h.ipv4.protocol 0x6
@@ -2519,7 +2467,7 @@ table write_source_ip_table {
 		m.local_metadata_mod_blob_ptr_snat exact
 	}
 	actions {
-		update_src_ip_mac
+		update_src_ip
 		NoAction
 	}
 	default_action NoAction args none 
@@ -2556,7 +2504,7 @@ table write_dest_ip_table {
 		m.local_metadata_mod_blob_ptr_dnat exact
 	}
 	actions {
-		update_dst_ip_mac
+		update_dst_ip
 		NoAction
 	}
 	default_action NoAction args none 

@@ -717,7 +717,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client, podIpAddr []s
 func SerivicesTest() {
 	ctx := context.Background()
 
-	p4InfoPath, _ := filepath.Abs("k8s_dp/p4info.txt")
+	p4InfoPath, _ := filepath.Abs("k8s_dp/p4Info.txt")
 	p4BinPath, _ := filepath.Abs("k8s_dp/k8s_dp.pb.bin")
 
 	var addr string
@@ -726,13 +726,13 @@ func SerivicesTest() {
 	flag.Uint64Var(&deviceID, "device-id", defaultDeviceID, "Device id")
 	var binPath string
 	flag.StringVar(&binPath, "bin", p4BinPath, "Path to P4 bin")
-	var p4infoPath string
-	flag.StringVar(&p4infoPath, "p4info", p4InfoPath, "Path to P4Info")
+	var infoPath string
+	flag.StringVar(&infoPath, "p4Info", p4InfoPath, "Path to p4Info")
 
 	flag.Parse()
 
-	if binPath == "" || p4infoPath == "" {
-		log.Fatalf("Missing .bin or P4Info")
+	if binPath == "" || infoPath == "" {
+		log.Fatalf("Missing .bin or p4Info")
 	}
 
 	log.Infof("Connecting to server at %s", addr)
@@ -786,7 +786,7 @@ func SerivicesTest() {
 	}()
 
 	log.Info("Setting forwarding pipe")
-	if _, err := p4RtC.SetFwdPipe(ctx, binPath, p4infoPath, 0); err != nil {
+	if _, err := p4RtC.SetFwdPipe(ctx, binPath, p4InfoPath, 0); err != nil {
 		log.Fatalf("Error when setting forwarding pipe: %v", err)
 	}
 

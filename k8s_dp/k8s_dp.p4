@@ -218,7 +218,7 @@ control k8s_dp_control(
 	InternetChecksum() ck1;
 	ExpireTimeProfileId_t new_expire_time_profile_id;
 
-	action update_src_ip_mac(bit<48> new_smac, bit<32> new_ip, bit<16> new_port) {
+	action update_src_ip(bit<32> new_ip, bit<16> new_port) {
 		ck.clear();
 		ck1.clear();
 		ck.subtract(hdr.ipv4.header_checksum);
@@ -238,7 +238,6 @@ control k8s_dp_control(
 			}
 		}
 
-		hdr.ethernet.src_mac = new_smac;
 		hdr.ipv4.src_addr = new_ip;
 
 		ck.add(hdr.ipv4.src_addr);
@@ -257,10 +256,10 @@ control k8s_dp_control(
 	}
 
 	/* SNAT table for Pod IP -> Service IP translation. Along with IP address,
-	 * the IP checksum and SMAC is also updated. */
+	 * the IP checksum is also updated. */
 	table write_source_ip_table {
 		key = { meta.mod_blob_ptr_snat : exact; }
-		actions = { update_src_ip_mac; }
+		actions = { update_src_ip; }
 		size = 2048;
 	}
 
@@ -308,7 +307,7 @@ control k8s_dp_control(
 		const default_action = set_dest_mac_vport(DEFAULT_HOST_PORT, 0);
 	}
 
-	action update_dst_ip_mac(bit<48> new_dmac, bit<32> new_ip, bit<16> new_port) {
+	action update_dst_ip(bit<32> new_ip, bit<16> new_port) {
 		ck.clear();
 		ck1.clear();
 		ck.subtract(hdr.ipv4.header_checksum);
@@ -328,7 +327,6 @@ control k8s_dp_control(
 		}
 
 		hdr.ipv4.dst_addr = new_ip;
-		hdr.ethernet.dst_mac = new_dmac;
 
 		ck.add(hdr.ipv4.dst_addr);
 		hdr.ipv4.header_checksum = ck.get();
@@ -346,10 +344,10 @@ control k8s_dp_control(
 	}
 
 	/* DNAT table for Service IP -> Pod IP translation. Along with IP address,
-	 * the IP checksum and DMAC is also updated. */
+	 * the IP checksum is also updated. */
 	table write_dest_ip_table {
 		key = { meta.mod_blob_ptr_dnat : exact; }
-		actions = { update_dst_ip_mac; }
+		actions = { update_dst_ip; }
 		size = 1024;
 	}
 
