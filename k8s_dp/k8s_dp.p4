@@ -28,7 +28,7 @@ const ActionRef_t NO_MODIFY =  (ActionRef_t) 0;
 
 const ExpireTimeProfileId_t EXPIRE_TIME_CT = (ExpireTimeProfileId_t) 2;
 
-const PortId_t DEFAULT_HOST_PORT = (PortId_t) 0;
+const PortId_t DEFAULT_HOST_PORT = (PortId_t) 1;
 
 /*************************************************************************
  ***********************  H E A D E R S  *********************************

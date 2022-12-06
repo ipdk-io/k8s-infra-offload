@@ -1073,8 +1073,8 @@
 }πÅ
 pipeŸÛ{
   "program_name" : "k8s_dp",
-  "build_date" : "Mon Dec  5 06:57:44 2022",
-  "compile_command" : "p4c-dpdk --arch pna -o ./pipe/k8s_dp.spec --p4runtime-files ./p4Info.txt --bf-rt-schema ./bfrt.json --context ./pipe/context.json ./k8s_dp.p4",
+  "build_date" : "Tue Dec  6 04:56:07 2022",
+  "compile_command" : "p4c-dpdk --arch pna -o ./pipe/k8s_dp.spec --p4runtime-files ./p4info.txt --bf-rt-schema ./bfrt.json --context ./pipe/context.json ./k8s_dp.p4",
   "compiler_version" : "0.1 (SHA: bad00d940 BUILD: RELEASE)",
   "schema_version" : "0.1",
   "target" : "DPDK",
@@ -2200,8 +2200,8 @@ struct arp_t {
 }
 
 struct cksum_state_t {
-	bit<16> state_0
 	bit<16> state_1
+	bit<16> state_0
 }
 
 struct pinned_flows_hit_arg_t {
@@ -2482,7 +2482,7 @@ table arpt_to_port_table {
 	actions {
 		set_dest_vport
 	}
-	default_action set_dest_vport args p 0x0 const
+	default_action set_dest_vport args p 0x1 const
 	size 0x10000
 }
 
@@ -2494,7 +2494,7 @@ table ipv4_to_port_table {
 	actions {
 		set_dest_mac_vport
 	}
-	default_action set_dest_mac_vport args p 0x0 new_dmac 0x0 const
+	default_action set_dest_mac_vport args p 0x1 new_dmac 0x0 const
 	size 0x10000
 }
 
@@ -2805,7 +2805,7 @@ apply {
 	LABEL_FALSE_12 :	jmpnv LABEL_FALSE_13 h.ipv4
 	table ipv4_to_port_table
 	jmp LABEL_END_12
-	LABEL_FALSE_13 :	mov m.pna_main_output_metadata_output_port 0x0
+	LABEL_FALSE_13 :	mov m.pna_main_output_metadata_output_port 0x1
 	LABEL_END_12 :	emit h.ethernet
 	emit h.vlan_tag
 	emit h.ipv4
