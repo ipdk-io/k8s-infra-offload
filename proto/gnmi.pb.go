@@ -326,10 +326,11 @@ func (GetRequest_DataType) EnumDescriptor() ([]byte, []int) {
 // Notification is a re-usable message that is used to encode data from the
 // target to the client. A Notification carries two types of changes to the data
 // tree:
-//  - Deleted values (delete) - a set of paths that have been removed from the
-//    data tree.
-//  - Updated values (update) - a set of path-value pairs indicating the path
-//    whose value has changed in the data tree.
+//   - Deleted values (delete) - a set of paths that have been removed from the
+//     data tree.
+//   - Updated values (update) - a set of path-value pairs indicating the path
+//     whose value has changed in the data tree.
+//
 // Reference: gNMI Specification Section 2.1
 type Notification struct {
 	state         protoimpl.MessageState
