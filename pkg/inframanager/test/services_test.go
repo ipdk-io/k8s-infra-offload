@@ -62,10 +62,6 @@ var (
 )
 
 var (
-	serverMac = []string{"00:1b:00:0b:c5:80"}
-)
-
-var (
 	servicePort uint32 = 20000
 )
 
@@ -74,59 +70,8 @@ var (
 )
 
 var (
-	serviceMacAddr = "00:00:00:aa:aa:aa"
-)
-
-var (
 	serviceIpAddr = "10.10.100.1"
 )
-
-func MacToPortTable(ctx context.Context, p4RtC *client.Client, macAddr string, port uint32, flag bool) error {
-	var err error
-
-	mac, err := net.ParseMAC(macAddr)
-	if err != nil {
-		log.Errorf("Invalid Mac Address %s", macAddr)
-		return err
-	}
-
-	if flag == true {
-		entryAdd := p4RtC.NewTableEntry(
-			"k8s_dp_control.mac_to_port_table",
-			map[string]client.MatchInterface{
-				"hdr.ethernet.dst_mac": &client.ExactMatch{
-					Value: mac,
-				},
-			},
-			p4RtC.NewTableActionDirect("k8s_dp_control.set_dest_vport", [][]byte{valueToBytes(port)}),
-			nil,
-		)
-
-		if err = p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
-			log.Errorf("Cannot insert entry into 'mac_to_port_table': %v", err)
-			return err
-		}
-
-	} else {
-		entryDelete := p4RtC.NewTableEntry(
-			"k8s_dp_control.mac_to_port_table",
-			map[string]client.MatchInterface{
-				"hdr.ethernet.dst_mac": &client.ExactMatch{
-					Value: mac,
-				},
-			},
-			nil,
-			nil,
-		)
-
-		if err = p4RtC.DeleteTableEntry(ctx, entryDelete); err != nil {
-			log.Errorf("Cannot delete entry from 'mac_to_port_table': %v", err)
-			return err
-		}
-	}
-
-	return nil
-}
 
 func ArptToPortTable(ctx context.Context, p4RtC *client.Client, arpTpa string, port uint32, flag bool) error {
 	var err error
@@ -235,10 +180,6 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, macAddr string, i
 		return err
 	}
 
-	err = MacToPortTable(ctx, p4RtC, macAddr, uint32(portId), true)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -253,24 +194,14 @@ func DeleteCniRules(ctx context.Context, p4RtC *client.Client, macAddr string, i
 		return err
 	}
 
-	err = MacToPortTable(ctx, p4RtC, macAddr, 0, false)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
-func WriteDestIpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []string, podMacAddr []string, portID []uint32, modBlobPtrDnat []uint32, addEntry bool) error {
+func WriteDestIpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []string, portID []uint32, modBlobPtrDnat []uint32, addEntry bool) error {
 	if addEntry {
 		for i := 0; i < len(modBlobPtrDnat); i++ {
-			dstMac, err := net.ParseMAC(podMacAddr[i])
-			if err != nil {
-				log.Errorf("Invalid mac address: %s, error: %v", podMacAddr[i], err)
-				return err
-			}
-
 			if net.ParseIP(podIpAddr[i]) == nil {
-				err = fmt.Errorf("Invalid IP address: %s", podIpAddr[i])
+				err := fmt.Errorf("Invalid IP address: %s", podIpAddr[i])
 				return err
 			}
 
@@ -281,7 +212,7 @@ func WriteDestIpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []str
 						Value: valueToBytes(modBlobPtrDnat[i]),
 					},
 				},
-				p4RtC.NewTableActionDirect("k8s_dp_control.update_dst_ip_mac", [][]byte{dstMac,
+				p4RtC.NewTableActionDirect("k8s_dp_control.update_dst_ip", [][]byte{
 					Pack32BinaryIP4(podIpAddr[i]),
 					valueToBytes(portID[i])}),
 				nil,
@@ -486,16 +417,10 @@ func TxBalanceUdpTable(ctx context.Context, p4RtC *client.Client, serviceIpAddr 
 	return nil
 }
 
-func WriteSourceIpTable(ctx context.Context, p4RtC *client.Client, ModBlobPtrSnat uint32, serviceIpAddr string, serviceMacAddr string, servicePort uint32, addEntry bool) error {
+func WriteSourceIpTable(ctx context.Context, p4RtC *client.Client, ModBlobPtrSnat uint32, serviceIpAddr string, servicePort uint32, addEntry bool) error {
 	if addEntry {
-		srcMac, err := net.ParseMAC(serviceMacAddr)
-		if err != nil {
-			log.Errorf("Failed to parse mac address: %s, error: %v", serviceMacAddr, err)
-			return err
-		}
-
 		if net.ParseIP(serviceIpAddr) == nil {
-			err = fmt.Errorf("Invalid IP Address: %s", serviceIpAddr)
+			err := fmt.Errorf("Invalid IP Address: %s", serviceIpAddr)
 			return err
 		}
 
@@ -506,12 +431,12 @@ func WriteSourceIpTable(ctx context.Context, p4RtC *client.Client, ModBlobPtrSna
 					Value: valueToBytes(ModBlobPtrSnat),
 				},
 			},
-			p4RtC.NewTableActionDirect("k8s_dp_control.update_src_ip_mac", [][]byte{srcMac,
+			p4RtC.NewTableActionDirect("k8s_dp_control.update_src_ip", [][]byte{
 				Pack32BinaryIP4(serviceIpAddr),
 				valueToBytes(servicePort)}),
 			nil,
 		)
-		if err = p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
+		if err := p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
 			log.Errorf("Cannot insert entry into 'write_source_ip_table table': %v", err)
 			return err
 		}
@@ -648,7 +573,7 @@ func SetMetaUdpTable(ctx context.Context, p4RtC *client.Client, podIpAddr []stri
 	return nil
 }
 
-func InsertServiceRules(ctx context.Context, p4RtC *client.Client, podIpAddr []string, podMacAddr []string, portID []uint32, serviceIpAddr string, serviceMacAddr string, servicePort uint32) error {
+func InsertServiceRules(ctx context.Context, p4RtC *client.Client, podIpAddr []string, portID []uint32, serviceIpAddr string, servicePort uint32) error {
 	var err error
 	memberID := make([]uint32, 0, len(podIpAddr))
 	modblobPtrDNAT := make([]uint32, 0, len(podIpAddr))
@@ -660,10 +585,10 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client, podIpAddr []s
 		val := uint32((groupID << 16) | uint32(i+1))
 		memberID = append(memberID, val)
 		modblobPtrDNAT = append(modblobPtrDNAT, val)
-		fmt.Println("modblobPtrDNAT:  ,memberid: , pod ip: , pod mac: , portID: ", modblobPtrDNAT[i], memberID[i], podIpAddr[i], podMacAddr[i], portID[i])
+		fmt.Println("modblobPtrDNAT:  ,memberid: , pod ip: , pod mac: , portID: ", modblobPtrDNAT[i], memberID[i], podIpAddr[i], portID[i])
 	}
 
-	err = WriteDestIpTable(ctx, p4RtC, podIpAddr, podMacAddr, portID, modblobPtrDNAT, true)
+	err = WriteDestIpTable(ctx, p4RtC, podIpAddr, portID, modblobPtrDNAT, true)
 	if err != nil {
 		fmt.Println("WriteDestIpTable failed")
 		return err
@@ -693,7 +618,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client, podIpAddr []s
 		return err
 	}
 
-	err = WriteSourceIpTable(ctx, p4RtC, groupID, serviceIpAddr, serviceMacAddr, servicePort, true)
+	err = WriteSourceIpTable(ctx, p4RtC, groupID, serviceIpAddr, servicePort, true)
 	if err != nil {
 		fmt.Println("WriteSourceIpTable failed")
 		return err
@@ -714,7 +639,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client, podIpAddr []s
 	return nil
 }
 
-func SerivicesTest() {
+func ServicesTest() {
 	ctx := context.Background()
 
 	p4InfoPath, _ := filepath.Abs("k8s_dp/p4Info.txt")
@@ -799,7 +724,7 @@ func SerivicesTest() {
 		}
 	}
 
-	err = InsertServiceRules(ctx, p4RtC, serverIp, serverMac, appPort, serviceIpAddr, serviceMacAddr, servicePort)
+	err = InsertServiceRules(ctx, p4RtC, serverIp, appPort, serviceIpAddr, servicePort)
 	if err != nil {
 		log.Fatalf("cannot insert service rules")
 	}
