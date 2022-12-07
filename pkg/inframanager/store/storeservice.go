@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	servicesFile = "/opt/inframanager/services_db.json"
+	servicesFile = storePath + "services_db.json"
 )
 
 func isServiceStoreEmpty() bool {

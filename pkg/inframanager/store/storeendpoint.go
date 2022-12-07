@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	storeFile = "/opt/inframanager/cni_db.json"
+	storeFile = storePath + "cni_db.json"
 )
 
 func isEndPointStoreEmpty() bool {

@@ -18,6 +18,10 @@ import (
 	"sync"
 )
 
+const (
+	storePath = "/var/lib/cni/inframanager/"
+)
+
 type store interface {
 	WriteToStore() bool
 	DeleteFromStore() bool
