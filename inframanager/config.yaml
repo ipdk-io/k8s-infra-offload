@@ -12,7 +12,15 @@ p4BinPath: k8s_dp/k8s_dp.pb.bin
 DeviceId: 1
 P4ProgConf: k8s_dp/k8s_dp.conf
 HostName: "Node1"
-LogLevel: "Info"
+# Possible debug levels
+#  "Panic"
+#  "Fatal"
+#  "Error"
+#  "Warn"
+#  "Info"
+#  "Debug" (Default)
+#  "Trace"
+LogLevel: "Debug"
 EnableServices: 0
 EnableRouting: 0
 DefaultDevice: 0

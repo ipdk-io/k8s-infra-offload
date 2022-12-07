@@ -44,7 +44,26 @@ func logInit() {
 	}
 	mw := io.MultiWriter(os.Stdout, logFile)
 	log.SetOutput(mw)
-	log.SetLevel(log.DebugLevel)
+
+	switch api.GetLogLevel() {
+	case "Panic":
+		log.SetLevel(log.PanicLevel)
+	case "Fatal":
+		log.SetLevel(log.FatalLevel)
+	case "Error":
+		log.SetLevel(log.ErrorLevel)
+	case "Warn":
+		log.SetLevel(log.WarnLevel)
+	case "Info":
+		log.SetLevel(log.InfoLevel)
+	case "Debug":
+		log.SetLevel(log.DebugLevel)
+	case "Trace":
+		log.SetLevel(log.TraceLevel)
+	default:
+		log.SetLevel(log.DebugLevel)
+	}
+
 	log.SetReportCaller(true)
 	log.SetFormatter(&log.TextFormatter{
 		PadLevelText:     true,

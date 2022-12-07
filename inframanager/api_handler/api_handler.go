@@ -68,6 +68,10 @@ func NewApiServer() *ApiServer {
 	return api
 }
 
+func GetLogLevel() string {
+	return config.LogLevel
+}
+
 func OpenP4RtC(ctx context.Context, high uint64, low uint64, stopCh <-chan struct{}) error {
 	var err error
 
