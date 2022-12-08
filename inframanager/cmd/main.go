@@ -23,6 +23,7 @@ import (
 
 	conf "github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/config"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
 	"github.com/antoninbas/p4runtime-go-client/pkg/signals"
@@ -37,6 +38,12 @@ func main() {
 	if config.P4BinPath == "" || config.P4InfoPath == "" {
 		log.Fatalf("Missing .bin or P4Info")
 	}
+
+	ip, err := utils.GetNodeIPFromEnv()
+	if err != nil {
+		log.Fatalf("Failed to get the node IP address, err: %v", err)
+	}
+	config.NodeIP = ip
 
 	api.PutConf(config)
 
@@ -99,7 +106,14 @@ func main() {
 
 	// Starting inframanager gRPC server
 	waitCh := make(chan struct{})
+
+	//Create a new manager object
 	mgr.NewManager()
+
+	/*
+		Start the api server and program the default gateway rule
+		for arp-proxy
+	*/
 	go mgr.Run(stopCh, waitCh)
 
 	// Wait till manager is exited

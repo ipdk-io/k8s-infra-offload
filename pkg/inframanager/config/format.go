@@ -20,6 +20,7 @@ type Configuration struct {
 	Client        ClientConf
 	GNMIServer    ServerConf
 	HostName      string
+	NodeIP        string
 	LogLevel      string
 	P4ProgConf    string
 	P4InfoPath    string

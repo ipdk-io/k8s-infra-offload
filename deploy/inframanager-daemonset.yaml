@@ -42,6 +42,11 @@ spec:
           mountPath: /var/lib/cni/inframanager
         command:
         - /inframanager
+        env:
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
       volumes:
       - name: log
         hostPath:

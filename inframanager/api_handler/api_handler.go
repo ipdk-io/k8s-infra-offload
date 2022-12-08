@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	"github.com/ipdk-io/k8s-infra-offload/proto"
 	"gopkg.in/tomb.v2"
 
@@ -241,8 +242,28 @@ func CreateServer(log *log.Entry) *ApiServer {
 
 func InsertDefaultRule() {
 	server := NewApiServer()
-	p4.ArptToPortTable(context.Background(), server.p4RtC, types.DefaultRoute,
-		types.ArpProxyDefaultPort, true)
+
+	IP, netIp, err := net.ParseCIDR(types.DefaultRoute)
+	if err != nil {
+		log.Errorf("Failed to get IP from the default route cidr, %s",
+			types.DefaultRoute)
+		return
+	}
+
+	utils.UNUSED(netIp)
+
+	ip := IP.String()
+	if len(ip) == 0 {
+		log.Errorf("Empty value: %s, cannot program default gateway",
+			types.DefaultRoute)
+		return
+	}
+
+	log.Infof("Inserting default gateway rule for arp-proxy route")
+	if err := p4.ArptToPortTable(context.Background(), server.p4RtC, ip,
+		types.ArpProxyDefaultPort, true); err != nil {
+		log.Errorf("Failed to insert the default rule for arp-proxy")
+	}
 }
 
 func (s *ApiServer) Start(t *tomb.Tomb) {
@@ -714,11 +735,29 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 
 	logger.Infof("Interface: %s, port id: %d", in.IfName, portID)
 
-	status, err := insertRule(s.log, ctx, server.p4RtC, macAddr,
-		ipAddr, int(portID), p4.HOST)
-	out.Successful = status
-
+	if status, err := insertRule(s.log, ctx, server.p4RtC, macAddr,
+		ipAddr, int(portID), p4.HOST); err != nil {
+		logger.Errorf("Failed to insert rule to the pipeline ip: %s mac: %s port id: %d err: %v",
+			ipAddr, macAddr, portID, err)
+		out.Successful = status
+		return out, err
+	}
 	hostInterfaceMac = macAddr
+
+	if len(config.NodeIP) == 0 {
+		logger.Errorf("No node ip address configured")
+		err = fmt.Errorf("No node ip address configured")
+		out.Successful = false
+		return out, err
+	}
+
+	status, err := insertRule(s.log, ctx, server.p4RtC, hostInterfaceMac,
+		config.NodeIP, int(portID), p4.HOST)
+	if err != nil {
+		logger.Errorf("Failed to insert rule to the pipeline ip: %s mac: %s port id: %d err: %v",
+			config.NodeIP, macAddr, portID, err)
+	}
+	out.Successful = status
 
 	return out, err
 }

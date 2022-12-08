@@ -100,9 +100,11 @@ func (m *Manager) stopServer() {
 
 func Run(stopCh <-chan struct{}, waitCh chan<- struct{}) {
 
-	manager.createAndStartServer()
-
+	// Insert the default rule for the arp-proxy
 	api.InsertDefaultRule()
+
+	// Start the api server
+	manager.createAndStartServer()
 
 	<-stopCh
 
