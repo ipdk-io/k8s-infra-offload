@@ -540,13 +540,3 @@ func CheckGrpcServerStatus(target string, log *log.Entry, grpcDial grpcDialType)
 	}
 	return resp.Status == healthpb.HealthCheckResponse_SERVING, nil
 }
-
-func GetNodeIPFromEnv() (ipAddr string, err error) {
-	ipAddr = os.Getenv("NODE_IP")
-	if len(ipAddr) == 0 {
-		err = fmt.Errorf("NODE_IP env variable is not set")
-	}
-	return ipAddr, err
-}
-
-func UNUSED(x ...interface{}) {}

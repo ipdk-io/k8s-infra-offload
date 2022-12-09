@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
-	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	"github.com/ipdk-io/k8s-infra-offload/proto"
 	"gopkg.in/tomb.v2"
 
@@ -250,7 +249,7 @@ func InsertDefaultRule() {
 		return
 	}
 
-	utils.UNUSED(netIp)
+	_ = netIp
 
 	ip := IP.String()
 	if len(ip) == 0 {
