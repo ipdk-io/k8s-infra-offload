@@ -204,6 +204,9 @@ func configureRouting(link netlink.Link, log *logrus.Entry) error {
 	if err := configureRoutingForCIDR(link, types.NodePodsCIDR, log); err != nil {
 		return fmt.Errorf("Failed to setup routing to Pods CIDR: %w", err)
 	}
+	if err := configureRoutingForCIDR(link, types.ClusterServicesSubnet, log); err != nil {
+		return fmt.Errorf("Failed to setup routing to Service CIDR: %w", err)
+	}
 	return nil
 }
 
