@@ -21,7 +21,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/containernetworking/plugins/pkg/ipam"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/pool"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
@@ -35,7 +34,6 @@ import (
 var (
 	getTapInterfaces               = utils.GetTapInterfaces
 	configureHostInterfaceFunc     = configureHostInterface
-	getHostIPfromPodCIDRFunc       = getHostIPfromPodCIDR
 	setHostInterfaceInPodNetnsFunc = setHostInterfaceInPodNetns
 )
 
@@ -99,15 +97,13 @@ func (pi *tapPodInterface) setup(intfs []*types.InterfaceInfo) error {
 		}
 	}
 
-	varConfigurer := utils.NewOsVariableConfigurer()
-	ec := utils.NewEnvConfigurer(varConfigurer, types.DefaultCalicoConfig)
+	_, ipnet, err := net.ParseCIDR(types.HostInterfaceAddr)
 
-	ipnet, err := getHostIPfromPodCIDRFunc(pi.log, ec)
 	if err != nil {
 		pi.log.WithError(err).Error("Failed to get IP for host interface")
 		return err
 	}
-	pi.log.Printf("Host IP address allocated: %s", ipnet)
+	pi.log.Printf("Host IP address: %s", ipnet)
 
 	if err := configureHostInterfaceFunc(res.InterfaceInfo.InterfaceName, ipnet, intfs, pi.log); err != nil {
 		return fmt.Errorf("Failed to configure host interface %s with IP configurations: %w", res.InterfaceInfo.InterfaceName, err)
@@ -165,20 +161,6 @@ func configureHostInterface(ifName string, ipnet *net.IPNet, interfaces []*types
 		return err
 	}
 	return nil
-}
-
-func getHostIPfromPodCIDR(log *logrus.Entry, ec *utils.EnvConfigurer) (*net.IPNet, error) {
-	// try to release any address allocated for IPU Agent, ignore error just print
-	if err := releaseIPFromIPAM(ec, ipam.ExecDel); err != nil {
-		log.WithError(err).Error("Failed to release allocated address")
-	}
-
-	ipnet, err := getIPFromIPAM(ec, ipam.ExecAdd)
-	if err != nil {
-		return nil, err
-	}
-
-	return ipnet, nil
 }
 
 func (pi *tapPodInterface) CreatePodInterface(in *pb.AddRequest) (*types.InterfaceInfo, error) {
