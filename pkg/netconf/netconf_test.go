@@ -165,20 +165,17 @@ var _ = Describe("netconf", func() {
 		})
 		var _ = It("return error if cannot get Host IP from Pod CIDR", func() {
 			getTapInterfaces = fakeGetTapInterfacesSingle
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDRErr
 			_, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return error if cannot configure host interface", func() {
 			getTapInterfaces = fakeGetTapInterfacesSingle
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterfaceErr
 			_, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return error if failed on send host interface configure request to manager", func() {
 			getTapInterfaces = fakeGetTapInterfacesSingle
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			sendSetupHostInterfaceFunc = fakeSendSetupHostInterfaceErr
 			_, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
@@ -186,7 +183,6 @@ var _ = Describe("netconf", func() {
 		})
 		var _ = It("return no error", func() {
 			getTapInterfaces = fakeGetTapInterfacesSingle
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			sendSetupHostInterfaceFunc = fakeSendSetupHostInterface
 			_, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
@@ -271,6 +267,7 @@ var _ = Describe("netconf", func() {
 		var _ = It("return no error", func() {
 			types.ClusterPodsCIDR = "10.210.0.0/16"
 			types.NodePodsCIDR = "10.210.0.0/24"
+			types.ClusterServicesSubnet = "10.96.0.0/16"
 			routeListFiltered = fakeRouteListFiltereToBeDeleted
 			routeDel = fakeRouteHandle
 			routeAdd = fakeRouteHandle
@@ -286,9 +283,10 @@ var _ = Describe("netconf", func() {
 			err := configureRouting(&fakeLink{}, logrus.NewEntry(logrus.New()))
 			Expect(err).To(HaveOccurred())
 		})
-		var _ = It("return error if cannot setup ClusterPodsCIDR routing", func() {
+		var _ = It("return error if cannot setup ClusterServicesSubnet routing", func() {
 			types.ClusterPodsCIDR = "10.210.0.0/16"
-			types.NodePodsCIDR = "badCidr"
+			types.NodePodsCIDR = "10.210.0.0/24"
+			types.ClusterServicesSubnet = "badCidr"
 			routeListFiltered = fakeRouteListFiltereToBeDeleted
 			routeDel = fakeRouteHandle
 			routeAdd = fakeRouteHandle
@@ -326,37 +324,9 @@ var _ = Describe("netconf", func() {
 		})
 	})
 
-	var _ = Context("getHostIPfromPodCIDR() should", func() {
-		var _ = It("return no error", func() {
-			types.ClusterPodsCIDR = "10.210.0.0/16"
-			types.NodePodsCIDR = "10.210.0.0/24"
-			releaseIPFromIPAM = fakeReleaseIPFromIPAM
-			getIPFromIPAM = fakeGetIPFromIPAM
-			_, err := getHostIPfromPodCIDR(logrus.NewEntry(logrus.New()), nil)
-			Expect(err).ToNot(HaveOccurred())
-		})
-		var _ = It("return no error if cannot release allocated address", func() {
-			types.ClusterPodsCIDR = "10.210.0.0/16"
-			types.NodePodsCIDR = "10.210.0.0/24"
-			releaseIPFromIPAM = fakeReleaseIPFromIPAMErr
-			getIPFromIPAM = fakeGetIPFromIPAM
-			_, err := getHostIPfromPodCIDR(logrus.NewEntry(logrus.New()), nil)
-			Expect(err).ToNot(HaveOccurred())
-		})
-		var _ = It("return no error if cannot get address from IPAM", func() {
-			types.ClusterPodsCIDR = "10.210.0.0/16"
-			types.NodePodsCIDR = "10.210.0.0/24"
-			releaseIPFromIPAM = fakeReleaseIPFromIPAMErr
-			getIPFromIPAM = fakeGetIPFromIPAMErr
-			_, err := getHostIPfromPodCIDR(logrus.NewEntry(logrus.New()), nil)
-			Expect(err).To(HaveOccurred())
-		})
-	})
-
 	var _ = Context("CreatePodInterface() should", func() {
 		var _ = It("return error if there are no available interfaces", func() {
 			getTapInterfaces = fakeGetTapInterfacesSingle
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
@@ -365,7 +335,6 @@ var _ = Describe("netconf", func() {
 		})
 		var _ = It("return error if cannot set host interface in pod netns", func() {
 			getTapInterfaces = fakeGetTapInterfacesMultiple
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
@@ -375,7 +344,6 @@ var _ = Describe("netconf", func() {
 		})
 		var _ = It("return error if cannot set host interface in pod netns inside container", func() {
 			getTapInterfaces = fakeGetTapInterfacesMultiple
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
@@ -385,7 +353,6 @@ var _ = Describe("netconf", func() {
 		})
 		var _ = It("return error if cannot save interface configuration", func() {
 			getTapInterfaces = fakeGetTapInterfacesMultiple
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
@@ -396,7 +363,6 @@ var _ = Describe("netconf", func() {
 		})
 		var _ = It("return no error", func() {
 			getTapInterfaces = fakeGetTapInterfacesMultiple
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			sendSetupHostInterfaceFunc = fakeSendSetupHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
@@ -411,7 +377,6 @@ var _ = Describe("netconf", func() {
 	var _ = Context("ReleasePodInterface() should", func() {
 		var _ = It("return error when cannot read interface conf", func() {
 			getTapInterfaces = fakeGetTapInterfacesMultiple
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
@@ -422,7 +387,6 @@ var _ = Describe("netconf", func() {
 		})
 		var _ = It("return no error when conf does not exist", func() {
 			getTapInterfaces = fakeGetTapInterfacesMultiple
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
@@ -433,7 +397,6 @@ var _ = Describe("netconf", func() {
 		})
 		var _ = It("return error when cannot move pod interface to host", func() {
 			getTapInterfaces = fakeGetTapInterfacesMultiple
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
@@ -445,7 +408,6 @@ var _ = Describe("netconf", func() {
 		})
 		var _ = It("return no error", func() {
 			getTapInterfaces = fakeGetTapInterfacesMultiple
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
@@ -460,7 +422,6 @@ var _ = Describe("netconf", func() {
 	var _ = Context("SetupNetwork() should", func() {
 		var _ = It("return error if cannot create network", func() {
 			getTapInterfaces = fakeGetTapInterfacesMultiple
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
@@ -470,7 +431,6 @@ var _ = Describe("netconf", func() {
 		})
 		var _ = It("return error if cannot create network", func() {
 			getTapInterfaces = fakeGetTapInterfacesMultiple
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
@@ -483,7 +443,6 @@ var _ = Describe("netconf", func() {
 	var _ = Context("ReleaseNetwork() should", func() {
 		var _ = It("return error if cannot read interface conf", func() {
 			getTapInterfaces = fakeGetTapInterfacesMultiple
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
@@ -493,7 +452,6 @@ var _ = Describe("netconf", func() {
 		})
 		var _ = It("return no error if cannot interface conf does not exist", func() {
 			getTapInterfaces = fakeGetTapInterfacesMultiple
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
@@ -503,8 +461,9 @@ var _ = Describe("netconf", func() {
 		})
 		var _ = It("return no error if namespace already gone", func() {
 			getTapInterfaces = fakeGetTapInterfacesMultiple
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
+			linkByName = fakeLinkByName
+			addrList = fakeAddrList
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
 			readInterfaceConf = fakeReadInterfaceConf
@@ -513,7 +472,6 @@ var _ = Describe("netconf", func() {
 		})
 		var _ = It("return error if cannot get link by name", func() {
 			getTapInterfaces = fakeGetTapInterfacesMultiple
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
@@ -526,7 +484,6 @@ var _ = Describe("netconf", func() {
 		})
 		var _ = It("return error if cannot list addresses", func() {
 			getTapInterfaces = fakeGetTapInterfacesMultiple
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
@@ -540,8 +497,9 @@ var _ = Describe("netconf", func() {
 		})
 		var _ = It("return no error", func() {
 			getTapInterfaces = fakeGetTapInterfacesMultiple
-			getHostIPfromPodCIDRFunc = fakeGetHostIPfromPodCIDR
 			configureHostInterfaceFunc = fakeConfigureHostInterface
+			addrList = fakeAddrList
+			linkByName = fakeLinkByName
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
 			readInterfaceConf = fakeReadInterfaceConf
@@ -741,40 +699,6 @@ var _ = Describe("netconf", func() {
 		var _ = It("return error if cannot get link by name", func() {
 			getVFList = fakeGetVFListSingle
 			linkByName = fakeLinkByNameErr
-			_, err := NewSriovPodInterface(logrus.NewEntry(logrus.New()))
-			Expect(err).To(HaveOccurred())
-		})
-		var _ = It("return error if cannot list addresses", func() {
-			getVFList = fakeGetVFListSingle
-			linkByName = fakeLinkByName
-			addrList = fakeAddrListErr
-			_, err := NewSriovPodInterface(logrus.NewEntry(logrus.New()))
-			Expect(err).To(HaveOccurred())
-		})
-		var _ = It("return error if cannot delete address", func() {
-			getVFList = fakeGetVFListSingle
-			linkByName = fakeLinkByName
-			addrList = fakeAddrListWithResult
-			addrDel = fakeAddrAddDelErr
-			_, err := NewSriovPodInterface(logrus.NewEntry(logrus.New()))
-			Expect(err).To(HaveOccurred())
-		})
-		var _ = It("return error if cannot release IP from IPAM", func() {
-			getVFList = fakeGetVFListSingle
-			linkByName = fakeLinkByName
-			addrList = fakeAddrListWithResult
-			addrDel = fakeAddrAddDel
-			releaseIPFromIPAM = fakeReleaseIPFromIPAMErr
-			_, err := NewSriovPodInterface(logrus.NewEntry(logrus.New()))
-			Expect(err).To(HaveOccurred())
-		})
-		var _ = It("return error if cannot get IP from IPAM", func() {
-			getVFList = fakeGetVFListSingle
-			linkByName = fakeLinkByName
-			addrList = fakeAddrListWithResult
-			addrDel = fakeAddrAddDel
-			releaseIPFromIPAM = fakeReleaseIPFromIPAM
-			getIPFromIPAM = fakeGetIPFromIPAMErr
 			_, err := NewSriovPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).To(HaveOccurred())
 		})
