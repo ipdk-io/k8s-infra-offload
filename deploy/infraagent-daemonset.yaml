@@ -40,20 +40,6 @@ spec:
           mountPath: /var/lib/calico
         command: ["/bin/sh", "-c"]
         args: ["mkdir -p /var/lib/calico/felix-plugins && cp felix-api-proxy /var/lib/calico/felix-plugins/felix-api-proxy"]
-      - name: wait-for-calico
-        image: infraagent:latest
-        imagePullPolicy: Always
-        command:
-        - /infraagent
-        - checkCalicoConfig
-        env:
-        - name: NODE_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: spec.nodeName
-        volumeMounts:
-        - name: cni-net
-          mountPath: /etc/cni/net.d
       - name: wait-for-manager
         image: infraagent:latest
         imagePullPolicy: Always
