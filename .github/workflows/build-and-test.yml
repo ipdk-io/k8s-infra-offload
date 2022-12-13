@@ -16,19 +16,47 @@ permissions: read-all
 
 jobs:
 
-
-  unit-test:
+  BuildAndTest:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
 
-    - name: Set up Go
+    - name: "Set up Go"
       uses: actions/setup-go@v3
       with:
-        go-version: 1.18
+        go-version: 1.19.1
 
-    - name: Build
+    - name: "Build"
       run: make
 
-    - name: Test
+    - name: "Test"
       run: make test
+
+    - name: "Create k8s Kind Cluster"
+      uses: helm/kind-action@v1.4.0
+
+    - name: "kustomize test"
+      run: |
+        # https://github.com/kubernetes-sigs/kustomize/issues/2867
+        kustomize version
+
+    - name: "docker build"
+      run: make docker-build IMAGE_REGISTRY=ghcr.io/mgaravin/k8s IMAGE_VERSION=main
+
+    - name: "docker deploy"
+      run: |
+        make deploy IMAGE_REGISTRY=ghcr.io/mgaravin/k8s IMAGE_VERSION=main
+        # getnodes using kubectl
+        kubectl get nodes -o wide
+
+    - name: "Login to GitHub Container Registry"
+      if: github.event_name == 'push'
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: "push docker images to registry"
+      if: github.event_name == 'push'
+      run: make docker-push IMAGE_REGISTRY=ghcr.io/mgaravin/k8s IMAGE_VERSION=main
