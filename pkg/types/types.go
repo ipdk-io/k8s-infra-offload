@@ -49,6 +49,7 @@ const (
 	HostInterfaceRefId          = "hostInterface"
 	DefaultRoute                = "169.254.1.1/32"
 	HostInterfaceAddr           = "200.1.1.2/32"
+	HostInterfaceMTU            = 1280
 	ArpProxyDefaultPort         = 0
 )
 

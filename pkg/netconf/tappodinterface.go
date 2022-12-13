@@ -150,6 +150,13 @@ func configureHostInterface(ifName string, ipnet *net.IPNet, interfaces []*types
 		log.WithError(err).Error("Failed to set ip address for interface")
 		return err
 	}
+
+	if err := linkSetMTU(link, types.HostInterfaceMTU); err != nil {
+		log.WithError(err).Errorf("Failed to set MTU %v for host interface", types.HostInterfaceMTU)
+		return err
+	}
+	log.Infof("Host interface MTU is set: %v", types.HostInterfaceMTU)
+
 	if err := linkSetUp(link); err != nil {
 		log.WithError(err).Error("Failed to set interface up")
 		return err

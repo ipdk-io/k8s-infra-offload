@@ -235,6 +235,7 @@ var _ = Describe("netconf", func() {
 			addrDel = fakeAddrAddDelErr
 			addrAdd = fakeAddrAddDel
 			linkSetUp = fakeLinkSet
+			linkSetMTU = fakeLinkSetMTU
 			configureRoutingFunc = fakeConfigureRouting
 			err := configureHostInterface("dummyIf", &net.IPNet{}, []*types.InterfaceInfo{}, logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
@@ -1529,6 +1530,9 @@ func fakeLinkByNameErr(name string) (netlink.Link, error) {
 }
 
 func fakeLinkSet(link netlink.Link) error {
+	return nil
+}
+func fakeLinkSetMTU(link netlink.Link, mtu int) error {
 	return nil
 }
 
