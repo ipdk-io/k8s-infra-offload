@@ -138,11 +138,12 @@ func setupGwRoute(link netlink.Link, gateway string) error {
 	return routeAdd(route)
 }
 
-func setupHostRoute(addr *net.IPNet, link netlink.Link) error {
+func setupHostRoute(addr *net.IPNet, gw *net.IPNet, link netlink.Link) error {
 	podRoute := netlink.Route{
 		Dst:       addr,
 		LinkIndex: link.Attrs().Index,
-		Scope:     netlink.SCOPE_LINK,
+		Scope:     netlink.SCOPE_UNIVERSE,
+		Gw:        gw.IP,
 	}
 	log.Infof("Trying to setup %v route on Infra host interface", podRoute)
 
@@ -185,12 +186,15 @@ func configureRoutingForCIDR(link netlink.Link, cidr string, log *logrus.Entry) 
 	log.Infof("CIDR %s", cidr)
 	addr, err := netlink.ParseAddr(cidr)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to pasre CIDR addr %s: %w", cidr, err)
 	}
 
-	// setup routing from pods CIDR via VF[0]
-	// check if it exist already
-	if err := setupHostRoute(addr.IPNet, link); err != nil {
+	gw, err := netlink.ParseAddr(types.DefaultRoute)
+	if err != nil {
+		return fmt.Errorf("Failed to pasre DefaultRoute GW addr %s: %w", types.DefaultRoute, err)
+	}
+	// setup routing from pods CIDR via host interface
+	if err := setupHostRoute(addr.IPNet, gw.IPNet, link); err != nil {
 		return fmt.Errorf("Failed to setup route to CIDR: %w", err)
 	}
 
@@ -198,15 +202,19 @@ func configureRoutingForCIDR(link netlink.Link, cidr string, log *logrus.Entry) 
 }
 
 func configureRouting(link netlink.Link, log *logrus.Entry) error {
+	// Set route to GW address
+	if err := setupGwRoute(link, types.DefaultRoute); err != nil {
+		return fmt.Errorf("Failed to setup Pod GW addr %s route: %w", types.DefaultRoute, err)
+	}
 	if err := configureRoutingForCIDR(link, types.ClusterPodsCIDR, log); err != nil {
 		return fmt.Errorf("Failed to setup routing to Cluster CIDR: %w", err)
 	}
 	if err := configureRoutingForCIDR(link, types.NodePodsCIDR, log); err != nil {
 		return fmt.Errorf("Failed to setup routing to Pods CIDR: %w", err)
 	}
-	if err := configureRoutingForCIDR(link, types.ClusterServicesSubnet, log); err != nil {
-		return fmt.Errorf("Failed to setup routing to Service CIDR: %w", err)
-	}
+	// if err := configureRoutingForCIDR(link, types.ClusterServicesSubnet, log); err != nil {
+	// 	return fmt.Errorf("Failed to setup routing to Service CIDR: %w", err)
+	// }
 	return nil
 }
 

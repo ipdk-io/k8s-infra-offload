@@ -83,7 +83,11 @@ func setupRouting(ipList []netlink.Addr) error {
 		logger.WithError(err).Error("Cannot get Infra host interface")
 		return err
 	}
-	if err := setupHostRoute(ipList[0].IPNet, infraHostLink); err != nil {
+	gw, err := netlink.ParseAddr(types.DefaultRoute)
+	if err != nil {
+		return fmt.Errorf("Failed to pasre DefaultRoute GW addr %s: %w", types.DefaultRoute, err)
+	}
+	if err := setupHostRoute(ipList[0].IPNet, gw.IPNet, infraHostLink); err != nil {
 		return err
 	}
 	return nil
