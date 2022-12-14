@@ -24,12 +24,13 @@ import (
 	"time"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	"github.com/ipdk-io/k8s-infra-offload/proto"
 	"gopkg.in/tomb.v2"
 
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
 	conf "github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/config"
-	p4 "github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/p4"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/p4"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
 	pb "github.com/ipdk-io/k8s-infra-offload/proto"
 
@@ -433,23 +434,20 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 	var podIpAddrs []string
 	var podMacAddrs []string
 	var podMac string
-	var groupID uint32
+	var serviceEpIpAddrs []string
 
 	out := &proto.Reply{
 		Successful: true,
 	}
+	update := false
 
 	logger := log.WithField("func", "NatTranslationAdd")
 
 	if in == nil || in.Endpoint == nil {
-		logger.Errorf("Invalid service request")
-		out.Successful = false
-		return out, nil
+		logger.Errorf("Invalid NatTranslationAdd request")
+		err := fmt.Errorf("Invalid NatTranslationAdd request")
+		return out, err
 	}
-
-	logger.Infof("Incoming NatTranslationAdd %+v", in)
-	logger.Infof("Service ip %v and port %v proto %v", in.Endpoint.Ipv4Addr, in.Endpoint.Port, in.Proto)
-	logger.Infof("Endpoints num %v", len(in.Backends))
 
 	/*
 		If there are no backend endpoints for the service,
@@ -475,27 +473,76 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 	serviceMacAddr := hostInterfaceMac
 	serviceIpAddr := in.Endpoint.Ipv4Addr
 	servicePort := uint16(in.Endpoint.Port)
-	serviceEndPointMap := map[string]store.ServiceEndPoint{}
+
+	service := store.Service{
+		ClusterIp:    serviceIpAddr,
+		ClusterPort:  in.Endpoint.Port,
+		ClusterProto: in.Proto,
+	}
+
+	entry := service.GetFromStore()
+	/*
+		Service already exists in the store.
+		Update with new endpoints.
+	*/
+	if entry != nil {
+		logger.Infof("Incoming NatTranslationUpdate %+v", in)
+		logger.Infof("Service ip %v and port %v proto %v", in.Endpoint.Ipv4Addr, in.Endpoint.Port, in.Proto)
+		logger.Infof("Endpoints num %v", len(in.Backends))
+
+		service = entry.(store.Service)
+		if service.ClusterPort != in.Endpoint.Port {
+			logger.Errorf("Port mismatch for the service %v, old port: %v, new port : %v",
+				service.ClusterIp, service.ClusterPort, in.Endpoint.Port)
+			err = fmt.Errorf("Port mismatch for the service %v, old port: %v, new port : %v",
+				service.ClusterIp, service.ClusterPort, in.Endpoint.Port)
+			out.Successful = false
+			return out, err
+		}
+
+		for ipAddr := range service.ServiceEndPoint {
+			serviceEpIpAddrs = append(serviceEpIpAddrs, ipAddr)
+		}
+
+		update = true
+
+	} else {
+		/*
+			New service. Add it to store
+		*/
+		logger.Infof("Incoming NatTranslationAdd %+v", in)
+		logger.Infof("Service ip %v and port %v proto %v", in.Endpoint.Ipv4Addr, in.Endpoint.Port, in.Proto)
+		logger.Infof("Endpoints num %v", len(in.Backends))
+
+		service.NumEndPoints = 0
+		service.ServiceEndPoint = make(map[string]store.ServiceEndPoint)
+	}
 
 	server := NewApiServer()
+	numEps := 0
 
 	for i, e := range in.Backends {
 		logger.Infof("Endpoint %v:  %v", i, e.DstEp)
 
 		ipAddr := e.DstEp.Ipv4Addr
-		ep := store.EndPoint{
-			PodIpAddress: ipAddr,
+		if utils.IsIn(ipAddr, serviceEpIpAddrs) {
+			continue
 		}
+		numEps++
 
-		/* The backends of the kube-api service runs on the
-		host network. So, they use the same IP as the host network.
-		For such cases, use host management interface to route all
-		non pod traffic. As the input request does not provide the
-		service name, identify the service using its port 443.
+		/*
+			The backends of the kube-api service runs on the
+			host network. So, they use the same IP as the host network.
+			For such cases, use host management interface to route all
+			non pod traffic. As the input request does not provide the
+			service name, identify the service using its port 443.
 		*/
 		if servicePort == 443 {
 			podMac = hostInterfaceMac
 		} else {
+			ep := store.EndPoint{
+				PodIpAddress: ipAddr,
+			}
 			entry := ep.GetFromStore()
 			if entry == nil {
 				err = fmt.Errorf("Entry for %s does not exist in the store", ipAddr)
@@ -509,35 +556,47 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 		podIpAddrs = append(podIpAddrs, ipAddr)
 		podPortIDs = append(podPortIDs, uint16(e.DstEp.Port))
 
-		endPoint := store.ServiceEndPoint{
-			IpAddress: ipAddr,
-			Port:      e.DstEp.Port,
-			MemberID:  uint32(i + 1),
-		}
-		serviceEndPointMap[ipAddr] = endPoint
-
 	}
 
-	if err, groupID = p4.InsertServiceRules(ctx, server.p4RtC, podIpAddrs, podMacAddrs, podPortIDs, serviceIpAddr, serviceMacAddr, servicePort); err != nil {
+	if numEps == 0 {
+		logger.Info("No new endpoints in the service. No rules inserted")
+		return out, err
+	}
+
+	if err, service = p4.InsertServiceRules(ctx, server.p4RtC, podIpAddrs,
+		podMacAddrs, podPortIDs, serviceIpAddr, serviceMacAddr,
+		servicePort, service, update); err != nil {
 		logger.Errorf("Failed to insert the service entry %s into the pipeline", serviceIpAddr)
 		out.Successful = false
 		return out, err
 	}
+	logger.Infof("Inserted the service entry %s, backends: %v into the pipeline",
+		serviceIpAddr, podIpAddrs)
 
-	service := store.Service{
-		ClusterIp:       serviceIpAddr,
-		ClusterPort:     uint32(servicePort),
-		GroupID:         uint32(groupID),
-		ServiceEndPoint: serviceEndPointMap,
+	if update {
+		/* Update only the endpoint details to the store */
+		if !service.UpdateToStore() {
+			logger.Errorf("Failed to update service entry %s into the store",
+				serviceIpAddr)
+			err = fmt.Errorf("Failed to update service %s into the store",
+				serviceIpAddr)
+			out.Successful = false
+			return out, err
+		}
+		logger.Infof("Updated the service entry %s, backends: %v in the store",
+			serviceIpAddr, podIpAddrs)
+	} else {
+		if !service.WriteToStore() {
+			logger.Errorf("Failed to insert service entry %s into the store",
+				serviceIpAddr)
+			err = fmt.Errorf("Failed to insert service %s into the store",
+				serviceIpAddr)
+			out.Successful = false
+			return out, err
+		}
+		logger.Infof("Inserted the service entry %s, backends: %v into the store",
+			serviceIpAddr, podIpAddrs)
 	}
-
-	if service.WriteToStore() != true {
-		logger.Errorf("Failed to insert service entry %s into the store", serviceIpAddr)
-		err = fmt.Errorf("Failed to insert service %s into the store", serviceIpAddr)
-		out.Successful = false
-		return out, err
-	}
-	logger.Infof("Inserted the service entry %s into the store", serviceIpAddr)
 
 	return out, err
 }

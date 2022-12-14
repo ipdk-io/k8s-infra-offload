@@ -32,6 +32,12 @@ const (
 )
 
 const (
+	Insert InterfaceType = iota
+	Delete
+	Update
+)
+
+const (
 	MAXUINT32              = 4294967295
 	DEFAULT_UUID_CNT_CACHE = 512
 )

@@ -540,3 +540,13 @@ func CheckGrpcServerStatus(target string, log *log.Entry, grpcDial grpcDialType)
 	}
 	return resp.Status == healthpb.HealthCheckResponse_SERVING, nil
 }
+
+func IsIn(str string, s []string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+
+	return false
+}
