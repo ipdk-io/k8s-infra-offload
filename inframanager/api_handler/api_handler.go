@@ -455,15 +455,16 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 		the function call.
 	*/
 	if len(in.Backends) == 0 {
-		logger.Errorf("No endpoints in the service. No rules inserted")
+		logger.Errorf("No endpoints in the service %s:%s:%d. No rules inserted",
+			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
 		return out, nil
 	}
 
 	if len(hostInterfaceMac) == 0 {
-		logger.Errorf("Host Interface is not yet setup. Cannot program rules for service ip %s",
-			in.Endpoint.Ipv4Addr)
-		err = fmt.Errorf("Host Interface is not yet setup. Cannot program rules for service ip %s",
-			in.Endpoint.Ipv4Addr)
+		logger.Errorf("Host Interface is not yet setup. Cannot program rules for service %s:%s:%d",
+			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
+		err = fmt.Errorf("Host Interface is not yet setup. Cannot program rules for service %s:%s:%d",
+			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
 		out.Successful = false
 		return out, err
 	}
@@ -475,9 +476,9 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 	servicePort := uint16(in.Endpoint.Port)
 
 	service := store.Service{
-		ClusterIp:    serviceIpAddr,
-		ClusterPort:  in.Endpoint.Port,
-		ClusterProto: in.Proto,
+		ClusterIp: serviceIpAddr,
+		Port:      in.Endpoint.Port,
+		Proto:     in.Proto,
 	}
 
 	entry := service.GetFromStore()
@@ -487,15 +488,15 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 	*/
 	if entry != nil {
 		logger.Infof("Incoming NatTranslationUpdate %+v", in)
-		logger.Infof("Service ip %v and port %v proto %v", in.Endpoint.Ipv4Addr, in.Endpoint.Port, in.Proto)
-		logger.Infof("Endpoints num %v", len(in.Backends))
+		logger.Infof("Service ip %v and proto %v port %v , num of endpoints %v",
+			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port, len(in.Backends))
 
 		service = entry.(store.Service)
-		if service.ClusterPort != in.Endpoint.Port {
+		if service.Port != in.Endpoint.Port {
 			logger.Errorf("Port mismatch for the service %v, old port: %v, new port : %v",
-				service.ClusterIp, service.ClusterPort, in.Endpoint.Port)
+				service.ClusterIp, service.Port, in.Endpoint.Port)
 			err = fmt.Errorf("Port mismatch for the service %v, old port: %v, new port : %v",
-				service.ClusterIp, service.ClusterPort, in.Endpoint.Port)
+				service.ClusterIp, service.Port, in.Endpoint.Port)
 			out.Successful = false
 			return out, err
 		}
@@ -511,24 +512,23 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 			New service. Add it to store
 		*/
 		logger.Infof("Incoming NatTranslationAdd %+v", in)
-		logger.Infof("Service ip %v and port %v proto %v", in.Endpoint.Ipv4Addr, in.Endpoint.Port, in.Proto)
-		logger.Infof("Endpoints num %v", len(in.Backends))
+		logger.Infof("Service ip %v proto %v port %v, num of endpoints %v",
+			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port, len(in.Backends))
 
+		service.MacAddr = serviceMacAddr
 		service.NumEndPoints = 0
 		service.ServiceEndPoint = make(map[string]store.ServiceEndPoint)
 	}
 
 	server := NewApiServer()
-	numEps := 0
+	newEps := 0
 
-	for i, e := range in.Backends {
-		logger.Infof("Endpoint %v:  %v", i, e.DstEp)
-
+	for _, e := range in.Backends {
 		ipAddr := e.DstEp.Ipv4Addr
 		if utils.IsIn(ipAddr, serviceEpIpAddrs) {
 			continue
 		}
-		numEps++
+		newEps++
 
 		/*
 			The backends of the kube-api service runs on the
@@ -558,44 +558,50 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 
 	}
 
-	if numEps == 0 {
+	if newEps == 0 {
 		logger.Info("No new endpoints in the service. No rules inserted")
 		return out, err
 	}
 
 	if err, service = p4.InsertServiceRules(ctx, server.p4RtC, podIpAddrs,
-		podMacAddrs, podPortIDs, serviceIpAddr, serviceMacAddr,
-		servicePort, service, update); err != nil {
-		logger.Errorf("Failed to insert the service entry %s into the pipeline", serviceIpAddr)
+		podMacAddrs, podPortIDs, service, update); err != nil {
+		logger.Errorf("Failed to insert the service entry %s:%s:%d, backends: %v into the pipeline",
+			serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
 		out.Successful = false
 		return out, err
 	}
-	logger.Infof("Inserted the service entry %s, backends: %v into the pipeline",
-		serviceIpAddr, podIpAddrs)
+	logger.Infof("Inserted the service entry %s:%s:%d, backends: %v into the pipeline",
+		serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
 
 	if update {
 		/* Update only the endpoint details to the store */
 		if !service.UpdateToStore() {
-			logger.Errorf("Failed to update service entry %s into the store",
-				serviceIpAddr)
-			err = fmt.Errorf("Failed to update service %s into the store",
-				serviceIpAddr)
+			logger.Errorf("Failed to update service entry %s:%s:%d, backends: %v into the store. Reverting from the pipeline",
+				serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
+
+			p4.DeleteServiceRules(ctx, server.p4RtC, service)
+
+			err = fmt.Errorf("Failed to update service %s:%s:%d, backends: %v into the store",
+				serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
 			out.Successful = false
 			return out, err
 		}
-		logger.Infof("Updated the service entry %s, backends: %v in the store",
-			serviceIpAddr, podIpAddrs)
+		logger.Infof("Updated the service entry %s:%s:%d, backends: %v in the store",
+			serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
 	} else {
 		if !service.WriteToStore() {
-			logger.Errorf("Failed to insert service entry %s into the store",
-				serviceIpAddr)
-			err = fmt.Errorf("Failed to insert service %s into the store",
-				serviceIpAddr)
+			logger.Errorf("Failed to insert service entry %s:%s:%d, backends: %v into the store. Reverting from the pipeline",
+				serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
+
+			p4.DeleteServiceRules(ctx, server.p4RtC, service)
+
+			err = fmt.Errorf("Failed to insert service %s:%s:%d, backends: %v into the store",
+				serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
 			out.Successful = false
 			return out, err
 		}
-		logger.Infof("Inserted the service entry %s, backends: %v into the store",
-			serviceIpAddr, podIpAddrs)
+		logger.Infof("Inserted the service entry %s:%s:%d, backends: %v into the store",
+			serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
 	}
 
 	return out, err
@@ -609,8 +615,28 @@ func (s *ApiServer) AddDelSnatPrefix(ctx context.Context, in *proto.AddDelSnatPr
 
 func (s *ApiServer) NatTranslationDelete(ctx context.Context, in *proto.NatTranslation) (*proto.Reply, error) {
 	logger := log.WithField("func", "NatTranslationDelete")
-	logger.Infof("Incomming NatTranslationDelete %+v", in)
-	return &proto.Reply{Successful: true}, nil
+	logger.Infof("Incoming NatTranslationDelete %+v", in)
+
+	out := &proto.Reply{
+		Successful: true,
+	}
+
+	service := store.Service{
+		ClusterIp: in.Endpoint.Ipv4Addr,
+		Port:      in.Endpoint.Port,
+		Proto:     in.Proto,
+	}
+
+	server := NewApiServer()
+
+	if err := p4.DeleteServiceRules(ctx, server.p4RtC, service); err != nil {
+		logger.Errorf("Failed to delete the service entry %s:%s:%d from the pipeline",
+			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
+		out.Successful = false
+		return out, err
+	}
+
+	return out, nil
 }
 
 func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePolicyUpdate) (*proto.Reply, error) {

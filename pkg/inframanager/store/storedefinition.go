@@ -42,17 +42,19 @@ type EndPointCollection struct {
 
 type Service struct {
 	ClusterIp       string
-	ClusterProto    string
-	ClusterPort     uint32
+	MacAddr         string
+	Proto           string
+	Port            uint32
 	GroupID         uint32
 	ServiceEndPoint map[string]ServiceEndPoint
 	NumEndPoints    uint32
 }
 
 type ServiceEndPoint struct {
-	IpAddress string
-	Port      uint32
-	MemberID  uint32
+	IpAddress      string
+	Port           uint32
+	MemberID       uint32
+	ModBlobPtrDNAT uint32
 }
 
 type ServiceCollection struct {

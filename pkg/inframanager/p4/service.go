@@ -428,7 +428,7 @@ func SetMetaUdpTable(ctx context.Context, p4RtC *client.Client,
 			}
 
 			entryAdd := p4RtC.NewTableEntry(
-				"k8s_dp_control.set_meta_tcp",
+				"k8s_dp_control.set_meta_udp",
 				map[string]client.MatchInterface{
 					"hdr.ipv4.dst_addr": &client.ExactMatch{
 						Value: Pack32BinaryIP4(podIpAddr[i]),
@@ -481,9 +481,8 @@ func SetMetaUdpTable(ctx context.Context, p4RtC *client.Client,
 
 func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	podIpAddr []string, podMacAddr []string,
-	portID []uint16, serviceIpAddr string,
-	serviceMacAddr string, servicePort uint16,
-	s store.Service, update bool) (err error, service store.Service) {
+	portID []uint16, s store.Service,
+	update bool) (err error, service store.Service) {
 	var action InterfaceType
 	var epNum uint32
 	var groupID uint32
@@ -516,16 +515,17 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 			modblobPtrDNAT[i], memberID[i], podIpAddr[i], podMacAddr[i], portID[i])
 
 		serviceEp := store.ServiceEndPoint{
-			IpAddress: podIpAddr[i],
-			Port:      uint32(portID[i]),
-			MemberID:  id,
+			IpAddress:      podIpAddr[i],
+			Port:           uint32(portID[i]),
+			MemberID:       id,
+			ModBlobPtrDNAT: id,
 		}
 		service.ServiceEndPoint[podIpAddr[i]] = serviceEp
 	}
 	service.NumEndPoints = epNum
 
 	log.Infof("group id: %d, service ip: %s, service mac: %s, service port: %d",
-		groupID, serviceIpAddr, serviceMacAddr, servicePort)
+		groupID, service.ClusterIp, service.MacAddr, service.Port)
 
 	if err = WriteDestIpTable(ctx, p4RtC, podIpAddr, portID,
 		modblobPtrDNAT, action); err != nil {
@@ -533,7 +533,8 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		return
 	}
 
-	if service.ClusterProto == "TCP" {
+	switch service.Proto {
+	case "TCP":
 		if err = AsSl3TcpTable(ctx, p4RtC, memberID, modblobPtrDNAT,
 			groupID, action); err != nil {
 			log.Errorf("Failed to AsSl3TcpTable")
@@ -544,15 +545,13 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 			return
 		}
 		if action != Update {
-			if err = TxBalanceTcpTable(ctx, p4RtC, serviceIpAddr, servicePort,
-				groupID, action); err != nil {
+			if err = TxBalanceTcpTable(ctx, p4RtC, service.ClusterIp,
+				uint16(service.Port), groupID, action); err != nil {
 				log.Errorf("Failed to TxBalanceTcpTable")
 				return
 			}
 		}
-	}
-
-	if service.ClusterProto == "UDP" {
+	case "UDP":
 		if err = AsSl3UdpTable(ctx, p4RtC, memberID, modblobPtrDNAT,
 			groupID, action); err != nil {
 			log.Errorf("Failed to AsSl3UdpTable")
@@ -562,17 +561,20 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 			log.Errorf("Failed to SetMetaUdpTable")
 		}
 		if action != Update {
-			if err = TxBalanceUdpTable(ctx, p4RtC, serviceIpAddr, servicePort,
-				groupID, action); err != nil {
+			if err = TxBalanceUdpTable(ctx, p4RtC, service.ClusterIp,
+				uint16(service.Port), groupID, action); err != nil {
 				log.Errorf("Failed to TxBalanceUdpTable")
 				return
 			}
 		}
+	default:
+		log.Errorf("Invalid protocol type")
+		return
 	}
 
 	if action != Update {
-		if err = WriteSourceIpTable(ctx, p4RtC, groupID,
-			serviceIpAddr, servicePort, action); err != nil {
+		if err = WriteSourceIpTable(ctx, p4RtC, groupID, service.ClusterIp,
+			uint16(service.Port), action); err != nil {
 			log.Errorf("Failed to WriteSourceIpTable")
 			return
 		}
@@ -581,32 +583,58 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	return
 }
 
-func DeleteServiceRules(ctx context.Context, p4RtC *client.Client, podIpAddr []string,
-	podMacAddr []string, portID []uint16, serviceIpAddr string,
-	serviceMacAddr string, servicePort uint16) error {
+func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
+	s store.Service) error {
 	var err error
 	var groupID uint32
+	var service store.Service
+	var podPortIDs []uint16
+	var podIpAddrs []string
+	var memberID []uint32
+	var modblobPtrDNAT []uint32
 
-	memberID := make([]uint32, 0, len(podIpAddr))
-	modblobPtrDNAT := make([]uint32, 0, len(podIpAddr))
-	s := store.Service{
-		ClusterIp: serviceIpAddr,
-	}
 	res := s.GetFromStore()
-	if res != nil {
-		serviceEntry := res.(store.Service)
-		groupID = serviceEntry.GroupID
-	} else {
+	if res == nil {
 		err = fmt.Errorf("No GroupID found")
 		return err
 	}
 
-	for i := 0; i < len(podIpAddr); i++ {
-		val := uint32((groupID << 16) | uint32(i+1))
-		memberID = append(memberID, val)
-		modblobPtrDNAT = append(modblobPtrDNAT, val)
-		log.Infof("modblobPtrDNAT: %d memberid: %d, pod ip: %s, pod mac: %s, portID: %d",
-			modblobPtrDNAT[i], memberID[i], podIpAddr[i], podMacAddr[i], portID[i])
+	service = res.(store.Service)
+	groupID = service.GroupID
+
+	for _, ep := range service.ServiceEndPoint {
+		podIpAddrs = append(podIpAddrs, ep.IpAddress)
+		podPortIDs = append(podPortIDs, uint16(ep.Port))
+		memberID = append(memberID, ep.MemberID)
+		modblobPtrDNAT = append(modblobPtrDNAT, ep.ModBlobPtrDNAT)
+		log.Infof("modblobPtrDNAT: %d memberid: %d, pod ip: %s, portID: %d",
+			ep.ModBlobPtrDNAT, ep.MemberID, ep.IpAddress, ep.Port)
+	}
+
+	switch service.Proto {
+	case "TCP":
+		if err = AsSl3TcpTable(ctx, p4RtC, memberID, modblobPtrDNAT, groupID, Delete); err != nil {
+			return nil
+		}
+		if err = SetMetaTcpTable(ctx, p4RtC, podIpAddrs, podPortIDs, 0, Delete); err != nil {
+			return nil
+		}
+		if err = TxBalanceTcpTable(ctx, p4RtC, service.ClusterIp, uint16(service.Port), groupID, Delete); err != nil {
+			return err
+		}
+	case "UDP":
+		if err = AsSl3UdpTable(ctx, p4RtC, memberID, modblobPtrDNAT, groupID, Delete); err != nil {
+			return nil
+		}
+		if err = SetMetaUdpTable(ctx, p4RtC, podIpAddrs, podPortIDs, 0, Delete); err != nil {
+			return nil
+		}
+		if err = TxBalanceUdpTable(ctx, p4RtC, service.ClusterIp, uint16(service.Port), groupID, Delete); err != nil {
+			return nil
+		}
+	default:
+		log.Errorf("Invalid protocol type")
+		return nil
 	}
 
 	err = WriteDestIpTable(ctx, p4RtC, nil, nil, modblobPtrDNAT, Delete)
@@ -614,37 +642,7 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client, podIpAddr []s
 		return err
 	}
 
-	err = AsSl3TcpTable(ctx, p4RtC, memberID, modblobPtrDNAT, groupID, Delete)
-	if err != nil {
-		return nil
-	}
-
-	err = AsSl3UdpTable(ctx, p4RtC, memberID, modblobPtrDNAT, groupID, Delete)
-	if err != nil {
-		return nil
-	}
-
-	err = TxBalanceTcpTable(ctx, p4RtC, serviceIpAddr, servicePort, groupID, Delete)
-	if err != nil {
-		return err
-	}
-
-	err = TxBalanceUdpTable(ctx, p4RtC, serviceIpAddr, servicePort, groupID, Delete)
-	if err != nil {
-		return nil
-	}
-
 	err = WriteSourceIpTable(ctx, p4RtC, groupID, "", 0, Delete)
-	if err != nil {
-		return nil
-	}
-
-	err = SetMetaTcpTable(ctx, p4RtC, podIpAddr, portID, 0, Delete)
-	if err != nil {
-		return nil
-	}
-
-	err = SetMetaUdpTable(ctx, p4RtC, podIpAddr, portID, 0, Delete)
 	if err != nil {
 		return nil
 	}

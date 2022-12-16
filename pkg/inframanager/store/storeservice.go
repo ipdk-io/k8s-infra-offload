@@ -81,10 +81,10 @@ func properKey(s Service) bool {
 	if len(s.ClusterIp) == 0 {
 		return false
 	}
-	if len(s.ClusterProto) == 0 {
+	if len(s.Proto) == 0 {
 		return false
 	}
-	if s.ClusterPort < 0 {
+	if s.Port < 0 || s.Port > 65536 {
 		return false
 	}
 	return true
@@ -95,7 +95,7 @@ func getKey(s Service) (key string, ok bool) {
 		return "", false
 	}
 
-	key = s.ClusterIp + ":" + s.ClusterProto + ":" + fmt.Sprint(s.ClusterPort)
+	key = s.ClusterIp + ":" + s.Proto + ":" + fmt.Sprint(s.Port)
 
 	return key, true
 }
