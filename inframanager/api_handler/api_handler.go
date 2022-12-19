@@ -432,8 +432,6 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 	var err error
 	var podPortIDs []uint16
 	var podIpAddrs []string
-	var podMacAddrs []string
-	var podMac string
 	var serviceEpIpAddrs []string
 
 	out := &proto.Reply{
@@ -473,7 +471,6 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 	*/
 	serviceMacAddr := hostInterfaceMac
 	serviceIpAddr := in.Endpoint.Ipv4Addr
-	servicePort := uint16(in.Endpoint.Port)
 
 	service := store.Service{
 		ClusterIp: serviceIpAddr,
@@ -530,29 +527,6 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 		}
 		newEps++
 
-		/*
-			The backends of the kube-api service runs on the
-			host network. So, they use the same IP as the host network.
-			For such cases, use host management interface to route all
-			non pod traffic. As the input request does not provide the
-			service name, identify the service using its port 443.
-		*/
-		if servicePort == 443 {
-			podMac = hostInterfaceMac
-		} else {
-			ep := store.EndPoint{
-				PodIpAddress: ipAddr,
-			}
-			entry := ep.GetFromStore()
-			if entry == nil {
-				err = fmt.Errorf("Entry for %s does not exist in the store", ipAddr)
-				out.Successful = false
-				return out, err
-			}
-			epEntry := entry.(store.EndPoint)
-			podMac = epEntry.PodMacAddress
-		}
-		podMacAddrs = append(podMacAddrs, podMac)
 		podIpAddrs = append(podIpAddrs, ipAddr)
 		podPortIDs = append(podPortIDs, uint16(e.DstEp.Port))
 
@@ -564,7 +538,7 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 	}
 
 	if err, service = p4.InsertServiceRules(ctx, server.p4RtC, podIpAddrs,
-		podMacAddrs, podPortIDs, service, update); err != nil {
+		podPortIDs, service, update); err != nil {
 		logger.Errorf("Failed to insert the service entry %s:%s:%d, backends: %v into the pipeline",
 			serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
 		out.Successful = false
@@ -616,27 +590,7 @@ func (s *ApiServer) AddDelSnatPrefix(ctx context.Context, in *proto.AddDelSnatPr
 func (s *ApiServer) NatTranslationDelete(ctx context.Context, in *proto.NatTranslation) (*proto.Reply, error) {
 	logger := log.WithField("func", "NatTranslationDelete")
 	logger.Infof("Incoming NatTranslationDelete %+v", in)
-
-	out := &proto.Reply{
-		Successful: true,
-	}
-
-	service := store.Service{
-		ClusterIp: in.Endpoint.Ipv4Addr,
-		Port:      in.Endpoint.Port,
-		Proto:     in.Proto,
-	}
-
-	server := NewApiServer()
-
-	if err := p4.DeleteServiceRules(ctx, server.p4RtC, service); err != nil {
-		logger.Errorf("Failed to delete the service entry %s:%s:%d from the pipeline",
-			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
-		out.Successful = false
-		return out, err
-	}
-
-	return out, nil
+	return &proto.Reply{Successful: true}, nil
 }
 
 func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePolicyUpdate) (*proto.Reply, error) {
