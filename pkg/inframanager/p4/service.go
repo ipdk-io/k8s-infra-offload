@@ -531,7 +531,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		log.Errorf("Failed to WriteDestIpTable")
 		return
 	}
-	log.Infof("Inserted into table WriteDestIpTable, pod ip addrs: %v, port id: %d, mod blob ptrs: %v",
+	log.Debugf("Inserted into table WriteDestIpTable, pod ip addrs: %v, port id: %d, mod blob ptrs: %v",
 		podIpAddr, portID, modblobPtrDNAT)
 
 	switch service.Proto {
@@ -541,14 +541,14 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 			log.Errorf("Failed to AsSl3TcpTable")
 			return
 		}
-		log.Infof("Inserted into table AsSl3TcpTable, member ids: %v, mob blob ptrs: %v, group id: %d",
+		log.Debugf("Inserted into table AsSl3TcpTable, member ids: %v, mob blob ptrs: %v, group id: %d",
 			memberID, modblobPtrDNAT, groupID)
 
 		if err = SetMetaTcpTable(ctx, p4RtC, podIpAddr, portID, groupID, action); err != nil {
 			log.Errorf("Failed to SetMetaTcpTable")
 			return
 		}
-		log.Infof("Inserted into table SetMetaTcpTable, pod ip addrs: %v, port id: %d, group id: %d",
+		log.Debugf("Inserted into table SetMetaTcpTable, pod ip addrs: %v, port id: %d, group id: %d",
 			podIpAddr, portID, groupID)
 
 		if action != Update {
@@ -557,7 +557,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 				log.Errorf("Failed to TxBalanceTcpTable")
 				return
 			}
-			log.Infof("Inserted into the table TxBalanceTcpTable, service ip: %s, service port: %d, group id: %d",
+			log.Debugf("Inserted into the table TxBalanceTcpTable, service ip: %s, service port: %d, group id: %d",
 				service.ClusterIp, uint16(service.Port), groupID)
 		}
 	case "UDP":
@@ -566,14 +566,14 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 			log.Errorf("Failed to AsSl3UdpTable")
 			return
 		}
-		log.Infof("Inserted into table AsSl3UdpTable, member ids: %v, mob blob ptrs: %v, group id: %d",
+		log.Debugf("Inserted into table AsSl3UdpTable, member ids: %v, mob blob ptrs: %v, group id: %d",
 			memberID, modblobPtrDNAT, groupID)
 
 		if err = SetMetaUdpTable(ctx, p4RtC, podIpAddr, portID, groupID, action); err != nil {
 			log.Errorf("Failed to SetMetaUdpTable")
 			return
 		}
-		log.Infof("Inserted into table SetMetaUdpTable, pod ip addrs: %v, port id: %d, group id: %d",
+		log.Debugf("Inserted into table SetMetaUdpTable, pod ip addrs: %v, port id: %d, group id: %d",
 			podIpAddr, portID, groupID)
 
 		if action != Update {
@@ -582,7 +582,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 				log.Errorf("Failed to TxBalanceUdpTable")
 				return
 			}
-			log.Infof("Inserted into the table TxBalanceTcpTable, service ip: %s, service port: %d, group id: %d",
+			log.Debugf("Inserted into the table TxBalanceTcpTable, service ip: %s, service port: %d, group id: %d",
 				service.ClusterIp, uint16(service.Port), groupID)
 		}
 	default:
@@ -596,7 +596,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 			log.Errorf("Failed to WriteSourceIpTable")
 			return
 		}
-		log.Infof("Inserted into table WriteSourceIpTable, group id: %d, service ip: %s, service port: %d",
+		log.Debugf("Inserted into table WriteSourceIpTable, group id: %d, service ip: %s, service port: %d",
 			groupID, service.ClusterIp, uint16(service.Port))
 	}
 
