@@ -1070,12 +1070,12 @@
     }
   ],
   "learn_filters" : []
-}πÅ
+}°∂
 pipeŸÛ{
   "program_name" : "k8s_dp",
-  "build_date" : "Tue Dec  6 04:56:07 2022",
+  "build_date" : "Mon Dec 19 11:09:40 2022",
   "compile_command" : "p4c-dpdk --arch pna -o ./pipe/k8s_dp.spec --p4runtime-files ./p4info.txt --bf-rt-schema ./bfrt.json --context ./pipe/context.json ./k8s_dp.p4",
-  "compiler_version" : "0.1 (SHA: bad00d940 BUILD: RELEASE)",
+  "compiler_version" : "0.1 (SHA: 340f61232 BUILD: RELEASE)",
   "schema_version" : "0.1",
   "target" : "DPDK",
   "tables" : [
@@ -2139,7 +2139,7 @@
     }
   ],
   "externs" : []
-}Ãç
+}¥¬
 
 
 
@@ -2200,8 +2200,8 @@ struct arp_t {
 }
 
 struct cksum_state_t {
-	bit<16> state_1
 	bit<16> state_0
+	bit<16> state_1
 }
 
 struct pinned_flows_hit_arg_t {
@@ -2241,8 +2241,16 @@ struct tx_balance_tcp_set_group_id_arg_t {
 	bit<32> group_id
 }
 
+struct tx_balance_tcp_set_member_id_arg_t {
+	bit<32> member_id
+}
+
 struct tx_balance_udp_set_group_id_arg_t {
 	bit<32> group_id
+}
+
+struct tx_balance_udp_set_member_id_arg_t {
+	bit<32> member_id
 }
 
 struct update_dst_ip_arg_t {
@@ -2273,8 +2281,16 @@ struct main_metadata_t {
 	bit<24> local_metadata_mod_blob_ptr_dnat
 	bit<24> local_metadata_mod_blob_ptr_snat
 	bit<32> pna_main_output_metadata_output_port
+	bit<32> k8s_dp_control_pinned_flows_local_metadata_src_ip
+	bit<32> k8s_dp_control_pinned_flows_local_metadata_dst_ip
 	bit<8> k8s_dp_control_pinned_flows_ipv4_protocol
+	bit<16> k8s_dp_control_pinned_flows_local_metadata_src_port
+	bit<16> k8s_dp_control_pinned_flows_local_metadata_dst_port
+	bit<32> k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip
+	bit<32> k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip
 	bit<8> k8s_dp_control_pinned_flows_reverse_ipv4_protocol
+	bit<16> k8s_dp_control_pinned_flows_reverse_local_metadata_src_port
+	bit<16> k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port
 	bit<32> k8s_dp_control_tx_balance_tcp_ipv4_dst_addr
 	bit<16> k8s_dp_control_tx_balance_tcp_tcp_dst_port
 	bit<32> k8s_dp_control_as_sl3_tcp_sel_ipv4_src_addr
@@ -2311,38 +2327,38 @@ action update_src_ip args instanceof update_src_ip_arg_t {
 	mov h.cksum_state.state_1 0x0
 	cksub h.cksum_state.state_0 h.ipv4.header_checksum
 	cksub h.cksum_state.state_0 h.ipv4.src_addr
-	jmpneq LABEL_FALSE_14 h.ipv4.protocol 0x6
+	jmpneq LABEL_FALSE_18 h.ipv4.protocol 0x6
 	cksub h.cksum_state.state_1 h.tcp.checksum
 	cksub h.cksum_state.state_1 h.ipv4.src_addr
 	cksub h.cksum_state.state_1 h.tcp.src_port
 	mov h.tcp.src_port t.new_port
-	jmp LABEL_END_14
-	LABEL_FALSE_14 :	jmpneq LABEL_END_14 h.ipv4.protocol 0x11
+	jmp LABEL_END_18
+	LABEL_FALSE_18 :	jmpneq LABEL_END_18 h.ipv4.protocol 0x11
 	cksub h.cksum_state.state_1 h.udp.checksum
 	cksub h.cksum_state.state_1 h.ipv4.src_addr
 	cksub h.cksum_state.state_1 h.udp.src_port
 	mov h.udp.src_port t.new_port
-	LABEL_END_14 :	mov h.ipv4.src_addr t.new_ip
+	LABEL_END_18 :	mov h.ipv4.src_addr t.new_ip
 	ckadd h.cksum_state.state_0 h.ipv4.src_addr
 	mov h.ipv4.header_checksum h.cksum_state.state_0
-	jmpneq LABEL_FALSE_16 h.ipv4.protocol 0x6
+	jmpneq LABEL_FALSE_20 h.ipv4.protocol 0x6
 	ckadd h.cksum_state.state_1 h.ipv4.src_addr
 	ckadd h.cksum_state.state_1 h.tcp.src_port
 	mov h.tcp.checksum h.cksum_state.state_1
-	jmp LABEL_END_16
-	LABEL_FALSE_16 :	jmpneq LABEL_END_16 h.ipv4.protocol 0x11
+	jmp LABEL_END_20
+	LABEL_FALSE_20 :	jmpneq LABEL_END_20 h.ipv4.protocol 0x11
 	ckadd h.cksum_state.state_1 h.ipv4.src_addr
 	ckadd h.cksum_state.state_1 h.udp.src_port
 	mov h.udp.checksum h.cksum_state.state_1
-	LABEL_END_16 :	return
+	LABEL_END_20 :	return
 }
 
 action set_dest_mac_vport args instanceof set_dest_mac_vport_arg_t {
-	jmpeq LABEL_END_18 t.new_dmac 0x0
-	jmpeq LABEL_END_18 t.new_dmac h.ethernet.dst_mac
+	jmpeq LABEL_END_22 t.new_dmac 0x0
+	jmpeq LABEL_END_22 t.new_dmac h.ethernet.dst_mac
 	mov h.ethernet.src_mac h.ethernet.dst_mac
 	mov h.ethernet.dst_mac t.new_dmac
-	LABEL_END_18 :	mov m.pna_main_output_metadata_output_port t.p
+	LABEL_END_22 :	mov m.pna_main_output_metadata_output_port t.p
 	return
 }
 
@@ -2356,30 +2372,30 @@ action update_dst_ip args instanceof update_dst_ip_arg_t {
 	mov h.cksum_state.state_1 0x0
 	cksub h.cksum_state.state_0 h.ipv4.header_checksum
 	cksub h.cksum_state.state_0 h.ipv4.dst_addr
-	jmpneq LABEL_FALSE_19 h.ipv4.protocol 0x6
+	jmpneq LABEL_FALSE_23 h.ipv4.protocol 0x6
 	cksub h.cksum_state.state_1 h.tcp.checksum
 	cksub h.cksum_state.state_1 h.ipv4.dst_addr
 	cksub h.cksum_state.state_1 h.tcp.dst_port
 	mov h.tcp.dst_port t.new_port
-	jmp LABEL_END_19
-	LABEL_FALSE_19 :	jmpneq LABEL_END_19 h.ipv4.protocol 0x11
+	jmp LABEL_END_23
+	LABEL_FALSE_23 :	jmpneq LABEL_END_23 h.ipv4.protocol 0x11
 	cksub h.cksum_state.state_1 h.udp.checksum
 	cksub h.cksum_state.state_1 h.ipv4.dst_addr
 	cksub h.cksum_state.state_1 h.udp.dst_port
 	mov h.udp.dst_port t.new_port
-	LABEL_END_19 :	mov h.ipv4.dst_addr t.new_ip
+	LABEL_END_23 :	mov h.ipv4.dst_addr t.new_ip
 	ckadd h.cksum_state.state_0 h.ipv4.dst_addr
 	mov h.ipv4.header_checksum h.cksum_state.state_0
-	jmpneq LABEL_FALSE_21 h.ipv4.protocol 0x6
+	jmpneq LABEL_FALSE_25 h.ipv4.protocol 0x6
 	ckadd h.cksum_state.state_1 h.ipv4.dst_addr
 	ckadd h.cksum_state.state_1 h.tcp.dst_port
 	mov h.tcp.checksum h.cksum_state.state_1
-	jmp LABEL_END_21
-	LABEL_FALSE_21 :	jmpneq LABEL_END_21 h.ipv4.protocol 0x11
+	jmp LABEL_END_25
+	LABEL_FALSE_25 :	jmpneq LABEL_END_25 h.ipv4.protocol 0x11
 	ckadd h.cksum_state.state_1 h.ipv4.dst_addr
 	ckadd h.cksum_state.state_1 h.udp.dst_port
 	mov h.udp.checksum h.cksum_state.state_1
-	LABEL_END_21 :	return
+	LABEL_END_25 :	return
 }
 
 action pinned_flows_hit args instanceof pinned_flows_hit_arg_t {
@@ -2389,12 +2405,12 @@ action pinned_flows_hit args instanceof pinned_flows_hit_arg_t {
 }
 
 action pinned_flows_miss args none {
-	jmpneq LABEL_END_23 m.MainControlT_do_clb_pinned_flows_add_on_miss 0x1
-	jmpeq LABEL_END_23 m.local_metadata_mod_blob_ptr_dnat 0x0
+	jmpneq LABEL_END_27 m.MainControlT_do_clb_pinned_flows_add_on_miss 0x1
+	jmpeq LABEL_END_27 m.local_metadata_mod_blob_ptr_dnat 0x0
 	mov m.MainControlT_tmp m.local_metadata_mod_blob_ptr_dnat
 	mov m.timeout_id 0x2
 	learn pinned_flows_hit m.MainControlT_tmp m.timeout_id
-	LABEL_END_23 :	return
+	LABEL_END_27 :	return
 }
 
 action pinned_flows_reverse_hit args instanceof pinned_flows_reverse_hit_arg_t {
@@ -2404,12 +2420,12 @@ action pinned_flows_reverse_hit args instanceof pinned_flows_reverse_hit_arg_t {
 }
 
 action pinned_flows_reverse_miss args none {
-	jmpneq LABEL_END_24 m.MainControlT_create_reverse_ct 0x1
-	jmpeq LABEL_END_24 m.local_metadata_mod_blob_ptr_snat 0x0
+	jmpneq LABEL_END_28 m.MainControlT_create_reverse_ct 0x1
+	jmpeq LABEL_END_28 m.local_metadata_mod_blob_ptr_snat 0x0
 	mov m.MainControlT_tmp_0 m.local_metadata_mod_blob_ptr_snat
 	mov m.timeout_id_0 0x2
 	learn pinned_flows_reverse_hit m.MainControlT_tmp_0 m.timeout_id_0
-	LABEL_END_24 :	return
+	LABEL_END_28 :	return
 }
 
 action set_default_lb_dest args instanceof set_default_lb_dest_arg_t {
@@ -2429,36 +2445,46 @@ action tx_balance_tcp_set_group_id args instanceof tx_balance_tcp_set_group_id_a
 	return
 }
 
+action tx_balance_tcp_set_member_id args instanceof tx_balance_tcp_set_member_id_arg_t {
+	mov m.MainControlT_as_sl3_tcp_member_id t.member_id
+	return
+}
+
 action tx_balance_udp_set_group_id args instanceof tx_balance_udp_set_group_id_arg_t {
 	mov m.MainControlT_as_sl3_udp_group_id t.group_id
+	return
+}
+
+action tx_balance_udp_set_member_id args instanceof tx_balance_udp_set_member_id_arg_t {
+	mov m.MainControlT_as_sl3_udp_member_id t.member_id
 	return
 }
 
 action set_key_for_reverse_ct args instanceof set_key_for_reverse_ct_arg_t {
 	mov m.local_metadata_src_ip h.ipv4.dst_addr
 	mov m.local_metadata_dst_ip h.ipv4.src_addr
-	jmpneq LABEL_FALSE_25 h.ipv4.protocol 0x6
+	jmpneq LABEL_FALSE_29 h.ipv4.protocol 0x6
 	mov m.local_metadata_src_port h.tcp.dst_port
 	mov m.local_metadata_dst_port h.tcp.src_port
-	jmp LABEL_END_25
-	LABEL_FALSE_25 :	jmpneq LABEL_END_25 h.ipv4.protocol 0x11
+	jmp LABEL_END_29
+	LABEL_FALSE_29 :	jmpneq LABEL_END_29 h.ipv4.protocol 0x11
 	mov m.local_metadata_src_port h.udp.dst_port
 	mov m.local_metadata_dst_port h.udp.src_port
-	LABEL_END_25 :	mov m.local_metadata_mod_blob_ptr_snat t.ptr
+	LABEL_END_29 :	mov m.local_metadata_mod_blob_ptr_snat t.ptr
 	return
 }
 
 action set_key_for_reverse_ct_1 args instanceof set_key_for_reverse_ct_1_arg_t {
 	mov m.local_metadata_src_ip h.ipv4.dst_addr
 	mov m.local_metadata_dst_ip h.ipv4.src_addr
-	jmpneq LABEL_FALSE_27 h.ipv4.protocol 0x6
+	jmpneq LABEL_FALSE_31 h.ipv4.protocol 0x6
 	mov m.local_metadata_src_port h.tcp.dst_port
 	mov m.local_metadata_dst_port h.tcp.src_port
-	jmp LABEL_END_27
-	LABEL_FALSE_27 :	jmpneq LABEL_END_27 h.ipv4.protocol 0x11
+	jmp LABEL_END_31
+	LABEL_FALSE_31 :	jmpneq LABEL_END_31 h.ipv4.protocol 0x11
 	mov m.local_metadata_src_port h.udp.dst_port
 	mov m.local_metadata_dst_port h.udp.src_port
-	LABEL_END_27 :	mov m.local_metadata_mod_blob_ptr_snat t.ptr
+	LABEL_END_31 :	mov m.local_metadata_mod_blob_ptr_snat t.ptr
 	return
 }
 
@@ -2519,9 +2545,10 @@ table tx_balance_tcp {
 	}
 	actions {
 		tx_balance_tcp_set_group_id
+		tx_balance_tcp_set_member_id
 		NoAction
 	}
-	default_action NoAction args none 
+	default_action NoAction args none const
 	size 0x10000
 }
 
@@ -2546,9 +2573,10 @@ table tx_balance_udp {
 	}
 	actions {
 		tx_balance_udp_set_group_id
+		tx_balance_udp_set_member_id
 		NoAction
 	}
-	default_action NoAction args none 
+	default_action NoAction args none const
 	size 0x10000
 }
 
@@ -2601,8 +2629,8 @@ selector as_sl3_tcp_sel {
 		m.k8s_dp_control_as_sl3_tcp_sel_tcp_src_port
 	}
 	member_id m.MainControlT_as_sl3_tcp_member_id
-	n_groups_max 80
-	n_members_per_group_max 400
+	n_groups_max 128
+	n_members_per_group_max 1024
 }
 
 selector as_sl3_udp_sel {
@@ -2612,17 +2640,17 @@ selector as_sl3_udp_sel {
 		m.k8s_dp_control_as_sl3_udp_sel_udp_src_port
 	}
 	member_id m.MainControlT_as_sl3_udp_member_id
-	n_groups_max 80
-	n_members_per_group_max 400
+	n_groups_max 128
+	n_members_per_group_max 1024
 }
 
 learner pinned_flows {
 	key {
-		m.local_metadata_src_ip
-		m.local_metadata_dst_ip
+		m.k8s_dp_control_pinned_flows_local_metadata_src_ip
+		m.k8s_dp_control_pinned_flows_local_metadata_dst_ip
 		m.k8s_dp_control_pinned_flows_ipv4_protocol
-		m.local_metadata_src_port
-		m.local_metadata_dst_port
+		m.k8s_dp_control_pinned_flows_local_metadata_src_port
+		m.k8s_dp_control_pinned_flows_local_metadata_dst_port
 	}
 	actions {
 		pinned_flows_hit @tableonly
@@ -2631,12 +2659,12 @@ learner pinned_flows {
 	default_action pinned_flows_miss args none 
 	size 0x10000
 	timeout {
+		10
+		30
+		60
 		120
-		120
-		120
-		120
-		120
-		120
+		300
+		43200
 		120
 		120
 
@@ -2645,11 +2673,11 @@ learner pinned_flows {
 
 learner pinned_flows_reverse {
 	key {
-		m.local_metadata_src_ip
-		m.local_metadata_dst_ip
+		m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip
+		m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip
 		m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol
-		m.local_metadata_src_port
-		m.local_metadata_dst_port
+		m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port
+		m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port
 	}
 	actions {
 		pinned_flows_reverse_hit @tableonly
@@ -2658,12 +2686,12 @@ learner pinned_flows_reverse {
 	default_action pinned_flows_reverse_miss args none 
 	size 0x10000
 	timeout {
+		10
+		30
+		60
 		120
-		120
-		120
-		120
-		120
-		120
+		300
+		43200
 		120
 		120
 
@@ -2701,10 +2729,13 @@ apply {
 	mov m.MainControlT_create_reverse_ct 0
 	jmpneq LABEL_FALSE h.ipv4.protocol 0x6
 	jmpneq LABEL_FALSE_0 h.tcp.flags 0x2
+	mov m.MainControlT_as_sl3_tcp_member_id 0x0
+	mov m.MainControlT_as_sl3_tcp_group_id 0xFFFFFFFF
 	mov m.k8s_dp_control_tx_balance_tcp_ipv4_dst_addr h.ipv4.dst_addr
 	mov m.k8s_dp_control_tx_balance_tcp_tcp_dst_port h.tcp.dst_port
 	table tx_balance_tcp
 	jmpnh LABEL_END
+	jmpeq LABEL_FALSE_2 m.MainControlT_as_sl3_tcp_group_id 0xFFFFFFFF
 	mov m.k8s_dp_control_as_sl3_tcp_sel_ipv4_src_addr h.ipv4.src_addr
 	mov m.k8s_dp_control_as_sl3_tcp_sel_tcp_src_port h.tcp.src_port
 	table as_sl3_tcp_sel
@@ -2718,9 +2749,29 @@ apply {
 	mov m.local_metadata_src_ip h.ipv4.src_addr
 	mov m.local_metadata_dst_ip h.ipv4.dst_addr
 	mov m.local_metadata_mod_blob_ptr_snat 0x0
+	mov m.k8s_dp_control_pinned_flows_local_metadata_src_ip m.local_metadata_src_ip
+	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_ip m.local_metadata_dst_ip
 	mov m.k8s_dp_control_pinned_flows_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_port m.local_metadata_dst_port
 	table pinned_flows
 	jmp LABEL_END
+	jmp LABEL_END
+	LABEL_FALSE_2 :	table as_sl3_tcp
+	jmpnh LABEL_END
+	mov m.MainControlT_do_clb_pinned_flows_add_on_miss 1
+	mov m.MainControlT_create_reverse_ct 1
+	mov m.local_metadata_dst_port h.tcp.dst_port
+	mov m.local_metadata_src_port h.tcp.src_port
+	mov m.local_metadata_src_ip h.ipv4.src_addr
+	mov m.local_metadata_dst_ip h.ipv4.dst_addr
+	mov m.local_metadata_mod_blob_ptr_snat 0x0
+	mov m.k8s_dp_control_pinned_flows_local_metadata_src_ip m.local_metadata_src_ip
+	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_ip m.local_metadata_dst_ip
+	mov m.k8s_dp_control_pinned_flows_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_port m.local_metadata_dst_port
+	table pinned_flows
 	jmp LABEL_END
 	jmp LABEL_END
 	LABEL_FALSE_0 :	mov m.local_metadata_dst_port h.tcp.dst_port
@@ -2730,24 +2781,35 @@ apply {
 	mov m.local_metadata_mod_action 0x0
 	mov m.local_metadata_mod_blob_ptr_dnat 0x0
 	mov m.local_metadata_mod_blob_ptr_snat 0x0
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip m.local_metadata_src_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip m.local_metadata_dst_ip
 	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port m.local_metadata_dst_port
 	table pinned_flows_reverse
-	jmpnh LABEL_FALSE_4
+	jmpnh LABEL_FALSE_6
 	jmp LABEL_END
-	LABEL_FALSE_4 :	mov m.k8s_dp_control_pinned_flows_ipv4_protocol h.ipv4.protocol
+	LABEL_FALSE_6 :	mov m.k8s_dp_control_pinned_flows_local_metadata_src_ip m.local_metadata_src_ip
+	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_ip m.local_metadata_dst_ip
+	mov m.k8s_dp_control_pinned_flows_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_port m.local_metadata_dst_port
 	table pinned_flows
 	jmp LABEL_END
 	LABEL_FALSE :	jmpneq LABEL_END h.ipv4.protocol 0x11
+	mov m.MainControlT_as_sl3_udp_member_id 0x0
+	mov m.MainControlT_as_sl3_udp_group_id 0xFFFFFFFF
 	mov m.k8s_dp_control_tx_balance_udp_ipv4_dst_addr h.ipv4.dst_addr
 	mov m.k8s_dp_control_tx_balance_udp_udp_dst_port h.udp.dst_port
 	table tx_balance_udp
-	jmpnh LABEL_FALSE_6
+	jmpnh LABEL_FALSE_8
+	jmpeq LABEL_FALSE_9 m.MainControlT_as_sl3_udp_group_id 0xFFFFFFFF
 	mov m.k8s_dp_control_as_sl3_udp_sel_ipv4_src_addr h.ipv4.src_addr
 	mov m.k8s_dp_control_as_sl3_udp_sel_udp_src_port h.udp.src_port
 	table as_sl3_udp_sel
-	jmpnh LABEL_FALSE_7
+	jmpnh LABEL_FALSE_10
 	table as_sl3_udp
-	jmpnh LABEL_FALSE_8
+	jmpnh LABEL_FALSE_11
 	mov m.MainControlT_create_reverse_ct 1
 	mov m.MainControlT_do_clb_pinned_flows_add_on_miss 1
 	mov m.local_metadata_dst_port h.udp.dst_port
@@ -2755,31 +2817,75 @@ apply {
 	mov m.local_metadata_src_ip h.ipv4.src_addr
 	mov m.local_metadata_dst_ip h.ipv4.dst_addr
 	mov m.local_metadata_mod_blob_ptr_snat 0x0
+	mov m.k8s_dp_control_pinned_flows_local_metadata_src_ip m.local_metadata_src_ip
+	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_ip m.local_metadata_dst_ip
 	mov m.k8s_dp_control_pinned_flows_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_port m.local_metadata_dst_port
 	table pinned_flows
+	jmp LABEL_END
+	LABEL_FALSE_11 :	mov m.local_metadata_dst_port h.udp.dst_port
+	mov m.local_metadata_src_port h.udp.src_port
+	mov m.local_metadata_src_ip h.ipv4.src_addr
+	mov m.local_metadata_dst_ip h.ipv4.dst_addr
+	mov m.local_metadata_mod_blob_ptr_snat 0x0
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip m.local_metadata_src_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip m.local_metadata_dst_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port m.local_metadata_dst_port
+	table pinned_flows_reverse
+	jmp LABEL_END
+	LABEL_FALSE_10 :	mov m.local_metadata_dst_port h.udp.dst_port
+	mov m.local_metadata_src_port h.udp.src_port
+	mov m.local_metadata_src_ip h.ipv4.src_addr
+	mov m.local_metadata_dst_ip h.ipv4.dst_addr
+	mov m.local_metadata_mod_blob_ptr_snat 0x0
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip m.local_metadata_src_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip m.local_metadata_dst_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port m.local_metadata_dst_port
+	table pinned_flows_reverse
+	jmp LABEL_END
+	LABEL_FALSE_9 :	table as_sl3_udp
+	jmpnh LABEL_FALSE_12
+	mov m.MainControlT_create_reverse_ct 1
+	mov m.MainControlT_do_clb_pinned_flows_add_on_miss 1
+	mov m.local_metadata_dst_port h.udp.dst_port
+	mov m.local_metadata_src_port h.udp.src_port
+	mov m.local_metadata_src_ip h.ipv4.src_addr
+	mov m.local_metadata_dst_ip h.ipv4.dst_addr
+	mov m.local_metadata_mod_blob_ptr_snat 0x0
+	mov m.k8s_dp_control_pinned_flows_local_metadata_src_ip m.local_metadata_src_ip
+	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_ip m.local_metadata_dst_ip
+	mov m.k8s_dp_control_pinned_flows_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_port m.local_metadata_dst_port
+	table pinned_flows
+	jmp LABEL_END
+	LABEL_FALSE_12 :	mov m.local_metadata_dst_port h.udp.dst_port
+	mov m.local_metadata_src_port h.udp.src_port
+	mov m.local_metadata_src_ip h.ipv4.src_addr
+	mov m.local_metadata_dst_ip h.ipv4.dst_addr
+	mov m.local_metadata_mod_blob_ptr_snat 0x0
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip m.local_metadata_src_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip m.local_metadata_dst_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port m.local_metadata_dst_port
+	table pinned_flows_reverse
 	jmp LABEL_END
 	LABEL_FALSE_8 :	mov m.local_metadata_dst_port h.udp.dst_port
 	mov m.local_metadata_src_port h.udp.src_port
 	mov m.local_metadata_src_ip h.ipv4.src_addr
 	mov m.local_metadata_dst_ip h.ipv4.dst_addr
 	mov m.local_metadata_mod_blob_ptr_snat 0x0
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip m.local_metadata_src_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip m.local_metadata_dst_ip
 	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
-	table pinned_flows_reverse
-	jmp LABEL_END
-	LABEL_FALSE_7 :	mov m.local_metadata_dst_port h.udp.dst_port
-	mov m.local_metadata_src_port h.udp.src_port
-	mov m.local_metadata_src_ip h.ipv4.src_addr
-	mov m.local_metadata_dst_ip h.ipv4.dst_addr
-	mov m.local_metadata_mod_blob_ptr_snat 0x0
-	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
-	table pinned_flows_reverse
-	jmp LABEL_END
-	LABEL_FALSE_6 :	mov m.local_metadata_dst_port h.udp.dst_port
-	mov m.local_metadata_src_port h.udp.src_port
-	mov m.local_metadata_src_ip h.ipv4.src_addr
-	mov m.local_metadata_dst_ip h.ipv4.dst_addr
-	mov m.local_metadata_mod_blob_ptr_snat 0x0
-	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port m.local_metadata_dst_port
 	table pinned_flows_reverse
 	LABEL_END :	jmpeq LABEL_SWITCH m.local_metadata_mod_action 0x1
 	jmpeq LABEL_SWITCH_0 m.local_metadata_mod_action 0x2
@@ -2788,25 +2894,29 @@ apply {
 	jmp LABEL_ENDSWITCH
 	LABEL_SWITCH_0 :	table write_dest_ip_table
 	jmpneq LABEL_ENDSWITCH m.MainControlT_create_reverse_ct 0x1
-	jmpneq LABEL_FALSE_10 h.ipv4.protocol 0x6
+	jmpneq LABEL_FALSE_14 h.ipv4.protocol 0x6
 	mov m.k8s_dp_control_set_meta_tcp_ipv4_dst_addr h.ipv4.dst_addr
 	mov m.k8s_dp_control_set_meta_tcp_tcp_dst_port h.tcp.dst_port
 	table set_meta_tcp
-	jmp LABEL_END_10
-	LABEL_FALSE_10 :	jmpneq LABEL_END_10 h.ipv4.protocol 0x11
+	jmp LABEL_END_14
+	LABEL_FALSE_14 :	jmpneq LABEL_END_14 h.ipv4.protocol 0x11
 	mov m.k8s_dp_control_set_meta_udp_ipv4_dst_addr h.ipv4.dst_addr
 	mov m.k8s_dp_control_set_meta_udp_udp_dst_port h.udp.dst_port
 	table set_meta_udp
-	LABEL_END_10 :	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
+	LABEL_END_14 :	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip m.local_metadata_src_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip m.local_metadata_dst_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port m.local_metadata_dst_port
 	table pinned_flows_reverse
-	LABEL_ENDSWITCH :	jmpnv LABEL_FALSE_12 h.arp
+	LABEL_ENDSWITCH :	jmpnv LABEL_FALSE_16 h.arp
 	table arpt_to_port_table
-	jmp LABEL_END_12
-	LABEL_FALSE_12 :	jmpnv LABEL_FALSE_13 h.ipv4
+	jmp LABEL_END_16
+	LABEL_FALSE_16 :	jmpnv LABEL_FALSE_17 h.ipv4
 	table ipv4_to_port_table
-	jmp LABEL_END_12
-	LABEL_FALSE_13 :	mov m.pna_main_output_metadata_output_port 0x1
-	LABEL_END_12 :	emit h.ethernet
+	jmp LABEL_END_16
+	LABEL_FALSE_17 :	mov m.pna_main_output_metadata_output_port 0x1
+	LABEL_END_16 :	emit h.ethernet
 	emit h.vlan_tag
 	emit h.ipv4
 	emit h.tcp
