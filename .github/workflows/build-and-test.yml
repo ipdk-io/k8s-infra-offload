@@ -41,11 +41,11 @@ jobs:
         kustomize version
 
     - name: "docker build"
-      run: make docker-build IMAGE_REGISTRY=ghcr.io/ipdk-io/k8s-infra-offload IMAGE_VERSION=main
+      run: make docker-build IMAGE_REGISTRY=ghcr.io/ipdk-io/k8s-infra-offload/ IMAGE_VERSION=main
 
     - name: "docker deploy"
       run: |
-        make deploy IMAGE_REGISTRY=ghcr.io/ipdk-io/k8s-infra-offload IMAGE_VERSION=main
+        make deploy IMAGE_REGISTRY=ghcr.io/ipdk-io/k8s-infra-offload/ IMAGE_VERSION=main
         # getnodes using kubectl
         kubectl get nodes -o wide
 
@@ -59,4 +59,4 @@ jobs:
 
     - name: "push docker images to registry"
       #if: github.event_name == 'push'
-      run: make docker-push IMAGE_REGISTRY=ghcr.io/ipdk-io/k8s-infra-offload IMAGE_VERSION=main
+      run: make docker-push IMAGE_REGISTRY=ghcr.io/ipdk-io/k8s-infra-offload/ IMAGE_VERSION=main
