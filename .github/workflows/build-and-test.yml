@@ -29,6 +29,12 @@ jobs:
     - name: "Build"
       run: make
 
+    - name: Change Permissions
+      run: |
+       sudo mkdir -p /var/lib/cni/inframanager
+       sudo chmod 777 -R /var/lib/cni/inframanager
+       ls -ltr /var/lib/cni
+
     - name: "Test"
       run: make test
 

@@ -15,19 +15,18 @@
 package store
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"net"
 	"os"
 
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	storeFile = storePath + "cni_db.json"
+	StoreEpFile = storePath + "cni_db.json"
 )
 
-func isEndPointStoreEmpty() bool {
+func IsEndPointStoreEmpty() bool {
 	if len(EndPointSet.EndPointMap) == 0 {
 		return true
 	} else {
@@ -50,16 +49,16 @@ func InitEndPointStore(setFwdPipe bool) bool {
 	}
 
 	/* Create the store file if it doesn't exist */
-	file, err := os.OpenFile(storeFile, flags, 0600)
+	file, err := NewOpenFile(StoreEpFile, flags, 0600)
 	if err != nil {
-		log.Error("Failed to open", storeFile)
+		log.Error("Failed to open", StoreEpFile)
 		return false
 	}
 	file.Close()
 
-	data, err := os.ReadFile(storeFile)
+	data, err := NewReadFile(StoreEpFile)
 	if err != nil {
-		log.Error("Error reading ", storeFile, err)
+		log.Error("Error reading ", StoreEpFile, err)
 		return false
 	}
 
@@ -67,9 +66,9 @@ func InitEndPointStore(setFwdPipe bool) bool {
 		return true
 	}
 
-	err = json.Unmarshal(data, &EndPointSet.EndPointMap)
+	err = JsonUnmarshal(data, &EndPointSet.EndPointMap)
 	if err != nil {
-		log.Error("Error unmarshalling data from ", storeFile, err)
+		log.Error("Error unmarshalling data from ", StoreEpFile, err)
 		return false
 	}
 
@@ -77,9 +76,19 @@ func InitEndPointStore(setFwdPipe bool) bool {
 }
 
 func (ep EndPoint) WriteToStore() bool {
+	if net.ParseIP(ep.PodIpAddress) == nil {
+		log.Errorf("Invalid IP Address %s", ep.PodIpAddress)
+		return false
+	}
+
+	_, err := net.ParseMAC(ep.PodMacAddress)
+	if err != nil {
+		log.Errorf("Invalid MAC Address %s", ep.PodMacAddress)
+		return false
+	}
 	//aquire lock before adding entry into the map
 	EndPointSet.EndPointLock.Lock()
-	//append tmp entry to the map
+	//append ep entry to the map
 	EndPointSet.EndPointMap[ep.PodIpAddress] = ep
 	//release lock after updating the map
 	EndPointSet.EndPointLock.Unlock()
@@ -88,6 +97,17 @@ func (ep EndPoint) WriteToStore() bool {
 }
 
 func (ep EndPoint) DeleteFromStore() bool {
+	if net.ParseIP(ep.PodIpAddress) == nil {
+		log.Errorf("Invalid IP Address %s", ep.PodIpAddress)
+		return false
+	}
+
+	_, err := net.ParseMAC(ep.PodMacAddress)
+	if err != nil {
+		log.Errorf("Invalid MAC Address %s", ep.PodMacAddress)
+		return false
+	}
+
 	//aquire lock before adding entry into the map
 	EndPointSet.EndPointLock.Lock()
 	//delete tmp entry from the map
@@ -98,6 +118,17 @@ func (ep EndPoint) DeleteFromStore() bool {
 }
 
 func (ep EndPoint) GetFromStore() store {
+	if net.ParseIP(ep.PodIpAddress) == nil {
+		log.Errorf("Invalid IP Address %s", ep.PodIpAddress)
+		return nil
+	}
+
+	_, err := net.ParseMAC(ep.PodMacAddress)
+	if err != nil {
+		log.Errorf("Invalid MAC Address %s", ep.PodMacAddress)
+		return nil
+	}
+
 	res := EndPointSet.EndPointMap[ep.PodIpAddress]
 	if (res == EndPoint{}) {
 		return nil
@@ -112,15 +143,15 @@ func (ep EndPoint) UpdateToStore() bool {
 }
 
 func RunSyncEndPointInfo() bool {
-	jsonStr, err := json.MarshalIndent(EndPointSet.EndPointMap, "", " ")
+	jsonStr, err := JsonMarshalIndent(EndPointSet.EndPointMap, "", " ")
 	if err != nil {
 		log.Errorf("Failed to marshal endpoint entries map %s", err)
 		return false
 	}
 
-	if err = ioutil.WriteFile(storeFile, jsonStr, 0600); err != nil {
+	if err = NewWriteFile(StoreEpFile, jsonStr, 0600); err != nil {
 		log.Errorf("Failed to write entries to %s, err %s",
-			storeFile, err)
+			StoreEpFile, err)
 		return false
 	}
 

@@ -15,6 +15,9 @@
 package store
 
 import (
+	"encoding/json"
+	"io/ioutil"
+	"os"
 	"sync"
 )
 
@@ -66,6 +69,14 @@ var ServiceSet *ServiceCollection
 var EndPointSet *EndPointCollection
 var once sync.Once
 var onceService sync.Once
+
+var (
+	JsonMarshalIndent = json.MarshalIndent
+	NewOpenFile       = os.OpenFile
+	NewReadFile       = os.ReadFile
+	NewWriteFile      = ioutil.WriteFile
+	JsonUnmarshal     = json.Unmarshal
+)
 
 func NewEndPoint() {
 	once.Do(func() {
