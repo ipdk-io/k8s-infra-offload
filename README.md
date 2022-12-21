@@ -7,7 +7,7 @@
     - [Install, configure and run Docker](#install-configure-and-run-docker)
     - [Install, configure and run containerd](#install-configure-and-run-containerd)
     - [Install kubernetes components](#install-kubernetes-components)
-  - [IPDK OVS Install](#ipdk-ovs-install)
+  - [IPDK Networking recipe install](#ipdk-networking-recipe-install)
   - [Setup P4-K8s](#setup-p4-k8s)
   - [P4-K8s Deployment](#p4-k8s-deployment)
   - [Simple Pod-to-Pod Ping Test](#simple-pod-to-pod-ping-test)
@@ -24,7 +24,7 @@
 - The firewall, if enabled in host OS, should either be disabled or configured to allow required traffic to flow through.
 
 ## Kubernetes installation
-If Kubernetes and other required components are already installed on the machine, then proceed to [IPDK OVS Install and Run](#ipdk-ovs-install-and-run)
+If Kubernetes and other required components are already installed on the machine, then proceed to [IPDK Networking recipe install](#ipdk-networking-recipe-install)
 
 ### Pre-requisites
 Kubernetes is known to not work well with Linux swap and hence, it should be turned off.
@@ -289,37 +289,43 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   # systemctl enable kubelet.service
   ```
   
-## IPDK OVS Install
-  This kubernetes depends upon the IPDK P4-OVS to be running in the background. Once P4-OVS is running, kubernetes can load its P4 pipeline and offload various functionalities on it i.e. on P4 data plane. Note that, IPDK P4-OVS needs to installed and run on the host natively. To install P4-OVS and P4-SDE (components as per IPDK 22.07 release) individually, follow the instructions listed below. Note that, P4C is not required as this software includes P4C generated artifacts.
+### IPDK Networking recipe install
+  Kubernetes deployment depends upon the daemon infrap4d of IPDK networking recipe to be running in the background. Once infrap4d is running, kubernetes can load its P4 pipeline and offload various functionalities on it i.e. on P4 data plane. Note that, IPDK infrap4d needs to installed and run on the host natively. To install infrap4d and P4-SDE (components as per IPDK 23.01 release) individually, follow the instructions listed below. Note that, P4C is not required as this software includes P4C generated artifacts.
    
   ### P4-SDE
-  To install P4-SDE, follow instructions at https://github.com/p4lang/p4-dpdk-target. Make sure to checkout using tag v22.07 (for 22.07 release) and build for TDI. User can also refer to the script https://github.com/ipdk-io/ipdk/blob/main/build/networking/scripts/build_p4sde.sh. The main steps can be summerized as:
+  To install P4-SDE, follow instructions at https://github.com/p4lang/p4-dpdk-target. Make sure to checkout using tag drop3_nw_rcp and build for TDI. User can also refer to README.md for instructions. The main steps can be summerized as:
   ```bash
-  git clone https://github.com/p4lang/p4-dpdk-target
-  cd p4-dpdk-target
-  git checkout v22.07
-  git submodule update --init --recursive
-  mkdir ./install
-  pushd ./tools/setup
-  source p4sde_env_setup.sh <path to p4-dpdk-target>
-  popd
-  ./autogen.sh
-  ./configure --prefix=$SDE_INSTALL --with-generic-flags=yes
-  make -j
-  make install
+  # git clone https://github.com/p4lang/p4-dpdk-target
+  # cd p4-dpdk-target
+  # git checkout drop3_nw_rcp
+  # git submodule update --init --recursive --force
+  # cd $SDE/p4-dpdk-target
+  # git submodule update --init --recursive --force
+  # ./autogen.sh
+  # ./configure --prefix=$SDE_INSTALL
+  # ./configure --prefix=$SDE_INSTALL --with-generic-flags=yes
+  # make -j
+  # make install
   ```
   
-  ### P4-OVS
-  To install P4-OVS, follow instructions as per the script https://github.com/ipdk-io/ipdk/blob/main/build/networking/scripts/get_p4ovs_repo.sh to download the code. Note that, the P4-OVS code is checked out using tag v22.07 (for 22.07 release). In addition, set the OVS_INSTALL env variable to point to this P4-OVS base directory. The main steps can be summarized as:
+  ### Infrap4d
+  To install infrap4d, follow instructions as per the ipdk-dpdk link https://github.com/ipdk-io/networking-recipe/blob/main/docs/ipdk-dpdk.md. Note that, the networking recipe code is checked out using the tag for drop3. The main steps can be summarized as:
   ```bash
-  git clone https://github.com/ipdk-io/ovs.git -b ovs-with-p4 P4-OVS
-  cd P4-OVS
-  git checkout v22.07
-  git submodule update --init --recursive
-  ./install_dep_packages.sh $PWD
-  source p4ovs_env_setup.sh $SDE_INSTALL
-  ./build-p4ovs.sh $SDE_INSTALL
-  export OVS_INSTALL=$PWD
+  # git clone --recursive https://github.com/ipdk-io/networking-recipe.git ipdk.recipe
+  # cd ipdk.recipe
+  # git submodule update --init --recursive
+  # export IPDK_RECIPE=`pwd`
+  # cd $IPDK_RECIPE/setup
+  # cmake -B build -DCMAKE_INSTALL_PREFIX=<dependency install path> [-DUSE_SUDO=ON]
+  # cmake --build build [-j<njobs>]
+
+  To build
+  # source ./scripts/dpdk/setup_env.sh $IPDK_RECIPE $SDE_INSTALL $DEPEND_INSTALL
+  # cd $IPDK_RECIPE
+  # ./make-all.sh --target=dpdk
+  # ./scripts/dpdk/copy_config_files.sh $IPDK_RECIPE $SDE_INSTALL
+  # ./scripts/dpdk/set_hugepages.sh
+  # ./install/sbin/infrap4d
   ```
 
 ## Setup P4-K8S
@@ -327,9 +333,9 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
  
   Pull P4-K8s and other software
   ```bash
-  git clone https://github.com/ipdk-io/k8s-infra-offload.git p4-k8s
-  cd p4-k8s
-  go get -u google.golang.org/protobuf
+  #git clone https://github.com/ipdk-io/k8s-infra-offload.git p4-k8s
+  #cd p4-k8s
+  #git checkout dpdk_drop_3
   ```
   
   Build p4-k8s images and other binaries as below
@@ -369,24 +375,25 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   ```
  
 ## P4-K8s Deployment
-  Run create_interfaces.sh script which, in addition to creating specified number of TAP interfaces, sets up the huge pages and starts P4-OVS.
+  Run create_interfaces.sh script which, in addition to creating specified number of TAP interfaces, sets up the huge pages and starts infrap4d.
+  Scripts requires some env variables to be set. These env variables are defined in networking-recipe/main/docs/ipdk-dpdk.md
   ```bash
-  # ./p4-k8s/scripts/create_interfaces.sh <8/16/32/...> [OVS_DEP_INSTALL_PATH]
+  # ./p4-k8s/scripts/create_interfaces.sh <8/16/32/...>
   ```
     
-  After running the above script, verify that P4-OVS is running in the background.
+  After running the above script, verify that infrap4d is running.
   ```bash
-  # ps -ef | grep ovs
-  root       25050       1  0 07:15 ?        00:00:00 ovsdb-server --remote=punix:/usr/local/var/run/openvswitch/db.sock --remote=db:Open_vSwitch,Open_vSwitch,manager_options --pidfile --detach
-  root       25054       1 99 07:15 ?        00:09:03 ovs-vswitchd --pidfile --detach --no-chdir --mlockall --log-file=/tmp/logs/ovs-vswitchd.log
+  # ps -ef | grep infrap4d
+  root     1254701       1 99 13:34 ?        00:13:10 /host/root/nupur-drop3/drop7/networking-recipe/install/sbin/infrap4d
   ```
 
-  Rename first TAP interface and run ARP-Proxy on it.
+  Run ARP-Proxy on the first interface.
   ```bash
-  ip link set P4TAP_0 name TAP_0
-  ip link set TAP_0 up
-  ip addr add 169.254.1.1/32 dev TAP_0
-  ARP_PROXY_IF=TAP_0 ./bin/arp_proxy &
+  ./p4-k8s/scripts/arp_proxy.sh
+
+  Inside the pod0 namespace, run the following command to start arp_proxy
+  export ARP_PROXY_IF=P4TAP_0
+  ./bin/arp_proxy &
   ```
 
   Start the containerd services
@@ -486,6 +493,20 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   test-pod                                    1/1     Running   0          25m   10.244.0.6   ins21   <none>           <none>
   test-pod2                                   1/1     Running   0          25m   10.244.0.7   ins21   <none>           <none>  
   ```
+  To test service traffic, iperf3 client can be started as below: 
+  ```bash
+  # cd kubernetes-iperf3
+  # ./steps/run.sh
+
+  The iperf3 client can also be executed manually inside the iperf client pod
+  # kubectl exec --stdin --tty <iperf3-clients-xxx> -- /bin/bash
+  # iperf3 -c iperf3-server
+  Connecting to host iperf3-server, port 5201
+  [  5] local 10.244.0.7 port 37728 connected to 10.96.186.247 port 5201
+  [ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+  [  5]   0.00-1.00   sec   107 KBytes   880 Kbits/sec    2   1.41 KBytes
+  [  5]   1.00-2.00   sec  0.00 Bytes  0.00 bits/sec    1   1.41 KBytes
+  ```
 
   To test service traffic, iperf3 client can be started as below: 
   ```bash
@@ -503,8 +524,11 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   ```
 
 ## Cleanup All  
-  Reset kubernetes which would stop and remove all pods. Then, remove all k8s runtime configurations and other files
+  Reset kubernetes which would stop and remove all pods. Then, remove all k8s runtime configurations and other files.
   ```bash
+  Delete all started pods, service deployments and daemonsets
+  # kubectl delete pod < >
+  # kubectl delete deployment < >
   # make undeploy
   # make undeploy-calico
   # kubeadm reset -f
@@ -512,25 +536,13 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   # rm -rf /var/lib/etcd /var/lib/kubelet /var/lib/cni
   # rm -rf /var/run/kubernetes
   # rm -rf $HOME/.kube
-  ```
-    
-  Check if there are pods that are still running. If so, stop and remove them
-  ```bash
-  # crictl ps -a
-  # crictl pods ls -a
-  # crictl stopp <pod_id>
-  # crictl rmp <pod_id>
-  ```
-    
+  # docker container stop registry && docker container rm -v registry
   Stop the system services
-  ```bash
-  # systemctl stop kubelet
   # systemctl stop containerd
   ```
 
-  Stop the ARP proxy and OVS processes running in the background. This will also remove all the TAP interfaces that were configured earlier including the renamed one.
+  Stop the ARP proxy and infrap4d processes running. This will also remove all the TAP interfaces that were configured earlier.
   ```bash
   # pkill arp_proxy
-  # pkill ovsdb-server
-  # pkill ovs-vswitchd
+  # pkill infrap4d
   ```
