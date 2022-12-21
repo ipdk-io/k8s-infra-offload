@@ -396,7 +396,7 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
     
   Initialize and start the core k8s components as below
   ```bash
-  # kubeadm init --pod-network-cidr=<pod-cidr>
+  # kubeadm init --pod-network-cidr=<pod-cidr> --service-cidr=<service-cidr>
   ```
     
   Once K8s control plane initialization is complete successfully, then (as non-root user)
@@ -411,13 +411,16 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   ```
     
   Start the deployments
-  ```bash
-  # make deploy
-  # make deploy-calico
-  ```
   Note that, for single node deployment, the node must be untainted to allow worker pods to share the node with control plane. This can be done as below.
   ```bash
   # kubectl taint node <node-name> node-role.kubernetes.io/control-plane-
+  ```
+  ```bash
+  # make deploy
+  # make deploy-calico
+
+  Check deployment using the command below.
+  # kubectl get pods -A -o wide
   ```
 
 ### Simple Pod-to-Pod Ping Test
@@ -465,16 +468,38 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   # git clone https://github.com/Pharb/kubernetes-iperf3.git
   # cd kubernetes-iperf3
   # ./steps/setup.sh
-  # kubectl get svc -o wide
+  # kubectl get svc -A -o wide
   NAME            TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE     SELECTOR
   iperf3-server   ClusterIP   10.111.123.3   <none>        5201/TCP   6m56s   app=iperf3-server
   kubernetes      ClusterIP   10.96.0.1      <none>        443/TCP    15m     <none>
-  # kubectl get pods -o wide
+ 
+  # kubectl get ep -A -o wide
+  NAMESPACE     NAME            ENDPOINTS                                               AGE
+  default       iperf3-server   10.244.0.5:5201,10.244.0.6:5201                         5h22m
+  default       kubernetes      10.233.134.119:6443                                     5h35m
+  kube-system   kube-dns        10.244.0.3:53,10.244.0.4:53,10.244.0.3:53 + 3 more...   5h35m
+
+  # kubectl get pods -A -o wide
   NAME                                        READY   STATUS    RESTARTS   AGE   IP           NODE    NOMINATED NODE   READINESS GATES
   iperf3-clients-8gkv7                        1/1     Running   0          18m   10.244.0.9   ins21   <none>           <none>
   iperf3-server-deployment-59bf4754f9-4hp4c   1/1     Running   0          18m   10.244.0.8   ins21   <none>           <none>
   test-pod                                    1/1     Running   0          25m   10.244.0.6   ins21   <none>           <none>
   test-pod2                                   1/1     Running   0          25m   10.244.0.7   ins21   <none>           <none>  
+  ```
+
+  To test service traffic, iperf3 client can be started as below: 
+  ```bash
+  # cd kubernetes-iperf3
+  # ./steps/run.sh
+
+  The iperf3 client can also be executed manually inside the iperf client pod
+  # kubectl exec --stdin --tty <iperf3-clients-xxx> -- /bin/bash
+  # iperf3 -c iperf3-server
+  Connecting to host iperf3-server, port 5201
+  [  5] local 10.244.0.7 port 37728 connected to 10.96.186.247 port 5201
+  [ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+  [  5]   0.00-1.00   sec   107 KBytes   880 Kbits/sec    2   1.41 KBytes
+  [  5]   1.00-2.00   sec  0.00 Bytes  0.00 bits/sec    1   1.41 KBytes
   ```
 
 ## Cleanup All  
