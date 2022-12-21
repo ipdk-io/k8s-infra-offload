@@ -293,35 +293,39 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   Kubernetes deployment depends upon the daemon infrap4d of IPDK networking recipe to be running in the background. Once infrap4d is running, kubernetes can load its P4 pipeline and offload various functionalities on it i.e. on P4 data plane. Note that, IPDK infrap4d needs to installed and run on the host natively. To install infrap4d and P4-SDE (components as per IPDK 23.01 release) individually, follow the instructions listed below. Note that, P4C is not required as this software includes P4C generated artifacts.
    
   ### P4-SDE
-  To install P4-SDE, follow instructions at https://github.com/p4lang/p4-dpdk-target. Make sure to checkout using tag drop3_nw_rcp and build for TDI. User can also refer to README.md for instructions. The main steps can be summerized as:
+  To install P4-SDE, follow instructions at https://github.com/p4lang/p4-dpdk-target. Make sure to checkout  SHA:467ef1c3a9709c6084838e1402905f25bb15577b from the main branch and build for TDI. User can also refer to README.md for instructions. The main steps can be summerized as:
+
+  Create an install dir, checkout code, set environment and build
   ```bash
+  Create directory for SDE
+  # mkdir sde
+  # cd sde
+
+  Create directory for SDE install path, i.e. - SDE_INSTALL_PATH
+  # mkdir install
   # git clone https://github.com/p4lang/p4-dpdk-target
   # cd p4-dpdk-target
-  # git checkout drop3_nw_rcp
+  # git checkout 467ef1c3a9709c6084838e1402905f25bb15577b 
   # git submodule update --init --recursive --force
-  # cd $SDE/p4-dpdk-target
-  # git submodule update --init --recursive --force
-  # ./autogen.sh
-  # ./configure --prefix=$SDE_INSTALL
-  # ./configure --prefix=$SDE_INSTALL --with-generic-flags=yes
-  # make -j
-  # make install
+  # cd p4-dpdk-target/tools/setup
+  # source p4sde_env_setup.sh <path to sde directory>
+  # ./build-p4sde.sh -s <SDE_INSTALL_PATH>
   ```
   
   ### Infrap4d
-  To install infrap4d, follow instructions as per the ipdk-dpdk link https://github.com/ipdk-io/networking-recipe/blob/main/docs/ipdk-dpdk.md. Note that, the networking recipe code is checked out using the tag for drop3. The main steps can be summarized as:
+  To install infrap4d, follow instructions as per the ipdk-dpdk link https://github.com/ipdk-io/networking-recipe/blob/main/docs/ipdk-dpdk.md. Note that, the networking recipe code is checked out. The main steps can be summarized as:
   ```bash
   # git clone --recursive https://github.com/ipdk-io/networking-recipe.git ipdk.recipe
   # cd ipdk.recipe
   # git submodule update --init --recursive
   # export IPDK_RECIPE=`pwd`
   # cd $IPDK_RECIPE/setup
-  # cmake -B build -DCMAKE_INSTALL_PREFIX=<dependency install path> [-DUSE_SUDO=ON]
+  # cmake -B build -DCMAKE_INSTALL_PREFIX=<DEPEND_INSTALL> [-DUSE_SUDO=ON]
   # cmake --build build [-j<njobs>]
 
   To build
-  # source ./scripts/dpdk/setup_env.sh $IPDK_RECIPE $SDE_INSTALL $DEPEND_INSTALL
   # cd $IPDK_RECIPE
+  # source ./scripts/dpdk/setup_env.sh $IPDK_RECIPE $SDE_INSTALL $DEPEND_INSTALL
   # ./make-all.sh --target=dpdk
   # ./scripts/dpdk/copy_config_files.sh $IPDK_RECIPE $SDE_INSTALL
   # ./scripts/dpdk/set_hugepages.sh
@@ -335,7 +339,7 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   ```bash
   #git clone https://github.com/ipdk-io/k8s-infra-offload.git p4-k8s
   #cd p4-k8s
-  #git checkout dpdk_drop_3
+  #git checkout dpdk_drop_4
   ```
   
   Build p4-k8s images and other binaries as below
@@ -376,7 +380,8 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
  
 ## P4-K8s Deployment
   Run create_interfaces.sh script which, in addition to creating specified number of TAP interfaces, sets up the huge pages and starts infrap4d.
-  Scripts requires some env variables to be set. These env variables are defined in networking-recipe/main/docs/ipdk-dpdk.md
+  Scripts requires following env variables to be set - SDE_INSTALL, IPDK_RECIPE, DEPEND_INSTALL . These env variables are defined in networking-recipe/main/docs/ipdk-dpdk.md
+
   ```bash
   # ./p4-k8s/scripts/create_interfaces.sh <8/16/32/...>
   ```
@@ -384,7 +389,7 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   After running the above script, verify that infrap4d is running.
   ```bash
   # ps -ef | grep infrap4d
-  root     1254701       1 99 13:34 ?        00:13:10 /host/root/nupur-drop3/drop7/networking-recipe/install/sbin/infrap4d
+  root     1254701       1 99 13:34 ?        00:13:10 /host/networking-recipe/install/sbin/infrap4d
   ```
 
   Run ARP-Proxy on the first interface.
