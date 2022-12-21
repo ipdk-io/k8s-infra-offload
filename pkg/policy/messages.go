@@ -135,8 +135,14 @@ func (s *PolicyServer) SendMessage(conn net.Conn, msg interface{}) (err error) {
 	lengthBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(lengthBytes, uint64(len(data)))
 	var messageBuf bytes.Buffer
-	messageBuf.Write(lengthBytes)
-	messageBuf.Write(data)
+	_, err = messageBuf.Write(lengthBytes)
+	if err != nil {
+		s.log.WithError(err).Panic("write to buffer failed")
+	}
+	_, err = messageBuf.Write(data)
+	if err != nil {
+		s.log.WithError(err).Panic("write to buffer failed")
+	}
 	for {
 		_, err := messageBuf.WriteTo(conn)
 		if err == io.ErrShortWrite {
