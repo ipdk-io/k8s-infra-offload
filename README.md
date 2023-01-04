@@ -293,7 +293,7 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   Kubernetes deployment depends upon the daemon infrap4d of IPDK networking recipe to be running in the background. Once infrap4d is running, kubernetes can load its P4 pipeline and offload various functionalities on it i.e. on P4 data plane. Note that, IPDK infrap4d needs to installed and run on the host natively. To install infrap4d and P4-SDE (components as per IPDK 23.01 release) individually, follow the instructions listed below. Note that, P4C is not required as this software includes P4C generated artifacts.
    
   ### P4-SDE
-  To install P4-SDE, follow instructions at https://github.com/p4lang/p4-dpdk-target. Make sure to checkout  SHA:467ef1c3a9709c6084838e1402905f25bb15577b from the main branch and build for TDI. User can also refer to README.md for instructions. The main steps can be summerized as:
+  To install P4-SDE, follow instructions at https://github.com/p4lang/p4-dpdk-target. Make sure to checkout  SHA:55d37ca682f119edc8bc9a6683f51ed3b83d60a8 from the main branch and build for TDI. User can also refer to README.md for instructions. The main steps can be summerized as:
 
   Create an install dir, checkout code, set environment and build
   ```bash
@@ -305,7 +305,7 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   # mkdir install
   # git clone https://github.com/p4lang/p4-dpdk-target
   # cd p4-dpdk-target
-  # git checkout 467ef1c3a9709c6084838e1402905f25bb15577b 
+  # git checkout 55d37ca682f119edc8bc9a6683f51ed3b83d60a8
   # git submodule update --init --recursive --force
   # cd p4-dpdk-target/tools/setup
   # source p4sde_env_setup.sh <path to sde directory>
@@ -313,10 +313,11 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   ```
   
   ### Infrap4d
-  To install infrap4d, follow instructions as per the ipdk-dpdk link https://github.com/ipdk-io/networking-recipe/blob/main/docs/ipdk-dpdk.md. Note that, the networking recipe code is checked out. The main steps can be summarized as:
+  To install infrap4d, follow instructions as per the ipdk-dpdk link https://github.com/ipdk-io/networking-recipe/blob/main/docs/ipdk-dpdk.md. Note that, the networking recipe code is checked out from main using SHA:946773414ec12afc32b2061019c1375ef6c5b3a7. The main steps can be summarized as:
   ```bash
   # git clone --recursive https://github.com/ipdk-io/networking-recipe.git ipdk.recipe
   # cd ipdk.recipe
+  # git checkout 946773414ec12afc32b2061019c1375ef6c5b3a7
   # git submodule update --init --recursive
   # export IPDK_RECIPE=`pwd`
   # cd $IPDK_RECIPE/setup
