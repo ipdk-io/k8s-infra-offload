@@ -88,13 +88,13 @@ func main() {
 			os.Exit(1)
 		}
 		if err := store.InitEndPointStore(false); !err {
-			log.Errorf("Failed to open endpoint store", err)
+			log.Errorf("Failed to open endpoint store, err: %v", err)
 			api.CloseP4RtCCon()
 			api.CloseGNMIConn()
 			os.Exit(1)
 		}
 		if err := store.InitServiceStore(false); !err {
-			log.Errorf("Failed to open service store", err)
+			log.Errorf("Failed to open service store, err: %v", err)
 			api.CloseP4RtCCon()
 			api.CloseGNMIConn()
 			os.Exit(1)
@@ -106,19 +106,19 @@ func main() {
 
 		if _, err := api.SetFwdPipe(ctx, p4BinPath, p4InfoPath,
 			0); err != nil {
-			log.Errorf("Error when setting forwarding pipe: %v", err)
+			log.Errorf("Error when setting forwarding pipe, err: %v", err)
 			api.CloseP4RtCCon()
 			api.CloseGNMIConn()
 			os.Exit(1)
 		}
 		if err := store.InitEndPointStore(true); !err {
-			log.Errorf("Failed to open endpoint store", err)
+			log.Errorf("Failed to open endpoint store, err: %v", err)
 			api.CloseP4RtCCon()
 			api.CloseGNMIConn()
 			os.Exit(1)
 		}
 		if err := store.InitServiceStore(true); !err {
-			log.Errorf("Failed to open service store", err)
+			log.Errorf("Failed to open service store, err: %v", err)
 			api.CloseP4RtCCon()
 			api.CloseGNMIConn()
 			os.Exit(1)
