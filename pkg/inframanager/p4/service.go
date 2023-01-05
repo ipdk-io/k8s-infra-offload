@@ -92,6 +92,23 @@ func AsSl3TcpTable(ctx context.Context, p4RtC *client.Client,
 		}
 		memberList = append(memberList, member)
 
+	}
+
+	entryGroupTcp := p4RtC.NewActionProfileGroup(
+		"k8s_dp_control.as_sl3_tcp",
+		groupID,
+		memberList,
+		int32(128),
+	)
+
+	if action == Delete {
+		if err = p4RtC.DeleteActionProfileGroup(ctx, entryGroupTcp); err != nil {
+			log.Errorf("Cannot delete group entry from 'as_sl3_tcp table': %v", err)
+			return err
+		}
+	}
+
+	for i := 0; i < len(memberID); i++ {
 		entryMemberTcp := p4RtC.NewActionProfileMember(
 			"k8s_dp_control.as_sl3_tcp",
 			memberID[i],
@@ -116,13 +133,6 @@ func AsSl3TcpTable(ctx context.Context, p4RtC *client.Client,
 		}
 	}
 
-	entryGroupTcp := p4RtC.NewActionProfileGroup(
-		"k8s_dp_control.as_sl3_tcp",
-		groupID,
-		memberList,
-		int32(128),
-	)
-
 	switch action {
 	case Insert:
 		if err = p4RtC.InsertActionProfileGroup(ctx, entryGroupTcp); err != nil {
@@ -135,10 +145,6 @@ func AsSl3TcpTable(ctx context.Context, p4RtC *client.Client,
 			return err
 		}
 	case Delete:
-		if err = p4RtC.DeleteActionProfileGroup(ctx, entryGroupTcp); err != nil {
-			log.Errorf("Cannot delete group entry from 'as_sl3_tcp table': %v", err)
-			return err
-		}
 	default:
 		log.Warnf("Invalid action %v", action)
 		err := fmt.Errorf("Invalid action %v", action)
@@ -159,7 +165,23 @@ func AsSl3UdpTable(ctx context.Context, p4RtC *client.Client,
 			MemberId: memberID[i],
 		}
 		memberList = append(memberList, member)
+	}
 
+	entryGroupUdp := p4RtC.NewActionProfileGroup(
+		"k8s_dp_control.as_sl3_udp",
+		groupID,
+		memberList,
+		int32(128),
+	)
+
+	if action == Delete {
+		if err = p4RtC.DeleteActionProfileGroup(ctx, entryGroupUdp); err != nil {
+			log.Errorf("Cannot delete group entry from 'as_sl3_udp table': %v", err)
+			return err
+		}
+	}
+
+	for i := 0; i < len(memberID); i++ {
 		entryMemberUdp := p4RtC.NewActionProfileMember(
 			"k8s_dp_control.as_sl3_udp",
 			memberID[i],
@@ -184,12 +206,6 @@ func AsSl3UdpTable(ctx context.Context, p4RtC *client.Client,
 		}
 	}
 
-	entryGroupUdp := p4RtC.NewActionProfileGroup(
-		"k8s_dp_control.as_sl3_udp",
-		groupID,
-		memberList,
-		int32(128),
-	)
 	switch action {
 	case Insert:
 		if err = p4RtC.InsertActionProfileGroup(ctx, entryGroupUdp); err != nil {
@@ -202,10 +218,6 @@ func AsSl3UdpTable(ctx context.Context, p4RtC *client.Client,
 			return err
 		}
 	case Delete:
-		if err = p4RtC.DeleteActionProfileGroup(ctx, entryGroupUdp); err != nil {
-			log.Errorf("Cannot delete group entry from 'as_sl3_udp table': %v", err)
-			return err
-		}
 	default:
 		log.Warnf("Invalid action %v", action)
 		err := fmt.Errorf("Invalid action %v", action)
@@ -531,7 +543,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		log.Errorf("Failed to WriteDestIpTable")
 		return
 	}
-	log.Debugf("Inserted into table WriteDestIpTable, pod ip addrs: %v, port id: %d, mod blob ptrs: %v",
+	log.Debugf("Inserted into table WriteDestIpTable, pod ip addrs: %v, port id: %v, mod blob ptrs: %v",
 		podIpAddr, portID, modblobPtrDNAT)
 
 	switch service.Proto {
@@ -541,7 +553,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 			log.Errorf("Failed to AsSl3TcpTable")
 			return
 		}
-		log.Debugf("Inserted into table AsSl3TcpTable, member ids: %v, mob blob ptrs: %v, group id: %d",
+		log.Debugf("Inserted into table AsSl3TcpTable, member ids: %v, mod blob ptrs: %v, group id: %d",
 			memberID, modblobPtrDNAT, groupID)
 
 		if err = SetMetaTcpTable(ctx, p4RtC, podIpAddr, portID, groupID, action); err != nil {
@@ -566,7 +578,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 			log.Errorf("Failed to AsSl3UdpTable")
 			return
 		}
-		log.Debugf("Inserted into table AsSl3UdpTable, member ids: %v, mob blob ptrs: %v, group id: %d",
+		log.Debugf("Inserted into table AsSl3UdpTable, member ids: %v, mod blob ptrs: %v, group id: %d",
 			memberID, modblobPtrDNAT, groupID)
 
 		if err = SetMetaUdpTable(ctx, p4RtC, podIpAddr, portID, groupID, action); err != nil {
@@ -582,7 +594,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 				log.Errorf("Failed to TxBalanceUdpTable")
 				return
 			}
-			log.Debugf("Inserted into the table TxBalanceTcpTable, service ip: %s, service port: %d, group id: %d",
+			log.Debugf("Inserted into the table TxBalanceUdpTable, service ip: %s, service port: %d, group id: %d",
 				service.ClusterIp, uint16(service.Port), groupID)
 		}
 	default:
@@ -633,23 +645,37 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 
 	switch service.Proto {
 	case "TCP":
-		if err = AsSl3TcpTable(ctx, p4RtC, memberID, modblobPtrDNAT, groupID, Delete); err != nil {
-			return nil
-		}
-		if err = SetMetaTcpTable(ctx, p4RtC, podIpAddrs, podPortIDs, 0, Delete); err != nil {
-			return nil
-		}
+		log.Debugf("Deleting from table TxBalanceTcpTable, service ip: %s, service port: %d, group id: %d",
+			service.ClusterIp, uint16(service.Port), groupID)
 		if err = TxBalanceTcpTable(ctx, p4RtC, service.ClusterIp, uint16(service.Port), groupID, Delete); err != nil {
 			return err
 		}
+		log.Debugf("Deleting from table AsSl3TcpTable, member ids: %v, mod blob ptrs: %v, group id: %d",
+			memberID, modblobPtrDNAT, groupID)
+		if err = AsSl3TcpTable(ctx, p4RtC, memberID, modblobPtrDNAT, groupID, Delete); err != nil {
+			return nil
+		}
+		log.Debugf("Deleting from table SetMetaTcpTable, pod ip addrs: %v, port id: %d, group id: %d",
+			podIpAddrs, podPortIDs, groupID)
+		if err = SetMetaTcpTable(ctx, p4RtC, podIpAddrs, podPortIDs, groupID, Delete); err != nil {
+			return nil
+		}
+
 	case "UDP":
+		log.Debugf("Deleting from table TxBalanceUdpTable, service ip: %s, service port: %d, group id: %d",
+			service.ClusterIp, uint16(service.Port), groupID)
+
+		if err = TxBalanceUdpTable(ctx, p4RtC, service.ClusterIp, uint16(service.Port), groupID, Delete); err != nil {
+			return nil
+		}
+		log.Debugf("Deleting from AsSl3UdpTable, member ids: %v, mod blob ptrs: %v, group id: %d",
+			memberID, modblobPtrDNAT, groupID)
 		if err = AsSl3UdpTable(ctx, p4RtC, memberID, modblobPtrDNAT, groupID, Delete); err != nil {
 			return nil
 		}
-		if err = SetMetaUdpTable(ctx, p4RtC, podIpAddrs, podPortIDs, 0, Delete); err != nil {
-			return nil
-		}
-		if err = TxBalanceUdpTable(ctx, p4RtC, service.ClusterIp, uint16(service.Port), groupID, Delete); err != nil {
+		log.Debugf("Deleting from table SetMetaUdpTable, pod ip addrs: %v, port id: %d, group id: %d",
+			podIpAddrs, podPortIDs, groupID)
+		if err = SetMetaUdpTable(ctx, p4RtC, podIpAddrs, podPortIDs, groupID, Delete); err != nil {
 			return nil
 		}
 	default:
@@ -657,14 +683,16 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 		return nil
 	}
 
+	log.Debugf("Deleting from table WriteDestIpTable, mod blob ptrs: %v", modblobPtrDNAT)
 	err = WriteDestIpTable(ctx, p4RtC, nil, nil, modblobPtrDNAT, Delete)
 	if err != nil {
 		return err
 	}
 
+	log.Debugf("Deleting from table WriteSourceIpTable, group id: %d", groupID)
 	err = WriteSourceIpTable(ctx, p4RtC, groupID, "", 0, Delete)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	return nil

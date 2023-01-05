@@ -590,7 +590,36 @@ func (s *ApiServer) AddDelSnatPrefix(ctx context.Context, in *proto.AddDelSnatPr
 func (s *ApiServer) NatTranslationDelete(ctx context.Context, in *proto.NatTranslation) (*proto.Reply, error) {
 	logger := log.WithField("func", "NatTranslationDelete")
 	logger.Infof("Incoming NatTranslationDelete %+v", in)
-	return &proto.Reply{Successful: true}, nil
+
+	out := &proto.Reply{
+		Successful: true,
+	}
+	service := store.Service{
+		ClusterIp: in.Endpoint.Ipv4Addr,
+		Port:      in.Endpoint.Port,
+		Proto:     in.Proto,
+	}
+
+	server := NewApiServer()
+
+	if err := p4.DeleteServiceRules(ctx, server.p4RtC, service); err != nil {
+		logger.Errorf("Failed to delete the service entry %s:%s:%d from the pipeline",
+			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
+		out.Successful = false
+		return out, err
+	}
+
+	if !service.DeleteFromStore() {
+		logger.Errorf("Failed to delete service entry %s:%s:%d from the store",
+			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
+
+		err := fmt.Errorf("Failed to delete service entry %s:%s:%d from the store",
+			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
+		out.Successful = false
+		return out, err
+	}
+
+	return out, nil
 }
 
 func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePolicyUpdate) (*proto.Reply, error) {

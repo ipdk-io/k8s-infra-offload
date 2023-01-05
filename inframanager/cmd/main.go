@@ -87,8 +87,19 @@ func main() {
 			api.CloseGNMIConn()
 			os.Exit(1)
 		}
-		store.InitEndPointStore(false)
-		store.InitServiceStore(false)
+		if err := store.InitEndPointStore(false); !err {
+			log.Errorf("Failed to open endpoint store", err)
+			api.CloseP4RtCCon()
+			api.CloseGNMIConn()
+			os.Exit(1)
+		}
+		if err := store.InitServiceStore(false); !err {
+			log.Errorf("Failed to open service store", err)
+			api.CloseP4RtCCon()
+			api.CloseGNMIConn()
+			os.Exit(1)
+		}
+
 	} else {
 		// Setting fwding pipeline
 		log.Infof("Setting the pipeline")
@@ -100,8 +111,18 @@ func main() {
 			api.CloseGNMIConn()
 			os.Exit(1)
 		}
-		store.InitEndPointStore(true)
-		store.InitServiceStore(true)
+		if err := store.InitEndPointStore(true); !err {
+			log.Errorf("Failed to open endpoint store", err)
+			api.CloseP4RtCCon()
+			api.CloseGNMIConn()
+			os.Exit(1)
+		}
+		if err := store.InitServiceStore(true); !err {
+			log.Errorf("Failed to open service store", err)
+			api.CloseP4RtCCon()
+			api.CloseGNMIConn()
+			os.Exit(1)
+		}
 	}
 
 	// Starting inframanager gRPC server
