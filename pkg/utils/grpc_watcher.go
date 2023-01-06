@@ -60,9 +60,9 @@ func (gw *grpcWatcher) handleEvents() {
 			gw.errors <- fmt.Errorf("quit signal received")
 			return
 		default:
-			if isServing, _ := gw.checkHealth(gw.target, gw.log, gw.dialFunc); isServing {
+			if isServing, err := gw.checkHealth(gw.target, gw.log, gw.dialFunc); isServing {
 				gw.done <- true
-				gw.errors <- nil
+				gw.errors <- err
 				return
 			}
 			time.Sleep(gw.sleepDuration)
@@ -71,7 +71,10 @@ func (gw *grpcWatcher) handleEvents() {
 }
 
 func (gw *grpcWatcher) initialCheck() bool {
-	status, _ := gw.checkHealth(gw.target, gw.log, gw.dialFunc)
+	status, err := gw.checkHealth(gw.target, gw.log, gw.dialFunc)
+	if err != nil {
+		gw.log.Infof("checkHealth received error: %v", err)
+	}
 	return status
 }
 
