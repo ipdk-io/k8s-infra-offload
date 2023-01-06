@@ -541,7 +541,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	if err = WriteDestIpTable(ctx, p4RtC, podIpAddr, portID,
 		modblobPtrDNAT, action); err != nil {
 		log.Errorf("Failed to WriteDestIpTable")
-		return
+		return err, store.Service{}
 	}
 	log.Debugf("Inserted into table WriteDestIpTable, pod ip addrs: %v, port id: %v, mod blob ptrs: %v",
 		podIpAddr, portID, modblobPtrDNAT)
@@ -551,14 +551,14 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		if err = AsSl3TcpTable(ctx, p4RtC, memberID, modblobPtrDNAT,
 			groupID, action); err != nil {
 			log.Errorf("Failed to AsSl3TcpTable")
-			return
+			return err, store.Service{}
 		}
 		log.Debugf("Inserted into table AsSl3TcpTable, member ids: %v, mod blob ptrs: %v, group id: %d",
 			memberID, modblobPtrDNAT, groupID)
 
 		if err = SetMetaTcpTable(ctx, p4RtC, podIpAddr, portID, groupID, action); err != nil {
 			log.Errorf("Failed to SetMetaTcpTable")
-			return
+			return err, store.Service{}
 		}
 		log.Debugf("Inserted into table SetMetaTcpTable, pod ip addrs: %v, port id: %d, group id: %d",
 			podIpAddr, portID, groupID)
@@ -567,7 +567,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 			if err = TxBalanceTcpTable(ctx, p4RtC, service.ClusterIp,
 				uint16(service.Port), groupID, action); err != nil {
 				log.Errorf("Failed to TxBalanceTcpTable")
-				return
+				return err, store.Service{}
 			}
 			log.Debugf("Inserted into the table TxBalanceTcpTable, service ip: %s, service port: %d, group id: %d",
 				service.ClusterIp, uint16(service.Port), groupID)
@@ -576,14 +576,14 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		if err = AsSl3UdpTable(ctx, p4RtC, memberID, modblobPtrDNAT,
 			groupID, action); err != nil {
 			log.Errorf("Failed to AsSl3UdpTable")
-			return
+			return err, store.Service{}
 		}
 		log.Debugf("Inserted into table AsSl3UdpTable, member ids: %v, mod blob ptrs: %v, group id: %d",
 			memberID, modblobPtrDNAT, groupID)
 
 		if err = SetMetaUdpTable(ctx, p4RtC, podIpAddr, portID, groupID, action); err != nil {
 			log.Errorf("Failed to SetMetaUdpTable")
-			return
+			return err, store.Service{}
 		}
 		log.Debugf("Inserted into table SetMetaUdpTable, pod ip addrs: %v, port id: %d, group id: %d",
 			podIpAddr, portID, groupID)
@@ -592,27 +592,27 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 			if err = TxBalanceUdpTable(ctx, p4RtC, service.ClusterIp,
 				uint16(service.Port), groupID, action); err != nil {
 				log.Errorf("Failed to TxBalanceUdpTable")
-				return
+				return err, store.Service{}
 			}
 			log.Debugf("Inserted into the table TxBalanceUdpTable, service ip: %s, service port: %d, group id: %d",
 				service.ClusterIp, uint16(service.Port), groupID)
 		}
 	default:
 		log.Errorf("Invalid protocol type")
-		return
+		return fmt.Errorf("Invalid protocol type"), store.Service{}
 	}
 
 	if action != Update {
 		if err = WriteSourceIpTable(ctx, p4RtC, groupID, service.ClusterIp,
 			uint16(service.Port), action); err != nil {
 			log.Errorf("Failed to WriteSourceIpTable")
-			return
+			return err, store.Service{}
 		}
 		log.Debugf("Inserted into table WriteSourceIpTable, group id: %d, service ip: %s, service port: %d",
 			groupID, service.ClusterIp, uint16(service.Port))
 	}
 
-	return
+	return nil, service
 }
 
 func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
@@ -653,12 +653,12 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 		log.Debugf("Deleting from table AsSl3TcpTable, member ids: %v, mod blob ptrs: %v, group id: %d",
 			memberID, modblobPtrDNAT, groupID)
 		if err = AsSl3TcpTable(ctx, p4RtC, memberID, modblobPtrDNAT, groupID, Delete); err != nil {
-			return nil
+			return err
 		}
 		log.Debugf("Deleting from table SetMetaTcpTable, pod ip addrs: %v, port id: %d, group id: %d",
 			podIpAddrs, podPortIDs, groupID)
 		if err = SetMetaTcpTable(ctx, p4RtC, podIpAddrs, podPortIDs, groupID, Delete); err != nil {
-			return nil
+			return err
 		}
 
 	case "UDP":
@@ -666,21 +666,21 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 			service.ClusterIp, uint16(service.Port), groupID)
 
 		if err = TxBalanceUdpTable(ctx, p4RtC, service.ClusterIp, uint16(service.Port), groupID, Delete); err != nil {
-			return nil
+			return err
 		}
 		log.Debugf("Deleting from AsSl3UdpTable, member ids: %v, mod blob ptrs: %v, group id: %d",
 			memberID, modblobPtrDNAT, groupID)
 		if err = AsSl3UdpTable(ctx, p4RtC, memberID, modblobPtrDNAT, groupID, Delete); err != nil {
-			return nil
+			return err
 		}
 		log.Debugf("Deleting from table SetMetaUdpTable, pod ip addrs: %v, port id: %d, group id: %d",
 			podIpAddrs, podPortIDs, groupID)
 		if err = SetMetaUdpTable(ctx, p4RtC, podIpAddrs, podPortIDs, groupID, Delete); err != nil {
-			return nil
+			return err
 		}
 	default:
 		log.Errorf("Invalid protocol type")
-		return nil
+		return fmt.Errorf("Invalid protocol type")
 	}
 
 	log.Debugf("Deleting from table WriteDestIpTable, mod blob ptrs: %v", modblobPtrDNAT)
