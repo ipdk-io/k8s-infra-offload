@@ -41,7 +41,9 @@ func WaitFor(w watcher) error {
 	if err := w.addWatchedResources(); err != nil {
 		_, quit, errCh := w.getChannels()
 		quit <- true
-		errCh <- nil
+		if watcherErr := <-errCh; watcherErr != nil {
+			return fmt.Errorf("%s: %s", watcherErr, err)
+		}
 		return err
 	}
 
@@ -63,10 +65,6 @@ func processEvents(w watcher) error {
 				return fmt.Errorf("error while waiting for the resource")
 			}
 			return nil
-		case err := <-errCh:
-			if err != nil {
-				return fmt.Errorf("watcher received error: %v", err)
-			}
 		}
 	} else {
 		// wait forever
@@ -75,5 +73,6 @@ func processEvents(w watcher) error {
 			return fmt.Errorf("error while waiting for the resource")
 		}
 	}
-	return nil
+	err := <-errCh
+	return err
 }

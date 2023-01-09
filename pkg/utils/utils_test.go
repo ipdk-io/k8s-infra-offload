@@ -1096,6 +1096,7 @@ type fakeWatcher struct {
 
 func (fs *fakeWatcher) handleEvents() {
 	<-fs.quit
+	fs.errors <- fmt.Errorf("quiting")
 }
 
 func (fs *fakeWatcher) initialCheck() bool {
