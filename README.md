@@ -160,7 +160,7 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   debug: true
   ```
   
-  Enable containerd services, configure default settings and proxies and start the containerd services.
+  Enable containerd services and configure default settings and proxies.
   ```bash
   # systemctl enable containerd.service
   # mkdir -p /etc/containerd
@@ -205,6 +205,11 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   export http_proxy=<proxy-url>
   ```
   
+  Start the containerd services
+  ```bash
+  # systemctl start containerd.service
+  ```
+
   Check the status and it should show it running as below
   ```bash
   # systemctl status containerd.service
@@ -235,7 +240,7 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   ```
   
 ### Install kubernetes components
-  Setup Kubernetes repo manager
+  Setup Kubernetes repo manager (use recommended version 1.25)
   ```bash
   # cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
   [kubernetes]
@@ -246,9 +251,9 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   repo_gpgcheck=1
   gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
   EOF
-  # sudo dnf install -y kubelet kubeadm kubectl containernetworking-plugins cri-tools --disableexcludes=kubernetes
+  # dnf install -y kubelet-1.25.1 kubeadm-1.25.1 kubectl-1.25.1 containernetworking-plugins cri-tools-1.25.0 --disableexcludes=kubernetes
   # dnf list installed | grep kube
-  cri-tools.x86_64                                   1.24.2-0                            @kubernetes
+  cri-tools.x86_64                                   1.25.0-0                            @kubernetes
   kubeadm.x86_64                                     1.25.0-0                            @kubernetes           
   kubectl.x86_64                                     1.25.0-0                            @kubernetes           
   kubelet.x86_64                                     1.25.0-0                            @kubernetes
@@ -295,52 +300,47 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   ### P4-SDE
   To install P4-SDE, follow instructions at https://github.com/p4lang/p4-dpdk-target. Make sure to checkout  SHA:55d37ca682f119edc8bc9a6683f51ed3b83d60a8 from the main branch and build for TDI. User can also refer to README.md for instructions. The main steps can be summerized as:
 
-  Create an install dir, checkout code, set environment and build
+  Clone SDE repository, create install directory, setup environment variable and then build
   ```bash
-  Create directory for SDE
-  # mkdir sde
-  # cd sde
-
-  Create directory for SDE install path, i.e. - SDE_INSTALL_PATH
-  # mkdir install
   # git clone https://github.com/p4lang/p4-dpdk-target
   # cd p4-dpdk-target
   # git checkout 55d37ca682f119edc8bc9a6683f51ed3b83d60a8
   # git submodule update --init --recursive --force
-  # cd p4-dpdk-target/tools/setup
-  # source p4sde_env_setup.sh <path to sde directory>
-  # ./build-p4sde.sh -s <SDE_INSTALL_PATH>
+  # export SDE=$PWD
+  # mkdir install
+  # cd ./tools/setup
+  # source p4sde_env_setup.sh $SDE
+  # cd $SDE
+  # ./build-p4sde.sh -s $SDE_INSTALL
   ```
   
   ### Infrap4d
   To install infrap4d, follow instructions as per the ipdk-dpdk link https://github.com/ipdk-io/networking-recipe/blob/main/docs/ipdk-dpdk.md. Note that, the networking recipe code is checked out from main using SHA:946773414ec12afc32b2061019c1375ef6c5b3a7. The main steps can be summarized as:
   ```bash
-  # git clone --recursive https://github.com/ipdk-io/networking-recipe.git ipdk.recipe
+  # git clone https://github.com/ipdk-io/networking-recipe.git ipdk.recipe
   # cd ipdk.recipe
   # git checkout 946773414ec12afc32b2061019c1375ef6c5b3a7
   # git submodule update --init --recursive
-  # export IPDK_RECIPE=`pwd`
+  # export IPDK_RECIPE=$PWD
+  # mkdir DEP_LIB
+  # export DEPEND_INSTALL=$PWD/DEP_LIB
   # cd $IPDK_RECIPE/setup
-  # cmake -B build -DCMAKE_INSTALL_PREFIX=<DEPEND_INSTALL> [-DUSE_SUDO=ON]
+  # cmake -B build -DCMAKE_INSTALL_PREFIX=$DEPEND_INSTALL
   # cmake --build build [-j<njobs>]
 
-  To build
   # cd $IPDK_RECIPE
   # source ./scripts/dpdk/setup_env.sh $IPDK_RECIPE $SDE_INSTALL $DEPEND_INSTALL
   # ./make-all.sh --target=dpdk
   # ./scripts/dpdk/copy_config_files.sh $IPDK_RECIPE $SDE_INSTALL
-  # ./scripts/dpdk/set_hugepages.sh
-  # ./install/sbin/infrap4d
   ```
 
 ## Setup P4-K8S
-  Install Go package (go version go1.18.6 linux/amd64), following instructions at https://go.dev/doc/install
+  Install Go package (go version go1.19.4 linux/amd64), following instructions at https://go.dev/doc/install
  
   Pull P4-K8s and other software
   ```bash
-  #git clone https://github.com/ipdk-io/k8s-infra-offload.git p4-k8s
-  #cd p4-k8s
-  #git checkout dpdk_drop_4
+  # git clone https://github.com/ipdk-io/k8s-infra-offload.git p4-k8s
+  # cd p4-k8s
   ```
   
   Build p4-k8s images and other binaries as below
@@ -369,7 +369,6 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   <none>                                 <none>        485d7bc6ec38   5 minutes ago   1.38GB
   localhost:5000/infraagent              latest        500075b89922   6 minutes ago   68.7MB
   <none>                                 <none>        dc519d06de56   6 minutes ago   1.68GB
-  golang                                 1.18          f81bafb819d5   6 days ago      965MB
   ...
   ```
   
@@ -402,11 +401,6 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   ./bin/arp_proxy &
   ```
 
-  Start the containerd services
-  ```bash
-  # systemctl start containerd.service
-  ```
-    
   Initialize and start the core k8s components as below
   ```bash
   # kubeadm init --pod-network-cidr=<pod-cidr> --service-cidr=<service-cidr>
@@ -475,6 +469,11 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   ...
   ```
 
+  To delete above created test pods
+  ```bash
+  # kubectl delete pod test-pod test-pod2
+  ```
+
 ### Service deployment Test
   To test simple service deployment, user can use iperf based server available in https://github.com/Pharb/kubernetes-iperf3.git repository. Clone this repository and deploy the service as below:
   ```bash
@@ -496,8 +495,7 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   NAME                                        READY   STATUS    RESTARTS   AGE   IP           NODE    NOMINATED NODE   READINESS GATES
   iperf3-clients-8gkv7                        1/1     Running   0          18m   10.244.0.9   ins21   <none>           <none>
   iperf3-server-deployment-59bf4754f9-4hp4c   1/1     Running   0          18m   10.244.0.8   ins21   <none>           <none>
-  test-pod                                    1/1     Running   0          25m   10.244.0.6   ins21   <none>           <none>
-  test-pod2                                   1/1     Running   0          25m   10.244.0.7   ins21   <none>           <none>  
+  ...
   ```
   To test service traffic, iperf3 client can be started as below: 
   ```bash
@@ -513,20 +511,9 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   [  5]   0.00-1.00   sec   107 KBytes   880 Kbits/sec    2   1.41 KBytes
   [  5]   1.00-2.00   sec  0.00 Bytes  0.00 bits/sec    1   1.41 KBytes
   ```
-
-  To test service traffic, iperf3 client can be started as below: 
+  To clean up above created services
   ```bash
-  # cd kubernetes-iperf3
-  # ./steps/run.sh
-
-  The iperf3 client can also be executed manually inside the iperf client pod
-  # kubectl exec --stdin --tty <iperf3-clients-xxx> -- /bin/bash
-  # iperf3 -c iperf3-server
-  Connecting to host iperf3-server, port 5201
-  [  5] local 10.244.0.7 port 37728 connected to 10.96.186.247 port 5201
-  [ ID] Interval           Transfer     Bitrate         Retr  Cwnd
-  [  5]   0.00-1.00   sec   107 KBytes   880 Kbits/sec    2   1.41 KBytes
-  [  5]   1.00-2.00   sec  0.00 Bytes  0.00 bits/sec    1   1.41 KBytes
+  # ./steps/cleanup.sh
   ```
 
 ## Cleanup All  
