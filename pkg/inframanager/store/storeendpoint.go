@@ -102,12 +102,6 @@ func (ep EndPoint) DeleteFromStore() bool {
 		return false
 	}
 
-	_, err := net.ParseMAC(ep.PodMacAddress)
-	if err != nil {
-		log.Errorf("Invalid MAC Address %s", ep.PodMacAddress)
-		return false
-	}
-
 	//aquire lock before adding entry into the map
 	EndPointSet.EndPointLock.Lock()
 	//delete tmp entry from the map
@@ -120,12 +114,6 @@ func (ep EndPoint) DeleteFromStore() bool {
 func (ep EndPoint) GetFromStore() store {
 	if net.ParseIP(ep.PodIpAddress) == nil {
 		log.Errorf("Invalid IP Address %s", ep.PodIpAddress)
-		return nil
-	}
-
-	_, err := net.ParseMAC(ep.PodMacAddress)
-	if err != nil {
-		log.Errorf("Invalid MAC Address %s", ep.PodMacAddress)
 		return nil
 	}
 
