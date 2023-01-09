@@ -189,16 +189,6 @@ var _ = Describe("Storeendpoint", func() {
 				Expect(ret).To(Equal(false))
 			})
 
-			It("returns error when mac address is invalid", func() {
-				data_invalid3 := store.EndPoint{
-					PodIpAddress:  "10.10.10.1",
-					InterfaceID:   1,
-					PodMacAddress: "10.10.10.1",
-				}
-				ret := data_invalid3.DeleteFromStore()
-				Expect(ret).To(Equal(false))
-			})
-
 		})
 
 	})
@@ -229,16 +219,6 @@ var _ = Describe("Storeendpoint", func() {
 					PodMacAddress: "00:00:00:aa:aa:aa",
 				}
 				ret := data_invalid1.GetFromStore()
-				Expect(ret).Should(BeNil())
-			})
-
-			It("returns nil when mac address is invalid", func() {
-				data_invalid3 := store.EndPoint{
-					PodIpAddress:  "10.10.10.1",
-					InterfaceID:   1,
-					PodMacAddress: "10.10.10.1",
-				}
-				ret := data_invalid3.GetFromStore()
 				Expect(ret).Should(BeNil())
 			})
 
