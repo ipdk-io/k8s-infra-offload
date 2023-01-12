@@ -12,7 +12,8 @@ concurrency:
   group: build-and-test-${{ github.ref }}
   cancel-in-progress: true
 
-permissions: read-all
+permissions:
+  packages: write
 
 jobs:
 
