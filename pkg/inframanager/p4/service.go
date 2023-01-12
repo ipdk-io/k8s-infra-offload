@@ -29,34 +29,32 @@ import (
 func WriteDestIpTable(ctx context.Context, p4RtC *client.Client,
 	podIpAddr []string, portID []uint16, modBlobPtrDnat []uint32,
 	action InterfaceType) error {
+	P4w = GetP4Wrapper(Env)
 	switch action {
 	case Insert, Update:
 		for i := 0; i < len(modBlobPtrDnat); i++ {
-			if net.ParseIP(podIpAddr[i]) == nil {
-				err := fmt.Errorf("Invalid IP address: %s", podIpAddr[i])
-				return err
-			}
-
-			entryAdd := p4RtC.NewTableEntry(
+			entryAdd := P4w.NewTableEntry(
+				p4RtC,
 				"k8s_dp_control.write_dest_ip_table",
 				map[string]client.MatchInterface{
 					"meta.mod_blob_ptr_dnat": &client.ExactMatch{
 						Value: valueToBytes(modBlobPtrDnat[i]),
 					},
 				},
-				p4RtC.NewTableActionDirect("k8s_dp_control.update_dst_ip",
+				P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.update_dst_ip",
 					[][]byte{Pack32BinaryIP4(podIpAddr[i]),
 						valueToBytes16(portID[i])}),
 				nil,
 			)
-			if err := p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
+			if err := P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
 				log.Errorf("Cannot insert entry into 'write_dest_ip_table': %v", err)
 				return err
 			}
 		}
 	case Delete:
 		for i := 0; i < len(modBlobPtrDnat); i++ {
-			entryDelete := p4RtC.NewTableEntry(
+			entryDelete := P4w.NewTableEntry(
+				p4RtC,
 				"k8s_dp_control.write_dest_ip_table",
 				map[string]client.MatchInterface{
 					"meta.mod_blob_ptr_dnat": &client.ExactMatch{
@@ -66,7 +64,7 @@ func WriteDestIpTable(ctx context.Context, p4RtC *client.Client,
 				nil,
 				nil,
 			)
-			if err := p4RtC.DeleteTableEntry(ctx, entryDelete); err != nil {
+			if err := P4w.DeleteTableEntry(ctx, p4RtC, entryDelete); err != nil {
 				log.Errorf("Cannot delete entry from 'write_dest_ip_table': %v", err)
 				return err
 			}
@@ -86,6 +84,7 @@ func AsSl3TcpTable(ctx context.Context, p4RtC *client.Client,
 	var err error
 	var memberList []*p4_v1.ActionProfileGroup_Member
 
+	P4w = GetP4Wrapper(Env)
 	for i := 0; i < len(memberID); i++ {
 		member := &p4_v1.ActionProfileGroup_Member{
 			MemberId: memberID[i],
@@ -94,7 +93,8 @@ func AsSl3TcpTable(ctx context.Context, p4RtC *client.Client,
 
 	}
 
-	entryGroupTcp := p4RtC.NewActionProfileGroup(
+	entryGroupTcp := P4w.NewActionProfileGroup(
+		p4RtC,
 		"k8s_dp_control.as_sl3_tcp",
 		groupID,
 		memberList,
@@ -102,14 +102,15 @@ func AsSl3TcpTable(ctx context.Context, p4RtC *client.Client,
 	)
 
 	if action == Delete {
-		if err = p4RtC.DeleteActionProfileGroup(ctx, entryGroupTcp); err != nil {
+		if err = P4w.DeleteActionProfileGroup(ctx, p4RtC, entryGroupTcp); err != nil {
 			log.Errorf("Cannot delete group entry from 'as_sl3_tcp table': %v", err)
 			return err
 		}
 	}
 
 	for i := 0; i < len(memberID); i++ {
-		entryMemberTcp := p4RtC.NewActionProfileMember(
+		entryMemberTcp := P4w.NewActionProfileMember(
+			p4RtC,
 			"k8s_dp_control.as_sl3_tcp",
 			memberID[i],
 			"k8s_dp_control.set_default_lb_dest",
@@ -117,12 +118,12 @@ func AsSl3TcpTable(ctx context.Context, p4RtC *client.Client,
 		)
 		switch action {
 		case Insert, Update:
-			if err = p4RtC.InsertActionProfileMember(ctx, entryMemberTcp); err != nil {
+			if err = P4w.InsertActionProfileMember(ctx, p4RtC, entryMemberTcp); err != nil {
 				log.Errorf("Cannot insert member entry into 'as_sl3_tcp table': %v", err)
 				return err
 			}
 		case Delete:
-			if err = p4RtC.DeleteActionProfileMember(ctx, entryMemberTcp); err != nil {
+			if err = P4w.DeleteActionProfileMember(ctx, p4RtC, entryMemberTcp); err != nil {
 				log.Errorf("Cannot delete member entry from 'as_sl3_tcp table': %v", err)
 				return err
 			}
@@ -135,12 +136,12 @@ func AsSl3TcpTable(ctx context.Context, p4RtC *client.Client,
 
 	switch action {
 	case Insert:
-		if err = p4RtC.InsertActionProfileGroup(ctx, entryGroupTcp); err != nil {
+		if err = P4w.InsertActionProfileGroup(ctx, p4RtC, entryGroupTcp); err != nil {
 			log.Errorf("Cannot insert group entry into 'as_sl3_tcp table': %v", err)
 			return err
 		}
 	case Update:
-		if err = p4RtC.ModifyActionProfileGroup(ctx, entryGroupTcp); err != nil {
+		if err = P4w.ModifyActionProfileGroup(ctx, p4RtC, entryGroupTcp); err != nil {
 			log.Errorf("Cannot update group entry into 'as_sl3_tcp table': %v", err)
 			return err
 		}
@@ -160,6 +161,7 @@ func AsSl3UdpTable(ctx context.Context, p4RtC *client.Client,
 	var err error
 	var memberList []*p4_v1.ActionProfileGroup_Member
 
+	P4w = GetP4Wrapper(Env)
 	for i := 0; i < len(memberID); i++ {
 		member := &p4_v1.ActionProfileGroup_Member{
 			MemberId: memberID[i],
@@ -167,7 +169,8 @@ func AsSl3UdpTable(ctx context.Context, p4RtC *client.Client,
 		memberList = append(memberList, member)
 	}
 
-	entryGroupUdp := p4RtC.NewActionProfileGroup(
+	entryGroupUdp := P4w.NewActionProfileGroup(
+		p4RtC,
 		"k8s_dp_control.as_sl3_udp",
 		groupID,
 		memberList,
@@ -175,14 +178,15 @@ func AsSl3UdpTable(ctx context.Context, p4RtC *client.Client,
 	)
 
 	if action == Delete {
-		if err = p4RtC.DeleteActionProfileGroup(ctx, entryGroupUdp); err != nil {
+		if err = P4w.DeleteActionProfileGroup(ctx, p4RtC, entryGroupUdp); err != nil {
 			log.Errorf("Cannot delete group entry from 'as_sl3_udp table': %v", err)
 			return err
 		}
 	}
 
 	for i := 0; i < len(memberID); i++ {
-		entryMemberUdp := p4RtC.NewActionProfileMember(
+		entryMemberUdp := P4w.NewActionProfileMember(
+			p4RtC,
 			"k8s_dp_control.as_sl3_udp",
 			memberID[i],
 			"k8s_dp_control.set_default_lb_dest",
@@ -190,12 +194,12 @@ func AsSl3UdpTable(ctx context.Context, p4RtC *client.Client,
 		)
 		switch action {
 		case Insert, Update:
-			if err = p4RtC.InsertActionProfileMember(ctx, entryMemberUdp); err != nil {
+			if err = P4w.InsertActionProfileMember(ctx, p4RtC, entryMemberUdp); err != nil {
 				log.Errorf("Cannot insert member entry into 'as_sl3_udp table': %v", err)
 				return err
 			}
 		case Delete:
-			if err = p4RtC.DeleteActionProfileMember(ctx, entryMemberUdp); err != nil {
+			if err = P4w.DeleteActionProfileMember(ctx, p4RtC, entryMemberUdp); err != nil {
 				log.Errorf("Cannot delete member entry from 'as_sl3_udp table': %v", err)
 				return err
 			}
@@ -208,12 +212,12 @@ func AsSl3UdpTable(ctx context.Context, p4RtC *client.Client,
 
 	switch action {
 	case Insert:
-		if err = p4RtC.InsertActionProfileGroup(ctx, entryGroupUdp); err != nil {
+		if err = P4w.InsertActionProfileGroup(ctx, p4RtC, entryGroupUdp); err != nil {
 			log.Errorf("Cannot insert group entry into 'as_sl3_udp table': %v", err)
 			return err
 		}
 	case Update:
-		if err = p4RtC.ModifyActionProfileGroup(ctx, entryGroupUdp); err != nil {
+		if err = P4w.ModifyActionProfileGroup(ctx, p4RtC, entryGroupUdp); err != nil {
 			log.Errorf("Cannot insert group entry into 'as_sl3_udp table': %v", err)
 			return err
 		}
@@ -230,10 +234,7 @@ func AsSl3UdpTable(ctx context.Context, p4RtC *client.Client,
 func TxBalanceTcpTable(ctx context.Context, p4RtC *client.Client,
 	serviceIpAddr string, servicePort uint16,
 	groupID uint32, action InterfaceType) error {
-	if net.ParseIP(serviceIpAddr) == nil {
-		err := fmt.Errorf("Invalid IP Address: %s", serviceIpAddr)
-		return err
-	}
+	P4w = GetP4Wrapper(Env)
 
 	mfs := map[string]client.MatchInterface{
 		"hdr.ipv4.dst_addr": &client.ExactMatch{
@@ -243,20 +244,21 @@ func TxBalanceTcpTable(ctx context.Context, p4RtC *client.Client,
 			Value: valueToBytes16(servicePort),
 		},
 	}
-	entryTcp := p4RtC.NewTableEntry(
+	entryTcp := P4w.NewTableEntry(
+		p4RtC,
 		"k8s_dp_control.tx_balance_tcp",
 		mfs,
-		p4RtC.NewTableActionGroup(groupID),
+		P4w.NewTableActionGroup(p4RtC, groupID),
 		nil,
 	)
 	switch action {
 	case Insert:
-		if err := p4RtC.InsertTableEntry(ctx, entryTcp); err != nil {
+		if err := P4w.InsertTableEntry(ctx, p4RtC, entryTcp); err != nil {
 			log.Errorf("Cannot insert entry into 'tx_balance_tcp table': %v", err)
 			return err
 		}
 	case Delete:
-		if err := p4RtC.DeleteTableEntry(ctx, entryTcp); err != nil {
+		if err := P4w.DeleteTableEntry(ctx, p4RtC, entryTcp); err != nil {
 			log.Errorf("Cannot delete entry from 'tx_balance_tcp table': %v", err)
 			return err
 		}
@@ -273,10 +275,7 @@ func TxBalanceTcpTable(ctx context.Context, p4RtC *client.Client,
 func TxBalanceUdpTable(ctx context.Context, p4RtC *client.Client,
 	serviceIpAddr string, servicePort uint16,
 	groupID uint32, action InterfaceType) error {
-	if net.ParseIP(serviceIpAddr) == nil {
-		err := fmt.Errorf("Invalid IP Address: %s", serviceIpAddr)
-		return err
-	}
+	P4w = GetP4Wrapper(Env)
 
 	mfs := map[string]client.MatchInterface{
 		"hdr.ipv4.dst_addr": &client.ExactMatch{
@@ -286,20 +285,21 @@ func TxBalanceUdpTable(ctx context.Context, p4RtC *client.Client,
 			Value: valueToBytes16(servicePort),
 		},
 	}
-	entryUdp := p4RtC.NewTableEntry(
+	entryUdp := P4w.NewTableEntry(
+		p4RtC,
 		"k8s_dp_control.tx_balance_udp",
 		mfs,
-		p4RtC.NewTableActionGroup(groupID),
+		P4w.NewTableActionGroup(p4RtC, groupID),
 		nil,
 	)
 	switch action {
 	case Insert:
-		if err := p4RtC.InsertTableEntry(ctx, entryUdp); err != nil {
+		if err := P4w.InsertTableEntry(ctx, p4RtC, entryUdp); err != nil {
 			log.Errorf("Cannot insert entry into 'tx_balance_udp table': %v", err)
 			return err
 		}
 	case Delete:
-		if err := p4RtC.DeleteTableEntry(ctx, entryUdp); err != nil {
+		if err := P4w.DeleteTableEntry(ctx, p4RtC, entryUdp); err != nil {
 			log.Errorf("Cannot delete entry from 'tx_balance_udp table': %v", err)
 			return err
 		}
@@ -316,31 +316,29 @@ func TxBalanceUdpTable(ctx context.Context, p4RtC *client.Client,
 func WriteSourceIpTable(ctx context.Context, p4RtC *client.Client,
 	ModBlobPtrSnat uint32, serviceIpAddr string, servicePort uint16,
 	action InterfaceType) error {
+	P4w = GetP4Wrapper(Env)
 	switch action {
 	case Insert:
-		if net.ParseIP(serviceIpAddr) == nil {
-			err := fmt.Errorf("Invalid IP Address: %s", serviceIpAddr)
-			return err
-		}
-
-		entryAdd := p4RtC.NewTableEntry(
+		entryAdd := P4w.NewTableEntry(
+			p4RtC,
 			"k8s_dp_control.write_source_ip_table",
 			map[string]client.MatchInterface{
 				"meta.mod_blob_ptr_snat": &client.ExactMatch{
 					Value: valueToBytes(ModBlobPtrSnat),
 				},
 			},
-			p4RtC.NewTableActionDirect("k8s_dp_control.update_src_ip",
+			P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.update_src_ip",
 				[][]byte{Pack32BinaryIP4(serviceIpAddr),
 					valueToBytes16(servicePort)}),
 			nil,
 		)
-		if err := p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
+		if err := P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
 			log.Errorf("Cannot insert entry into 'write_source_ip_table table': %v", err)
 			return err
 		}
 	case Delete:
-		entryDelete := p4RtC.NewTableEntry(
+		entryDelete := P4w.NewTableEntry(
+			p4RtC,
 			"k8s_dp_control.write_source_ip_table",
 			map[string]client.MatchInterface{
 				"meta.mod_blob_ptr_snat": &client.ExactMatch{
@@ -350,7 +348,7 @@ func WriteSourceIpTable(ctx context.Context, p4RtC *client.Client,
 			nil,
 			nil,
 		)
-		if err := p4RtC.DeleteTableEntry(ctx, entryDelete); err != nil {
+		if err := P4w.DeleteTableEntry(ctx, p4RtC, entryDelete); err != nil {
 			log.Errorf("Cannot delete entry from 'write_source_ip_table table': %v", err)
 			return err
 		}
@@ -368,15 +366,12 @@ func WriteSourceIpTable(ctx context.Context, p4RtC *client.Client,
 func SetMetaTcpTable(ctx context.Context, p4RtC *client.Client,
 	podIpAddr []string, portID []uint16,
 	ModBlobPtrSnat uint32, action InterfaceType) error {
+	P4w = GetP4Wrapper(Env)
 	switch action {
 	case Insert, Update:
 		for i := 0; i < len(podIpAddr); i++ {
-			if net.ParseIP(podIpAddr[i]) == nil {
-				err := fmt.Errorf("Invalid IP Address: %s", podIpAddr[i])
-				return err
-			}
-
-			entryAdd := p4RtC.NewTableEntry(
+			entryAdd := P4w.NewTableEntry(
+				p4RtC,
 				"k8s_dp_control.set_meta_tcp",
 				map[string]client.MatchInterface{
 					"hdr.ipv4.dst_addr": &client.ExactMatch{
@@ -386,23 +381,19 @@ func SetMetaTcpTable(ctx context.Context, p4RtC *client.Client,
 						Value: valueToBytes16(portID[i]),
 					},
 				},
-				p4RtC.NewTableActionDirect("k8s_dp_control.set_key_for_reverse_ct",
+				P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.set_key_for_reverse_ct",
 					[][]byte{valueToBytes(ModBlobPtrSnat)}),
 				nil,
 			)
-			if err := p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
+			if err := P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
 				log.Errorf("Cannot insert entry in 'set_meta_tcp table': %v", err)
 				return err
 			}
 		}
 	case Delete:
 		for i := 0; i < len(podIpAddr); i++ {
-			if net.ParseIP(podIpAddr[i]) == nil {
-				err := fmt.Errorf("Invalid IP Address: %s", podIpAddr[i])
-				return err
-			}
-
-			entryDelete := p4RtC.NewTableEntry(
+			entryDelete := P4w.NewTableEntry(
+				p4RtC,
 				"k8s_dp_control.set_meta_tcp",
 				map[string]client.MatchInterface{
 					"hdr.ipv4.dst_addr": &client.ExactMatch{
@@ -415,7 +406,7 @@ func SetMetaTcpTable(ctx context.Context, p4RtC *client.Client,
 				nil,
 				nil,
 			)
-			if err := p4RtC.DeleteTableEntry(ctx, entryDelete); err != nil {
+			if err := P4w.DeleteTableEntry(ctx, p4RtC, entryDelete); err != nil {
 				log.Errorf("Cannot delete entry from 'set_meta_tcp table': %v", err)
 				return err
 			}
@@ -431,15 +422,12 @@ func SetMetaTcpTable(ctx context.Context, p4RtC *client.Client,
 func SetMetaUdpTable(ctx context.Context, p4RtC *client.Client,
 	podIpAddr []string, portID []uint16,
 	ModBlobPtrSnat uint32, action InterfaceType) error {
+	P4w = GetP4Wrapper(Env)
 	switch action {
 	case Insert, Update:
 		for i := 0; i < len(podIpAddr); i++ {
-			if net.ParseIP(podIpAddr[i]) == nil {
-				err := fmt.Errorf("Invalid IP Address: %s", podIpAddr[i])
-				return err
-			}
-
-			entryAdd := p4RtC.NewTableEntry(
+			entryAdd := P4w.NewTableEntry(
+				p4RtC,
 				"k8s_dp_control.set_meta_udp",
 				map[string]client.MatchInterface{
 					"hdr.ipv4.dst_addr": &client.ExactMatch{
@@ -449,23 +437,19 @@ func SetMetaUdpTable(ctx context.Context, p4RtC *client.Client,
 						Value: valueToBytes16(portID[i]),
 					},
 				},
-				p4RtC.NewTableActionDirect("k8s_dp_control.set_key_for_reverse_ct",
+				P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.set_key_for_reverse_ct",
 					[][]byte{valueToBytes(ModBlobPtrSnat)}),
 				nil,
 			)
-			if err := p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
+			if err := P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
 				log.Errorf("Cannot insert entry in 'set_meta_udp table': %v", err)
 				return err
 			}
 		}
 	case Delete:
 		for i := 0; i < len(podIpAddr); i++ {
-			if net.ParseIP(podIpAddr[i]) == nil {
-				err := fmt.Errorf("Invalid IP Address: %s", podIpAddr[i])
-				return err
-			}
-
-			entryDelete := p4RtC.NewTableEntry(
+			entryDelete := P4w.NewTableEntry(
+				p4RtC,
 				"k8s_dp_control.set_meta_udp",
 				map[string]client.MatchInterface{
 					"hdr.ipv4.dst_addr": &client.ExactMatch{
@@ -478,7 +462,7 @@ func SetMetaUdpTable(ctx context.Context, p4RtC *client.Client,
 				nil,
 				nil,
 			)
-			if err := p4RtC.DeleteTableEntry(ctx, entryDelete); err != nil {
+			if err := P4w.DeleteTableEntry(ctx, p4RtC, entryDelete); err != nil {
 				log.Errorf("Cannot delete entry from 'set_meta_udp table': %v", err)
 				return err
 			}
@@ -517,7 +501,17 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		epNum = 0
 	}
 
+	if net.ParseIP(s.ClusterIp) == nil {
+		err := fmt.Errorf("Invalid cluster IP: %s", s.ClusterIp)
+		return err, store.Service{}
+	}
+
 	for i := 0; i < len(podIpAddr); i, epNum = i+1, epNum+1 {
+		if net.ParseIP(podIpAddr[i]) == nil {
+			err := fmt.Errorf("Invalid IP Address: %s", podIpAddr[i])
+			return err, store.Service{}
+		}
+
 		id := uint32((groupID << 4) | ((epNum + 1) & 0xF))
 
 		memberID = append(memberID, id)
