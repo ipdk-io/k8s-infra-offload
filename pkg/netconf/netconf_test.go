@@ -1796,7 +1796,7 @@ func fakeSendSetupHostInterfaceErr(request *proto.SetupHostInterfaceRequest) err
 }
 
 func fakeGrpcDial(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
-	return grpc.DialContext(context.TODO(), "", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	return grpc.DialContext(context.TODO(), "foo.bar:54321", grpc.WithTransportCredentials(insecure.NewCredentials()))
 }
 
 func fakeGrpcDialErr(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
