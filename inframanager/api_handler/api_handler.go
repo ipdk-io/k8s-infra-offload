@@ -245,8 +245,7 @@ func InsertDefaultRule() {
 
 	IP, netIp, err := net.ParseCIDR(types.DefaultRoute)
 	if err != nil {
-		log.Errorf("Failed to get IP from the default route cidr, %s",
-			types.DefaultRoute)
+		log.Errorf("Failed to get IP from the default route cidr %s", types.DefaultRoute)
 		return
 	}
 
@@ -254,8 +253,7 @@ func InsertDefaultRule() {
 
 	ip := IP.String()
 	if len(ip) == 0 {
-		log.Errorf("Empty value: %s, cannot program default gateway",
-			types.DefaultRoute)
+		log.Errorf("Empty value %s, cannot program default gateway", types.DefaultRoute)
 		return
 	}
 
@@ -319,30 +317,26 @@ func insertRule(log *log.Entry, ctx context.Context, p4RtC *client.Client, macAd
 			epEntry.InterfaceID == ep.InterfaceID &&
 			epEntry.PodMacAddress == ep.PodMacAddress {
 
-			logger.Infof("Entry %s %s %d already exists",
-				macAddr, ipAddr, portID)
+			logger.Debugf("Entry %s %s %d already exists", macAddr, ipAddr, portID)
 			return true, nil
 		} else {
-			err = fmt.Errorf("A different entry for %s already exists in the store", ipAddr)
+			err = fmt.Errorf("A different entry for %s, already exists in the store", ipAddr)
 			return false, err
 		}
 	}
 
 	logger.Infof("Inserting entry into the cni tables")
 	if err = p4.InsertCniRules(ctx, p4RtC, macAddr, ipAddr, portID, ifaceType); err != nil {
-		logger.Errorf("Failed to insert the entries for %s %s", macAddr, ipAddr)
+		logger.Errorf("Failed to insert the entries for cni add %s %s", macAddr, ipAddr)
 		return false, err
 	}
-	logger.Infof("Inserted the entries %s %s %d into the pipeline",
-		macAddr, ipAddr, portID)
+	logger.Debugf("Inserted the entries %s %s %d into the pipeline", macAddr, ipAddr, portID)
 
 	if ep.WriteToStore() != true {
-		err = fmt.Errorf("Failed to add %s %s %d to the store",
-			macAddr, ipAddr, portID)
+		err = fmt.Errorf("Failed to add %s %s %d entry to the store", macAddr, ipAddr, portID)
 		return false, err
 	}
-	logger.Infof("Inserted the entries %s %s %d into the store",
-		macAddr, ipAddr, portID)
+	logger.Debugf("Inserted the entries %s %s %d into the store", macAddr, ipAddr, portID)
 
 	return true, err
 }
@@ -410,14 +404,14 @@ func (s *ApiServer) DeleteNetwork(ctx context.Context, in *proto.DeleteNetworkRe
 		out.Successful = false
 		return out, err
 	}
-	logger.Infof("Deleted the entries %s %s from the pipeline", macAddr, ipAddr)
+	logger.Debugf("Deleted the entries %s %s from the pipeline", macAddr, ipAddr)
 
 	if ep.DeleteFromStore() != true {
 		out.Successful = false
 		err = fmt.Errorf("Failed to delete %s %s from the store", macAddr, ipAddr)
 		return out, err
 	}
-	logger.Infof("Deleted the entries %s %s from the store", macAddr, ipAddr)
+	logger.Debugf("Deleted the entries %s %s from the store", macAddr, ipAddr)
 
 	return out, err
 }
@@ -485,7 +479,7 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 	*/
 	if entry != nil {
 		logger.Infof("Incoming NatTranslationUpdate %+v", in)
-		logger.Infof("Service ip %v and proto %v port %v , num of endpoints %v",
+		logger.Debugf("Service ip %v and proto %v port %v , num of endpoints %v",
 			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port, len(in.Backends))
 
 		service = entry.(store.Service)
@@ -509,7 +503,7 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 			New service. Add it to store
 		*/
 		logger.Infof("Incoming NatTranslationAdd %+v", in)
-		logger.Infof("Service ip %v proto %v port %v, num of endpoints %v",
+		logger.Debugf("Service ip %v proto %v port %v, num of endpoints %v",
 			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port, len(in.Backends))
 
 		service.MacAddr = serviceMacAddr
@@ -539,18 +533,18 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 
 	if err, service = p4.InsertServiceRules(ctx, server.p4RtC, podIpAddrs,
 		podPortIDs, service, update); err != nil {
-		logger.Errorf("Failed to insert the service entry %s:%s:%d, backends: %v into the pipeline",
+		logger.Errorf("Failed to insert the service entry %s:%s:%d, backends: %v, into the pipeline",
 			serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
 		out.Successful = false
 		return out, err
 	}
-	logger.Infof("Inserted the service entry %s:%s:%d, backends: %v into the pipeline",
+	logger.Debugf("Inserted the service entry %s:%s:%d, backends: %v into the pipeline",
 		serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
 
 	if update {
 		/* Update only the endpoint details to the store */
 		if !service.UpdateToStore() {
-			logger.Errorf("Failed to update service entry %s:%s:%d, backends: %v into the store. Reverting from the pipeline",
+			logger.Errorf("Failed to update service entry %s:%s:%d, backends: %v, into the store. Reverting from the pipeline",
 				serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
 
 			p4.DeleteServiceRules(ctx, server.p4RtC, service)
@@ -560,7 +554,7 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 			out.Successful = false
 			return out, err
 		}
-		logger.Infof("Updated the service entry %s:%s:%d, backends: %v in the store",
+		logger.Debugf("Updated the service entry %s:%s:%d, backends: %v in the store",
 			serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
 	} else {
 		if !service.WriteToStore() {
@@ -574,7 +568,7 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 			out.Successful = false
 			return out, err
 		}
-		logger.Infof("Inserted the service entry %s:%s:%d, backends: %v into the store",
+		logger.Debugf("Inserted the service entry %s:%s:%d, backends: %v into the store",
 			serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
 	}
 
@@ -800,7 +794,7 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 		return out, err
 	}
 
-	logger.Infof("Interface: %s, port id: %d", in.IfName, portID)
+	logger.Debugf("Interface: %s, port id: %d", in.IfName, portID)
 
 	if status, err := insertRule(s.log, ctx, server.p4RtC, macAddr,
 		ipAddr, int(portID), p4.HOST); err != nil {
@@ -821,7 +815,7 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 	status, err := insertRule(s.log, ctx, server.p4RtC, hostInterfaceMac,
 		config.NodeIP, int(portID), p4.HOST)
 	if err != nil {
-		logger.Errorf("Failed to insert rule to the pipeline ip: %s mac: %s port id: %d err: %v",
+		logger.Errorf("Failed to insert rule to the pipeline p: %s mac: %s port id: %d err: %v",
 			config.NodeIP, macAddr, portID, err)
 	}
 	out.Successful = status

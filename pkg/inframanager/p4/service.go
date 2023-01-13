@@ -522,7 +522,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 
 		memberID = append(memberID, id)
 		modblobPtrDNAT = append(modblobPtrDNAT, id)
-		log.Infof("modblobPtrDNAT: %d memberid: %d, pod ip: %s, portID: %d",
+		log.Debugf("modblobPtrDNAT: %d memberid: %d, pod ip: %s, portID: %d",
 			modblobPtrDNAT[i], memberID[i], podIpAddr[i], portID[i])
 
 		serviceEp := store.ServiceEndPoint{
@@ -535,7 +535,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	}
 	service.NumEndPoints = epNum
 
-	log.Infof("group id: %d, service ip: %s, service mac: %s, service port: %d",
+	log.Debugf("group id: %d, service ip: %s, service mac: %s, service port: %d",
 		groupID, service.ClusterIp, service.MacAddr, service.Port)
 
 	if err = WriteDestIpTable(ctx, p4RtC, podIpAddr, portID,
@@ -639,7 +639,7 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 		podPortIDs = append(podPortIDs, uint16(ep.Port))
 		memberID = append(memberID, ep.MemberID)
 		modblobPtrDNAT = append(modblobPtrDNAT, ep.ModBlobPtrDNAT)
-		log.Infof("modblobPtrDNAT: %d memberid: %d, pod ip: %s, portID: %d",
+		log.Debugf("modblobPtrDNAT: %d memberid: %d, pod ip: %s, portID: %d",
 			ep.ModBlobPtrDNAT, ep.MemberID, ep.IpAddress, ep.Port)
 	}
 
