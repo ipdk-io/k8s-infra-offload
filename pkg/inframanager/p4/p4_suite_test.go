@@ -34,7 +34,7 @@ var _ = Describe("cni", func() {
 
 	Describe("ArptToPortTable", func() {
 
-		Context("Programs ArptToPortTable", func() {
+		Context("Configures ArptToPortTable", func() {
 
 			BeforeEach(func() {
 				p4.Env = "test"
