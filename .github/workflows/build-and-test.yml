@@ -19,6 +19,7 @@ jobs:
 
   BuildAndTest:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
     - uses: actions/checkout@v3
 
@@ -41,6 +42,19 @@ jobs:
         #make test
         echo "skipping unit test"
 
+  DockerBuildAndPush:
+    needs: BuildAndTest
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+
+    - uses: actions/checkout@v3
+
+    - name: "Set up Go"
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.19.4
+
     - name: "Create k8s Kind Cluster"
       uses: helm/kind-action@v1.4.0
 
@@ -50,11 +64,11 @@ jobs:
         kustomize version
 
     - name: "docker build"
-      run: make docker-build IMAGE_REGISTRY=ghcr.io/ipdk-io/k8s-infra-offload/ IMAGE_VERSION=main
+      run: make docker-build IMAGE_REGISTRY=ghcr.io/ipdk-io/k8s-infra-offload/ IMAGE_VERSION=sha-${GITHUB_SHA::7}
 
     - name: "docker deploy"
       run: |
-        make deploy IMAGE_REGISTRY=ghcr.io/ipdk-io/k8s-infra-offload/ IMAGE_VERSION=main
+        make deploy IMAGE_REGISTRY=ghcr.io/ipdk-io/k8s-infra-offload/ IMAGE_VERSION=sha-${GITHUB_SHA::7}
         # getnodes using kubectl
         kubectl get nodes -o wide
 
@@ -63,9 +77,9 @@ jobs:
       uses: docker/login-action@v2
       with:
         registry: ghcr.io
-        username: ${{ github.actor }}
+        username: ${{ github.repository_owner }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: "push docker images to registry"
       #if: github.event_name == 'push'
-      run: make docker-push IMAGE_REGISTRY=ghcr.io/ipdk-io/k8s-infra-offload/ IMAGE_VERSION=main
+      run: make docker-push IMAGE_REGISTRY=ghcr.io/ipdk-io/k8s-infra-offload/ IMAGE_VERSION=sha-${GITHUB_SHA::7}
