@@ -32,7 +32,7 @@ func ArptToPortTable(ctx context.Context, p4RtC *client.Client, arpTpa string, p
 	var err error
 	P4w = GetP4Wrapper(Env)
 
-  if flag == true {
+	if flag == true {
 		entryAdd := P4w.NewTableEntry(
 			p4RtC,
 			"k8s_dp_control.arpt_to_port_table",
