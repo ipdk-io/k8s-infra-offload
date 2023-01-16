@@ -71,10 +71,10 @@ jobs:
 
     - name: "docker deploy"
       run: |
-        make deploy IMAGE_REGISTRY=ghcr.io/ipdk-io/k8s-infra-offload/ IMAGE_VERSION=sha-${GITHUB_SHA::7}
+        make deploy IMAGE_REGISTRY=ghcr.io//${{ github.repository_owner }}k8s-infra-offload/ IMAGE_VERSION=sha-${GITHUB_SHA::7}
         # getnodes using kubectl
         kubectl get nodes -o wide
-        docker images | grep "ghcr.io//${{ github.repository_owner }}k8s-infra-offload"
+        #docker images | grep "ghcr.io//${{ github.repository_owner }}k8s-infra-offload"
 
     - name: "Login to GitHub Container Registry"
       if: github.event_name == 'push'
