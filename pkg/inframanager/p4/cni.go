@@ -49,8 +49,6 @@ func ArptToPortTable(ctx context.Context, p4RtC *client.Client, arpTpa string, p
 				arpTpa, port, err)
 			return err
 		}
-		log.Debugf("Successfully inserted entry into arpt_to_port_table, ip: %s, port: %d",
-			arpTpa, port)
 	} else {
 		entryDelete := P4w.NewTableEntry(
 			p4RtC,
@@ -68,8 +66,6 @@ func ArptToPortTable(ctx context.Context, p4RtC *client.Client, arpTpa string, p
 				arpTpa, port, err)
 			return err
 		}
-		log.Debugf("Successfully deleted entry from arpt_to_port_table, ip: %s, port: %d",
-			arpTpa, port)
 	}
 
 	return nil
