@@ -16,28 +16,21 @@ package config
 
 // Configurations exported
 type Configuration struct {
-	Server        ServerConf
-	Client        ClientConf
-	GNMIServer    ServerConf
-	HostName      string
-	NodeIP        string
-	LogLevel      string
-	P4ProgConf    string
-	P4InfoPath    string
-	P4BinPath     string
-	DeviceId      uint64
-	EnableService bool
-	EnableRouting bool
-	DefaultDevice int
-	EXAMPLE_PATH  string
-	EXAMPLE_VAR   string
+	GrpcServer GrpcServerConf
+	GnmiServer GnmiServerConf
+	HostName   string
+	NodeIP     string
+	LogLevel   string
+	P4InfoPath string
+	P4BinPath  string
+	DeviceId   uint64
 }
 
 // ServerConfigurations exported
-type ServerConf struct {
+type GnmiServerConf struct {
 	Addr string
 }
 
-type ClientConf struct {
+type GrpcServerConf struct {
 	Addr string
 }

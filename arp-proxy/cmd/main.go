@@ -41,8 +41,8 @@ func logInit() {
 	if err != nil {
 		panic(err)
 	}
-	mw := io.MultiWriter(os.Stdout, logFile)
-	log.SetOutput(mw)
+
+	log.SetOutput(logFile)
 	log.SetLevel(log.DebugLevel)
 	log.SetReportCaller(true)
 	log.SetFormatter(&log.TextFormatter{

@@ -15,6 +15,7 @@
 package store
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -47,6 +48,14 @@ func InitServiceStore(setFwdPipe bool) bool {
 	*/
 	if setFwdPipe {
 		flags = flags | os.O_TRUNC
+	}
+
+	if _, err := os.Stat(storePath); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(storePath, 0640)
+		if err != nil {
+			log.Error("Failed to create directory ", storePath)
+			return false
+		}
 	}
 
 	/* Create the store file if it doesn't exist */
