@@ -22,6 +22,10 @@
 - The number of TAP interfaces created must be a power of 2 and more than 4. For example, it can be 8, 16, 32 and so on.
 - The P4 data plane program (k8s_dp.p4) and the configuration file (k8s_dp.conf), must not be modified as the k8s control plane software is tightly coupled with the pipeline. The P4 compiler generated artifacts are available in the container and must be used as is.
 - The firewall, if enabled in host OS, should either be disabled or configured to allow required traffic to flow through.
+- Many steps contained in this README require root permissions, especially the
+  ones which install kubernetes and related software and configure system files.
+  So, even though many steps can be carried out as non-root user, it is recommended
+  to run all the steps as root to avoid any confusion.
 
 ## Kubernetes installation
 If Kubernetes and other required components are already installed on the machine, then proceed to [IPDK Networking recipe install](#ipdk-networking-recipe-install)
@@ -383,7 +387,7 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   Scripts requires following env variables to be set - SDE_INSTALL, IPDK_RECIPE, DEPEND_INSTALL . These env variables are defined in networking-recipe/main/docs/ipdk-dpdk.md
 
   ```bash
-  # ./p4-k8s/scripts/create_interfaces.sh <8/16/32/...>
+  # ./scripts/create_interfaces.sh <8/16/32/...>
   ```
     
   After running the above script, verify that infrap4d is running.
@@ -395,7 +399,7 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   Run ARP-Proxy script, which would create a new namespace, assign first tap
   interface i.e. P4TAP_0 to it, and finally run the arp-proxy on that interface.
   ```bash
-  ./p4-k8s/scripts/arp_proxy.sh
+  ./scripts/arp_proxy.sh
   ```
 
   Initialize and start the core k8s components as below
@@ -406,8 +410,8 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   Once K8s control plane initialization is complete successfully, then (as non-root user)
   ```bash
   # mkdir -p $HOME/.kube
-  # sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-  # sudo chown $(id -u):$(id -g) $HOME/.kube/config
+  # cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  # chown $(id -u):$(id -g) $HOME/.kube/config
   ```
   Or (as root user)
   ```bash
