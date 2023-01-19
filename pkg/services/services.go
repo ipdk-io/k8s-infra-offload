@@ -141,7 +141,8 @@ func NewServiceServer(log *logrus.Entry, handler NatSettingsHandler, refreshTime
 	if err != nil {
 		return nil, err
 	}
-	log.Infof("Creating new server, cluster config %+v", clusterConfig)
+	log.Info("Creating new service server")
+	log.Debugf("Using cluster config %+v", clusterConfig)
 	k8sc, err := newForConfig(clusterConfig)
 	if err != nil {
 		return nil, err

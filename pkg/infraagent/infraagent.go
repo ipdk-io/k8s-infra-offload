@@ -185,7 +185,7 @@ func logInit(logDir string) error {
 	}
 	mw := io.MultiWriter(os.Stdout, logFile)
 	log.SetOutput(mw)
-	log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.InfoLevel)
 	log.SetReportCaller(true)
 	log.SetFormatter(&log.TextFormatter{
 		PadLevelText:     true,
