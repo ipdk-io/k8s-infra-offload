@@ -1,4 +1,4 @@
-# Development Update: IPDK 23.01 K8s Infra Offload recipe
+# Release Notes: IPDK 23.01 K8s Infra Offload
 
 ## Overview
 
@@ -29,7 +29,7 @@ The following are the main components of K8s Infra Offload software.
 ### K8s Infra Manager
 - The Infra Manager is deployed as a core kube-system pod along with other
   kube-system pods.
-- This components acts as a server for K8s Infra Agent and receives K8s
+- This components acts as a gRPC server for K8s Infra Agent and receives K8s
   configurations from the Infra Agent over the gRPC channel.
 - It acts as a client for the P4 Runtime Server (infrap4d) and updates the
   K8s Pipeline tables (Data Plane), over another gRPC channel, to apply K8s
@@ -40,7 +40,7 @@ The following are the main components of K8s Infra Offload software.
   kube-system pods.
 - It receives all CNI requests from the Calico plug-in, configures pod system
   files and adds interaces to be pods. And finally, it relays these
-  configuration to the Infra Manager.
+  configurations to the Infra Manager.
 - It also acts as a K8s client for K8s API server and receives all configuration
   changes and passes them on to the Infra Manager component.
 - It interacts with Infra Manager over gRPC channel to pass all the
@@ -57,12 +57,12 @@ The following are the main components of K8s Infra Offload software.
   rules. These rules are for managing pkt forwarding, service groups, service
   end points, etc.
 
-### Debug
+## Debugging
 
 - The k8s-infra-offload software provides logging capabilities. The logging
   level can be changed via the config.yaml file.
-- The logs are dumped in temporary log file viz. /var/log/inframanager.log.
-  These can be inspected using kubectl as below:
+- The logs are dumped in temporary log file e.g. /var/log/inframanager.log.
+  These logs can be inspected using kubectl as below:
   kubectl exec -n kube-system -it inframanager-xx-xxxx -- cat /var/log/inframanager.log
   kubectl exec -n kube-system -it infraagent-xx-xxxx -- cat /var/log/infraagent/infraagent.log
 - Logs can also be captured via kubectl using following commands:
@@ -74,30 +74,19 @@ The following are the main components of K8s Infra Offload software.
 ## Directories
 
 - arp-proxy: This contains source code for the ARP Proxy
-
 - bin: This contains all the binaries of the executables created by the
   Makefile
-
 - deploy: This has all the YAML files for deploying kubernetes components
-
 - example: This has example YAML files to deploy test pods, etc.
-
 - hack: This has scripts for CI/CD
-
 - images: This has the Dockerfiles for Infra Agent and Infra Manager
-
 - infraagent: This has the source Go code of Infra Agent
-
 - inframanager: This has the source Go code of Infra Manager
-
 - k8s_dp: This has the P4 source code and the pre-built P4 pipeline
-
 - pkg: This has all the supporting Go source code for Infra Manager and
   Infra Agent.
-
 - proto: This has all the protobuf files for gRPC messaging and the
   corresponding Go code.
-
 - scripts: This has all the setup scripts
 
 ## Setup scripts
@@ -110,9 +99,9 @@ The following are the main components of K8s Infra Offload software.
   the first TAP interface (i.e. P4TAP_0) to it and then launches ARP proxy
   within the isolated namespace.
 
-## Documentation Updates
+## Documentation
 
-- The [Kubernetes Infra Offload Usage Guide](https://github.com/ipdk-io/k8s-infra-offload/blob/main/README.md) has been extensively revised.
+- The [Kubernetes Infra Offload Usage Guide](https://github.com/ipdk-io/k8s-infra-offload/blob/main/README.md) provides the installation and deployment instructions.
 
 ## Security Domain
 
