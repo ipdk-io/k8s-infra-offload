@@ -392,13 +392,10 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   root     1254701       1 99 13:34 ?        00:13:10 /host/networking-recipe/install/sbin/infrap4d
   ```
 
-  Run ARP-Proxy on the first interface.
+  Run ARP-Proxy script, which would create a new namespace, assign first tap
+  interface i.e. P4TAP_0 to it, and finally run the arp-proxy on that interface.
   ```bash
   ./p4-k8s/scripts/arp_proxy.sh
-
-  Inside the pod0 namespace, run the following command to start arp_proxy
-  export ARP_PROXY_IF=P4TAP_0
-  ./bin/arp_proxy &
   ```
 
   Initialize and start the core k8s components as below
