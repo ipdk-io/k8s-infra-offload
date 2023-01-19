@@ -45,7 +45,7 @@ function run_infrap4d () {
   getPid=$(pgrep -f infrap4d)  #  kill if already runnning
   [[ $getPid ]] && kill $getPid
   sleep 1
-  $IPDK_RECIPE/install/sbin/infrap4d
+  $IPDK_RECIPE/install/sbin/infrap4d -grpc_open_insecure_mode=true
 }
 
 function is_power_of_two () {
@@ -90,6 +90,6 @@ max=$(($IF_MAX - 1))
 for i in $(seq 0 $max);
 do
   echo "creating P4TAP_$i"
-  $IPDK_RECIPE/install/bin/gnmi-ctl set "device:virtual-device,name:P4TAP_$i,pipeline-name:pipe,mempool-name:MEMPOOL0,mtu:1500,port-type:TAP"
+  $IPDK_RECIPE/install/bin/gnmi-ctl set "device:virtual-device,name:P4TAP_$i,pipeline-name:pipe,mempool-name:MEMPOOL0,mtu:1500,port-type:TAP" -grpc_use_insecure_mode=true
   ifconfig P4TAP_$i mtu 1280 up
 done

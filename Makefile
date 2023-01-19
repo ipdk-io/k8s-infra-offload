@@ -20,7 +20,7 @@ export INFRAMANAGER_IMAGE?=$(IMAGE_REGISTRY)inframanager:$(IMAGE_VERSION)
 #	endif
 #endif
 
-tagname:=dpdk
+tagname := dpdk
 
 DOCKERARGS?=
 ifdef HTTP_PROXY
@@ -29,6 +29,11 @@ endif
 ifdef HTTPS_PROXY
         DOCKERARGS += --build-arg https_proxy=$(HTTPS_PROXY)
 endif
+
+LOGDIR := /var/log
+CNIDIR := /var/lib/cni
+
+RUNDIRS := ${LOGDIR}/arp_proxy* ${CNIDIR}/infra*
 
 .PHONY: all
 
@@ -61,6 +66,10 @@ clean:
 	@echo "Remove bin directory"
 	rm -rf ./bin
 
+clean-dirs:
+	pkill arp_proxy || true
+	rm -rf ${RUNDIRS}
+
 test:
 	./hack/cicd/run-tests.sh
 
@@ -86,7 +95,7 @@ deploy: kustomize create-kubeconfig-cm
 	cd deploy && $(KUSTOMIZE) edit set image infraagent:latest=$(INFRAAGENT_IMAGE) && $(KUSTOMIZE) edit set image inframanager:latest=$(INFRAMANAGER_IMAGE)
 	$(KUSTOMIZE) build --load-restrictor LoadRestrictionsNone deploy | envsubst | kubectl apply -f -
 
-undeploy: kustomize delete-kubeconfig-cm
+undeploy: clean-dirs kustomize delete-kubeconfig-cm
 	cd deploy
 	$(KUSTOMIZE) build --load-restrictor LoadRestrictionsNone deploy | envsubst | kubectl delete -f -
 

@@ -30,16 +30,11 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 	// Enable VIPER to read Environment Variables
 	viper.AutomaticEnv()
 
-	viper.SetConfigType("yml")
+	viper.SetConfigType("yaml")
 
 	if err := viper.ReadInConfig(); err != nil {
 		fmt.Printf("Error reading config file, %s", err)
 	}
-
-	// Set undefined variables
-	viper.SetDefault("DefaultDevice", 0)
-	viper.SetDefault("EnableService", 0)
-	viper.SetDefault("EnableRouting", 0)
 
 	err := viper.Unmarshal(conf)
 	if err != nil {
@@ -47,13 +42,7 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 	}
 
 	// Reading variables without using the model
-	fmt.Println("Client Addr:\t", viper.GetString("Client.Addr"))
-	fmt.Println("Server Addr:\t", viper.GetString("Server.Addr"))
-	fmt.Println("gNMI Server Addr:\t", viper.GetString("GNMIServer.Addr"))
-	fmt.Println("Log Level:\t", viper.GetString("LogLevel"))
-	fmt.Println("P4 prog config file \t", viper.GetString("P4ProgConf"))
-	fmt.Println("P4Info path \t", viper.GetString("P4InfoPath"))
-	fmt.Println("P4 bin path \t", viper.GetString("P4BinPath"))
-	fmt.Println("EnableServices:\t", viper.GetInt(""))
-	fmt.Println("HostName:\t", viper.GetString("HostName"))
+	fmt.Println("gRPC Server Addr:\t", viper.GetString("GrpcServer.Addr"))
+	fmt.Println("gNMI Server Addr:\t", viper.GetString("GnmiServer.Addr"))
+	fmt.Println("Log Level is set to :\t", viper.GetString("LogLevel"))
 }

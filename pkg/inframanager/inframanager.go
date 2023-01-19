@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	logDir = "/var/log"
+	logDir = "/var/log/inframanager"
 )
 
 func logInit() {
@@ -38,10 +38,19 @@ func logInit() {
 	if err != nil {
 		panic(err)
 	}
+
+	err = os.MkdirAll(logDir, 0644)
+	if err != nil {
+		panic(err)
+	}
+
 	logFile, err := os.OpenFile(verifiedFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		panic(err)
 	}
+
+	log.Println("Created log file ", verifiedFileName)
+
 	mw := io.MultiWriter(os.Stdout, logFile)
 	log.SetOutput(mw)
 

@@ -76,11 +76,11 @@ func GetLogLevel() string {
 func OpenP4RtC(ctx context.Context, high uint64, low uint64, stopCh <-chan struct{}) error {
 	var err error
 
-	log.Infof("Connecting to P4Runtime Server at %s", config.Client.Addr)
+	log.Infof("Connecting to P4Runtime Server at %s", config.GrpcServer.Addr)
 
 	server := NewApiServer()
 
-	server.p4RtCConn, err = grpc.Dial(config.Client.Addr,
+	server.p4RtCConn, err = grpc.Dial(config.GrpcServer.Addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Errorf("Cannot connect to P4Runtime Client: %v", err)
@@ -143,7 +143,7 @@ func OpenGNMICCon() error {
 
 	server := NewApiServer()
 
-	server.gNMICConn, err = grpc.Dial(config.GNMIServer.Addr,
+	server.gNMICConn, err = grpc.Dial(config.GnmiServer.Addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Errorf("Cannot connect to gNMI Server: %v", err)
