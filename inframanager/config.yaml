@@ -7,7 +7,6 @@ GnmiServer:
 P4InfoPath: k8s_dp/p4Info.txt
 p4BinPath: k8s_dp/k8s_dp.pb.bin
 DeviceId: 1
-HostName: "Node1"
 # Possible debug levels
 #  "Panic"
 #  "Fatal"

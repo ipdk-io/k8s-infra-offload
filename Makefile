@@ -67,8 +67,8 @@ clean:
 	rm -rf ./bin
 
 clean-dirs:
-	rm -rf ${RUNDIRS}
 	pkill arp_proxy || true
+	rm -rf ${RUNDIRS}
 
 test:
 	./hack/cicd/run-tests.sh

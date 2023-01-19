@@ -18,7 +18,6 @@ package config
 type Configuration struct {
 	GrpcServer GrpcServerConf
 	GnmiServer GnmiServerConf
-	HostName   string
 	NodeIP     string
 	LogLevel   string
 	P4InfoPath string
