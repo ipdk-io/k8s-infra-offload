@@ -51,8 +51,9 @@ The following are the main components of K8s Infra Offload software.
   dataplane.
 - It comes along with the source P4 code for user to understand the packet
   processing pipeline.
-- The L3 forwarding, load balancing, connection tracking is all implemented
-  within this pipeline.
+- Offloading kube-proxy functionality, providing pod to pod L3 connectivity,
+  local node gateway routing, load balancing & connection tracking, is all
+  implemented within this pipeline.
 - It exposes p4 tables that can be modified at runtime with packet processing
   rules. These rules are for managing pkt forwarding, service groups, service
   end points, etc.
