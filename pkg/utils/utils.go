@@ -77,12 +77,21 @@ func SaveInterfaceConf(dataDir, refid, podIface string, conf *types.InterfaceInf
 		return err
 	}
 	path := filepath.Join(dataDir, refid+"-"+podIface)
-	return os.WriteFile(path, confBytes, 0600)
+	verifiedPath, err := VerifiedFilePath(path, dataDir)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(verifiedPath, confBytes, 0600)
 }
 
 func ReadInterfaceConf(dataDir, refid, podIface string) (*types.InterfaceInfo, error) {
 	path := filepath.Join(dataDir, refid+"-"+podIface)
-	data, err := os.ReadFile(path)
+	verifiedPath, err := VerifiedFilePath(path, dataDir)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := os.ReadFile(verifiedPath)
 	if err != nil {
 		return nil, err
 	}
