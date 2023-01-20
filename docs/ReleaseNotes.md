@@ -60,10 +60,9 @@ The following are the main components of K8s Infra Offload software.
 
 ## Debugging
 
-- The k8s-infra-offload software provides logging capabilities. The logging
-  level can be changed via the config.yaml file.
-- The logs are dumped in temporary log file e.g. /var/log/inframanager.log.
-  These logs can be inspected using kubectl as below:
+- The k8s-infra-offload software provides logging capabilities. The logs are
+  dumped in temporary log file e.g. /var/log/inframanager.log. These logs can
+  be inspected using kubectl as below:
   kubectl exec -n kube-system -it inframanager-xx-xxxx -- cat /var/log/inframanager.log
   kubectl exec -n kube-system -it infraagent-xx-xxxx -- cat /var/log/infraagent/infraagent.log
 - Logs can also be captured via kubectl using following commands:
@@ -128,6 +127,12 @@ true.
 - /var/log/inframanager.log is not deleted after "make undeploy"
 
 - Unused params in "inframanager/config.yaml" should be removed from input file
+
+## Known Issues
+
+- The LogLevel configuration option in the config.yaml file does not apply in
+  a consistent manner. For example, the logs generated at some places may be
+  more than configured level.
 
 ## Coming Attractions
 
