@@ -83,7 +83,7 @@ func NewHealthCheckServer(l *logrus.Entry) (types.Server, error) {
 	return hs, nil
 }
 
-func (s *healtServer) checkGrpcServerStatus(target string) bool {
+func (s *healtServer) checkGrpcServerStatus(target string, tls bool) bool {
 	status, err := utils.CheckGrpcServerStatus(target, s.log, grpcDial)
 	if err != nil {
 		s.log.Errorf("error while checking %s: %s", target, err.Error())
@@ -93,13 +93,13 @@ func (s *healtServer) checkGrpcServerStatus(target string) bool {
 
 func (s *healtServer) checkInfraManagerLiveness() bool {
 	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
-	return s.checkGrpcServerStatus(managerAddr)
+	return s.checkGrpcServerStatus(managerAddr, true)
 }
 
 func (s *healtServer) checkCniServerLiveness() bool {
 	// TODO change this to UDS when grpc start working using it
 	agentAddr := fmt.Sprintf("%s:%s", types.InfraAgentAddr, types.InfraAgentPort)
-	return s.checkGrpcServerStatus(agentAddr)
+	return s.checkGrpcServerStatus(agentAddr, false)
 }
 
 func (s *healtServer) checkServicesServerStatus() bool {

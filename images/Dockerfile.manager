@@ -24,4 +24,13 @@ COPY --from=builder /workspace/bin/inframanager /inframanager
 COPY --from=builder /workspace/inframanager/config.yaml ./
 COPY --from=builder /workspace/k8s_dp /k8s_dp/
 
+COPY certs/infra-server-ca.crt /etc/pki/tls/infra/
+COPY certs/infra-server-ca.key /etc/pki/tls/infra/
+COPY certs/infra-client-ca.crt /etc/pki/tls/infra/
+COPY certs/infra-client-ca.key /etc/pki/tls/infra/
+COPY certs/inframgr-server.crt /etc/pki/tls/infra/
+COPY certs/inframgr-server.key /etc/pki/tls/infra/
+COPY certs/inframgr-client.crt /etc/pki/tls/infra/
+COPY certs/inframgr-client.key /etc/pki/tls/infra/
+
 ENTRYPOINT ["/inframanager"]

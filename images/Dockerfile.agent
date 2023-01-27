@@ -21,4 +21,13 @@ WORKDIR /
 COPY --from=builder /workspace/bin/infraagent /infraagent
 COPY --from=builder /workspace/bin/felix-api-proxy /felix-api-proxy
 
+COPY certs/infra-server-ca.crt /etc/pki/tls/infra/
+COPY certs/infra-server-ca.key /etc/pki/tls/infra/
+COPY certs/infra-client-ca.crt /etc/pki/tls/infra/
+COPY certs/infra-client-ca.key /etc/pki/tls/infra/
+COPY certs/infraagent-server.crt /etc/pki/tls/infra/
+COPY certs/infraagent-server.key /etc/pki/tls/infra/
+COPY certs/infraagent-client.crt /etc/pki/tls/infra/
+COPY certs/infraagent-client.key /etc/pki/tls/infra/
+
 ENTRYPOINT ["/infraagent"]

@@ -20,12 +20,12 @@ import (
 	"net"
 	"os"
 
+	"github.com/ipdk-io/k8s-infra-offload/pkg/infratls"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	pb "github.com/ipdk-io/k8s-infra-offload/proto"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"gopkg.in/tomb.v2"
 )
 
@@ -544,7 +544,8 @@ func (s *PolicyServer) handleGlobalBGPConfigUpdate(msg *pb.GlobalBGPConfigUpdate
 
 func (s *PolicyServer) dialManager() (pb.InfraAgentClient, error) {
 	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
-	conn, err := grpcDial(managerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := infratls.GrpcDial(managerAddr, infratls.Insecure,
+		infratls.InfraAgent)
 	if err != nil {
 		s.log.WithField("func", "dialManager")
 		s.log.Errorf("unable to dial Infra Manager. err %v", err)

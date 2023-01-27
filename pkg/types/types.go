@@ -51,6 +51,16 @@ const (
 	HostInterfaceAddr           = "200.1.1.2/32"
 	HostInterfaceMTU            = 1280
 	ArpProxyDefaultPort         = 0
+	InfraServerCA               = "/etc/pki/tls/infra/infra-server-ca.crt"
+	InfraClientCA               = "/etc/pki/tls/infra/infra-client-ca.crt"
+	InfraManagerServerCert      = "/etc/pki/tls/infra/inframgr-server.crt"
+	InfraManagerServerKey       = "/etc/pki/tls/infra/inframgr-server.key"
+	InfraManagerClientCert      = "/etc/pki/tls/infra/inframgr-client.crt"
+	InfraManagerClientKey       = "/etc/pki/tls/infra/inframgr-client.key"
+	InfraAgentServerCert        = "/etc/pki/tls/infra/infraagent-server.crt"
+	InfraAgentServerKey         = "/etc/pki/tls/infra/infraagent-server.key"
+	InfraAgentClientCert        = "/etc/pki/tls/infra/infraagent-client.crt"
+	InfraAgentClientKey         = "/etc/pki/tls/infra/infraagent-client.key"
 )
 
 var (

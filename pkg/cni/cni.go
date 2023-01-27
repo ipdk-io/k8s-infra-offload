@@ -22,12 +22,12 @@ import (
 	"time"
 
 	"github.com/containernetworking/plugins/pkg/ns"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/infratls"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/netconf"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	pb "github.com/ipdk-io/k8s-infra-offload/proto"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/keepalive"
 	"gopkg.in/tomb.v2"
@@ -137,8 +137,11 @@ func (s *CniServer) Add(ctx context.Context, in *pb.AddRequest) (*pb.AddReply, e
 		out.ErrorMessage = err.Error()
 		return out, nil
 	}
-	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
-	conn, err := grpcDial(managerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr,
+		types.InfraManagerPort)
+	conn, err := infratls.GrpcDial(managerAddr, infratls.Insecure,
+		infratls.InfraAgent)
 	defer grpcClose(conn, s.log, "failed to close connnection, not fatal")
 
 	if err != nil {
@@ -188,7 +191,8 @@ func (s *CniServer) Del(ctx context.Context, in *pb.DelRequest) (*pb.DelReply, e
 	}
 
 	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
-	conn, err := grpcDial(managerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := infratls.GrpcDial(managerAddr, infratls.Insecure,
+		infratls.InfraAgent)
 	defer grpcClose(conn, s.log, "failed to close connnection")
 
 	if err != nil {

@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ipdk-io/k8s-infra-offload/pkg/infratls"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	"github.com/ipdk-io/k8s-infra-offload/proto"
@@ -37,9 +38,7 @@ import (
 	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/grpc/keepalive"
 )
 
 var config *conf.Configuration
@@ -80,8 +79,8 @@ func OpenP4RtC(ctx context.Context, high uint64, low uint64, stopCh <-chan struc
 
 	server := NewApiServer()
 
-	server.p4RtCConn, err = grpc.Dial(config.GrpcServer.Addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	server.p4RtCConn, err = infratls.GrpcDial(config.GrpcServer.Addr,
+		infratls.GetAuthType(config.GnmiServer.Auth), 0)
 	if err != nil {
 		log.Errorf("Cannot connect to P4Runtime Client: %v", err)
 		return err
@@ -143,8 +142,8 @@ func OpenGNMICCon() error {
 
 	server := NewApiServer()
 
-	server.gNMICConn, err = grpc.Dial(config.GnmiServer.Addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	server.gNMICConn, err = infratls.GrpcDial(config.GnmiServer.Addr,
+		infratls.Insecure, 0)
 	if err != nil {
 		log.Errorf("Cannot connect to gNMI Server: %v", err)
 		return err
@@ -227,10 +226,15 @@ func CreateServer(log *log.Entry) *ApiServer {
 	if err != nil {
 		logger.Fatalf("failed to listen on %s://%s, err: %v", types.ServerNetProto, managerAddr, err)
 	}
-	kp := grpc.KeepaliveParams(keepalive.ServerParameters{MaxConnectionAge: time.Duration(time.Second * 10), MaxConnectionAgeGrace: time.Duration(time.Second * 30)})
 
 	server := NewApiServer()
-	server.grpc = grpc.NewServer(kp)
+	server.grpc, err = infratls.NewGrpcServer(infratls.ServerParams{
+		KeepAlive: true,
+		AuthType:  infratls.GetAuthType(config.GrpcServer.Auth),
+		Service:   infratls.InfraManager,
+		ConClient: infratls.InfraAgent,
+	})
+
 	server.listener = listen
 	server.log = log
 

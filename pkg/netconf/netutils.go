@@ -21,6 +21,7 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ip"
 	"github.com/containernetworking/plugins/pkg/ns"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/infratls"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	pb "github.com/ipdk-io/k8s-infra-offload/proto"
@@ -28,7 +29,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 const nonTargetIP = "0.0.0.0/0"
@@ -220,7 +220,8 @@ func configureRouting(link netlink.Link, log *logrus.Entry) error {
 
 func sendSetupHostInterface(request *pb.SetupHostInterfaceRequest) error {
 	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
-	conn, err := grpcDial(managerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := infratls.GrpcDial(managerAddr, infratls.Insecure,
+		infratls.InfraAgent)
 	if err != nil {
 		return err
 	}

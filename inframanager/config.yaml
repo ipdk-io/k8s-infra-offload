@@ -1,8 +1,18 @@
 GrpcServer:
   addr: localhost:9559
+# Possible authentication types
+#  Insecure
+#  ServerSideTLS
+#  MutualTLS
+  auth: Insecure
 
 GnmiServer:
   addr: localhost:9339
+# Possible authentication types
+#  Insecure
+#  MutualTLS
+  auth: Insecure
+
 
 P4InfoPath: k8s_dp/p4Info.txt
 p4BinPath: k8s_dp/k8s_dp.pb.bin

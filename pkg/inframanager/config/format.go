@@ -28,8 +28,10 @@ type Configuration struct {
 // ServerConfigurations exported
 type GnmiServerConf struct {
 	Addr string
+	Auth string
 }
 
 type GrpcServerConf struct {
 	Addr string
+	Auth string
 }

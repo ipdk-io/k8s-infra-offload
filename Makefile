@@ -35,9 +35,9 @@ CNIDIR := /var/lib/cni
 
 RUNDIRS := ${LOGDIR}/arp_proxy* ${CNIDIR}/infra*
 
-.PHONY: all
+.PHONY: all certs
 
-all: check-fmt vet build
+all: check-fmt vet certs build
 
 fmt: ## Run go fmt against code.
 	go fmt ./...
@@ -72,6 +72,13 @@ clean-dirs:
 
 test:
 	./hack/cicd/run-tests.sh
+
+certs: clean-certs
+	@echo "Generating certificates"
+	./scripts/gen_cert.sh
+
+clean-certs:
+	rm -rf certs
 
 docker-build: docker-build-agent docker-build-manager
 
