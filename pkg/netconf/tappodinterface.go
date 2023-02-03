@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 
 	"github.com/containernetworking/plugins/pkg/ns"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/infratls"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/pool"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
@@ -38,12 +39,17 @@ var (
 )
 
 type tapPodInterface struct {
-	log  *logrus.Entry
-	pool pool.ResourcePool
+	log              *logrus.Entry
+	pool             pool.ResourcePool
+	inframgrAuthType infratls.AuthType
 }
 
-func NewTapPodInterface(log *logrus.Entry) (types.PodInterface, error) {
-	pi := &tapPodInterface{log: log}
+func NewTapPodInterface(log *logrus.Entry,
+	inframgrAuthType infratls.AuthType) (types.PodInterface, error) {
+	pi := &tapPodInterface{
+		log:              log,
+		inframgrAuthType: inframgrAuthType,
+	}
 	intfs, err := pi.configurePool()
 	if err != nil {
 		log.WithError(err).Error("failed to configure pool")
@@ -117,7 +123,8 @@ func (pi *tapPodInterface) setup(intfs []*types.InterfaceInfo) error {
 		Ipv4Addr: ipnet.String(),
 		MacAddr:  res.InterfaceInfo.MacAddr,
 	}
-	if err := sendSetupHostInterfaceFunc(request); err != nil {
+	if err := sendSetupHostInterfaceFunc(request,
+		pi.inframgrAuthType); err != nil {
 		return err
 	}
 	// save host interface setting in cache

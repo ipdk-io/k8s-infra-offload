@@ -6,3 +6,4 @@ metadata:
 data:
   infraagent.yaml: |
     interfaceType: tap
+    inframgrAuthType: ServerSideTLS

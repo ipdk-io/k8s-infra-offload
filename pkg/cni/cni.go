@@ -44,6 +44,7 @@ type CniServer struct {
 	log              *log.Entry
 	name             string
 	podInterfaceType string
+	inframgrAuthType infratls.AuthType
 	podInterface     types.PodInterface
 	serveFunc        func() error
 }
@@ -57,7 +58,8 @@ var (
 	getNSFunc  = ns.GetNS
 )
 
-func NewCniServer(log *log.Entry, t, uri string, serveFunc func() error) (types.Server, error) {
+func NewCniServer(log *log.Entry, t string, authType infratls.AuthType,
+	uri string, serveFunc func() error) (types.Server, error) {
 	listen, err := listenFunc(types.ServerNetProto, uri)
 	if err != nil {
 		log.WithError(err).Error("failed to listen on socket")
@@ -66,7 +68,7 @@ func NewCniServer(log *log.Entry, t, uri string, serveFunc func() error) (types.
 	log.Infof("Listen on addr: %s", listen.Addr().String())
 	kp := grpc.KeepaliveParams(keepalive.ServerParameters{MaxConnectionAge: time.Duration(time.Second * 10), MaxConnectionAgeGrace: time.Duration(time.Second * 30)})
 
-	pi, err := newPodInterface(t, log.WithField("pkg", "netconf"))
+	pi, err := newPodInterface(t, log.WithField("pkg", "netconf"), authType)
 	if err != nil {
 		return nil, err
 	}
@@ -76,6 +78,7 @@ func NewCniServer(log *log.Entry, t, uri string, serveFunc func() error) (types.
 		log:              log,
 		name:             "cni-server",
 		podInterfaceType: t,
+		inframgrAuthType: authType,
 		podInterface:     pi,
 		serveFunc:        serveFunc,
 	}
@@ -140,7 +143,7 @@ func (s *CniServer) Add(ctx context.Context, in *pb.AddRequest) (*pb.AddReply, e
 
 	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr,
 		types.InfraManagerPort)
-	conn, err := infratls.GrpcDial(managerAddr, infratls.Insecure,
+	conn, err := infratls.GrpcDial(managerAddr, s.inframgrAuthType,
 		infratls.InfraAgent)
 	defer grpcClose(conn, s.log, "failed to close connnection, not fatal")
 

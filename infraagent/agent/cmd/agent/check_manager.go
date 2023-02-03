@@ -20,11 +20,11 @@ import (
 
 	"time"
 
+	"github.com/ipdk-io/k8s-infra-offload/pkg/infratls"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"google.golang.org/grpc"
 )
 
 const sleepDuration = time.Millisecond * 100
@@ -56,7 +56,11 @@ var checkManager = &cobra.Command{
 		}
 
 		managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
-		watcher := utils.NewGrpcWatcher(timeout, sleepDuration, managerAddr, grpc.Dial, utils.CheckGrpcServerStatus)
+		watcher := utils.NewGrpcWatcher(timeout, sleepDuration,
+			managerAddr, infratls.GrpcDial,
+			infratls.GetAuthType(config.inframgrAuthType),
+			infratls.InfraAgent, utils.CheckGrpcServerStatus)
+		//watcher := utils.NewGrpcWatcher(timeout, sleepDuration, managerAddr, grpc.Dial, utils.CheckGrpcServerStatus)
 		if err := utils.WaitFor(watcher); err != nil {
 			return err
 		}

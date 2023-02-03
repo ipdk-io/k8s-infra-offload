@@ -218,9 +218,10 @@ func configureRouting(link netlink.Link, log *logrus.Entry) error {
 	return nil
 }
 
-func sendSetupHostInterface(request *pb.SetupHostInterfaceRequest) error {
+func sendSetupHostInterface(request *pb.SetupHostInterfaceRequest,
+	inframgrAuthType infratls.AuthType) error {
 	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
-	conn, err := infratls.GrpcDial(managerAddr, infratls.Insecure,
+	conn, err := infratls.GrpcDial(managerAddr, inframgrAuthType,
 		infratls.InfraAgent)
 	if err != nil {
 		return err

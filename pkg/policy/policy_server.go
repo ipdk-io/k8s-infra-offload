@@ -37,18 +37,21 @@ var (
 )
 
 type PolicyServer struct {
-	log           *logrus.Entry
-	nextSeqNumber uint64
-	exiting       chan bool
-	name          string
+	log              *logrus.Entry
+	nextSeqNumber    uint64
+	exiting          chan bool
+	name             string
+	inframgrAuthType infratls.AuthType
 }
 
-func NewPolicyServer(log *logrus.Entry) (types.Server, error) {
+func NewPolicyServer(log *logrus.Entry,
+	authType infratls.AuthType) (types.Server, error) {
 	return &PolicyServer{
-		log:           log,
-		nextSeqNumber: 0,
-		exiting:       make(chan bool),
-		name:          "felix-policy-server"}, nil
+		log:              log,
+		nextSeqNumber:    0,
+		exiting:          make(chan bool),
+		name:             "felix-policy-server",
+		inframgrAuthType: authType}, nil
 }
 
 func (s *PolicyServer) GetName() string {
@@ -544,7 +547,7 @@ func (s *PolicyServer) handleGlobalBGPConfigUpdate(msg *pb.GlobalBGPConfigUpdate
 
 func (s *PolicyServer) dialManager() (pb.InfraAgentClient, error) {
 	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
-	conn, err := infratls.GrpcDial(managerAddr, infratls.Insecure,
+	conn, err := infratls.GrpcDial(managerAddr, s.inframgrAuthType,
 		infratls.InfraAgent)
 	if err != nil {
 		s.log.WithField("func", "dialManager")

@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/infraagent"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/infratls"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	"github.com/spf13/cobra"
@@ -32,10 +33,11 @@ const (
 )
 
 var config struct {
-	cfgFile       string
-	interfaceType string
-	interfaceName string
-	tapPrefix     string
+	cfgFile          string
+	interfaceType    string
+	inframgrAuthType string
+	interfaceName    string
+	tapPrefix        string
 }
 
 var rootCmd = &cobra.Command{
@@ -51,16 +53,20 @@ It off-loads K8s dataplane to Infrastructure components.
 	Run: func(_ *cobra.Command, _ []string) {
 		interfaceType := viper.GetString("interfaceType")
 		ifName := viper.GetString("interface")
-		config, err := utils.GetK8sConfig()
+		config.inframgrAuthType = viper.GetString("inframgrAuthType")
+		//config.inframgrAuthType = infratls.GetAuthType(authType)
+		cfg, err := utils.GetK8sConfig()
 		if err != nil {
 			exitWithError(err, 2)
 		}
 
-		client, err := utils.GetK8sClient(config)
+		client, err := utils.GetK8sClient(cfg)
 		if err != nil {
 			exitWithError(err, 3)
 		}
-		agent, err := infraagent.NewAgent(interfaceType, ifName, types.InfraAgentLogDir, client)
+		agent, err := infraagent.NewAgent(interfaceType, ifName,
+			infratls.GetAuthType(config.inframgrAuthType),
+			types.InfraAgentLogDir, client)
 		if err != nil {
 			exitWithError(err, 4)
 		}
@@ -84,10 +90,15 @@ func init() {
 
 	intfTypeOpts := newFlagOpts([]string{types.SriovPodInterface, types.IpvlanPodInterface, types.TapInterface}, types.SriovPodInterface)
 	rootCmd.PersistentFlags().Var(intfTypeOpts, "interfaceType", "Pod Interface type (sriov|ipvlan|tap)")
+	rootCmd.PersistentFlags().StringVar(&config.inframgrAuthType, "auth", "serversidetls", "Inframanager authentication type(insecure|serversidetls|mutualtls)")
 	rootCmd.PersistentFlags().StringVar(&config.interfaceName, "interface", "", intfFlagHelpMsg)
 	rootCmd.PersistentFlags().StringVar(&config.cfgFile, "config", "/etc/infra/infraagent.yaml", "config file")
 	rootCmd.PersistentFlags().StringVar(&config.tapPrefix, "tapPrefix", types.TapInterfacePrefix, "Host TAP interface prefix for TAP interface type")
 	if err := viper.BindPFlag("interfaceType", rootCmd.PersistentFlags().Lookup("interfaceType")); err != nil {
+		fmt.Fprintf(os.Stderr, "There was an error while binding flags '%s'", err)
+		os.Exit(1)
+	}
+	if err := viper.BindPFlag("auth", rootCmd.PersistentFlags().Lookup("auth")); err != nil {
 		fmt.Fprintf(os.Stderr, "There was an error while binding flags '%s'", err)
 		os.Exit(1)
 	}
@@ -148,6 +159,11 @@ func validateConfigs() error {
 		err = fmt.Errorf("error validating interfaceType: %w", newErr)
 	}
 
+	inframgrAuthType := viper.GetString("inframgrAuthType")
+	if infratls.GetAuthType(inframgrAuthType) == infratls.UnknownAuth {
+		err = fmt.Errorf("Invalid authentication type for communicating with inframanager: %v",
+			inframgrAuthType)
+	}
 	// When validating other configs wrap add error msgs in one and then return it at the end.
 	// For example:
 	//

@@ -22,6 +22,7 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ipam"
 	"github.com/containernetworking/plugins/pkg/ns"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/infratls"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/pool"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
@@ -36,12 +37,17 @@ var (
 )
 
 type sriovPodInterface struct {
-	log  *logrus.Entry
-	pool pool.ResourcePool
+	log              *logrus.Entry
+	pool             pool.ResourcePool
+	inframgrAuthType infratls.AuthType
 }
 
-func NewSriovPodInterface(log *logrus.Entry) (types.PodInterface, error) {
-	pi := &sriovPodInterface{log: log}
+func NewSriovPodInterface(log *logrus.Entry,
+	inframgrAuthType infratls.AuthType) (types.PodInterface, error) {
+	pi := &sriovPodInterface{
+		log:              log,
+		inframgrAuthType: inframgrAuthType,
+	}
 	if err := pi.setup(); err != nil {
 		log.WithError(err).Error("failed to setup SRIOV interface")
 		return nil, err
@@ -98,7 +104,7 @@ func (pi *sriovPodInterface) setup() error {
 		Ipv4Addr: ipnet.String(),
 		MacAddr:  res.InterfaceInfo.MacAddr,
 	}
-	if err := sendSetupHostInterfaceFunc(request); err != nil {
+	if err := sendSetupHostInterfaceFunc(request, pi.inframgrAuthType); err != nil {
 		return err
 	}
 

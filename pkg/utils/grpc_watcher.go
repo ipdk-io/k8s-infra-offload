@@ -18,25 +18,31 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ipdk-io/k8s-infra-offload/pkg/infratls"
 	"github.com/sirupsen/logrus"
 )
 
-type checkGrpcServerStatusType func(target string, log *logrus.Entry, grpcDial grpcDialType) (bool, error)
+type checkGrpcServerStatusType func(target string, log *logrus.Entry, grpcDial InfratlsGrpcDialType, authType infratls.AuthType, conClient infratls.Service) (bool, error)
+
+//type checkGrpcServerStatusType func(target string, log *logrus.Entry, grpcDial grpcDialType) (bool, error)
 
 type grpcWatcher struct {
 	sleepDuration time.Duration
 	timeout       time.Duration
 	target        string
-	dialFunc      grpcDialType
-	checkHealth   checkGrpcServerStatusType
-	done          chan bool
-	quit          chan bool
-	errors        chan error
-	log           *logrus.Entry
+	dialFunc      InfratlsGrpcDialType
+	//dialFunc    grpcDialType
+	authType    infratls.AuthType
+	conClient   infratls.Service
+	checkHealth checkGrpcServerStatusType
+	done        chan bool
+	quit        chan bool
+	errors      chan error
+	log         *logrus.Entry
 }
 
 // NewGrpcWatcher returns new gRPC watcher
-func NewGrpcWatcher(timeout, sleepDuration time.Duration, target string, dialFunc grpcDialType, checkHealth checkGrpcServerStatusType) *grpcWatcher {
+func NewGrpcWatcher(timeout, sleepDuration time.Duration, target string, dialFunc InfratlsGrpcDialType, authType infratls.AuthType, conClient infratls.Service, checkHealth checkGrpcServerStatusType) *grpcWatcher {
 	done := make(chan bool)
 	quit := make(chan bool)
 	errors := make(chan error)
@@ -45,6 +51,8 @@ func NewGrpcWatcher(timeout, sleepDuration time.Duration, target string, dialFun
 		timeout:       timeout,
 		target:        target,
 		dialFunc:      dialFunc,
+		authType:      authType,
+		conClient:     conClient,
 		checkHealth:   checkHealth,
 		done:          done,
 		quit:          quit,
@@ -60,7 +68,8 @@ func (gw *grpcWatcher) handleEvents() {
 			gw.errors <- fmt.Errorf("quit signal received")
 			return
 		default:
-			if isServing, err := gw.checkHealth(gw.target, gw.log, gw.dialFunc); isServing {
+			if isServing, err := gw.checkHealth(gw.target,
+				gw.log, gw.dialFunc, gw.authType, gw.conClient); isServing {
 				if err != nil {
 					gw.log.Infof("checkHealth returned error: %s", err.Error())
 				}
@@ -74,7 +83,7 @@ func (gw *grpcWatcher) handleEvents() {
 }
 
 func (gw *grpcWatcher) initialCheck() bool {
-	status, err := gw.checkHealth(gw.target, gw.log, gw.dialFunc)
+	status, err := gw.checkHealth(gw.target, gw.log, gw.dialFunc, gw.authType, gw.conClient)
 	if err != nil {
 		gw.log.Infof("checkHealth returned error: %s", err.Error())
 	}

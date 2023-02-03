@@ -235,6 +235,10 @@ func CreateServer(log *log.Entry) *ApiServer {
 		ConClient: infratls.InfraAgent,
 	})
 
+	if err != nil {
+		logger.Fatalf("Failed to start inframanager grpc server")
+	}
+
 	server.listener = listen
 	server.log = log
 

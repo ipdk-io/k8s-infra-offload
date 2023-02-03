@@ -33,17 +33,22 @@ var (
 )
 
 type ServiceHandler struct {
-	log *logrus.Entry
+	log              *logrus.Entry
+	inframgrAuthType infratls.AuthType
 }
 
-func NewNatServiceHandler(log *logrus.Entry) *ServiceHandler {
-	return &ServiceHandler{log: log}
+func NewNatServiceHandler(log *logrus.Entry,
+	authType infratls.AuthType) *ServiceHandler {
+	return &ServiceHandler{
+		log:              log,
+		inframgrAuthType: authType,
+	}
 }
 
 func (s *ServiceHandler) dialManager() (pb.InfraAgentClient, *grpc.ClientConn, error) {
 	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
 	s.log.Info("dialer using manager address: ", managerAddr)
-	conn, err := infratls.GrpcDial(managerAddr, infratls.Insecure,
+	conn, err := infratls.GrpcDial(managerAddr, s.inframgrAuthType,
 		infratls.InfraAgent)
 	if err != nil {
 		s.log.Errorf("unable to dial Infra Manager. err %v", err)

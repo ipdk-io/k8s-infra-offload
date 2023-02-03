@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"strings"
 	"time"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
@@ -51,13 +52,13 @@ type ServerParams struct {
 
 func GetAuthType(auth string) AuthType {
 	switch auth {
-	case "UnknownAuth":
+	case strings.ToLower("UnknownAuth"):
 		return UnknownAuth
-	case "Insecure":
+	case strings.ToLower("Insecure"):
 		return Insecure
-	case "ServerSideTLS":
+	case strings.ToLower("ServerSideTLS"):
 		return ServerSideTLS
-	case "MutualTLS":
+	case strings.ToLower("MutualTLS"):
 		return MutualTLS
 	default:
 		return UnknownAuth
