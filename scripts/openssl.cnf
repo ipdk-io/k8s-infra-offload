@@ -20,6 +20,9 @@ subjectAltName          = @server_alt_names
 
 [server_alt_names]
 DNS.1 = *.intel.com
+DNS.2 = k8s
+DNS.3 = kubernetes.default
+IP.1  = 127.0.0.1
 
 [v3_client]
 basicConstraints        = critical,CA:FALSE

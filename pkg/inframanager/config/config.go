@@ -42,9 +42,10 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 	}
 
 	// Reading variables without using the model
-	fmt.Println("gRPC Server Addr:\t", viper.GetString("GrpcServer.Addr"))
-	fmt.Println("gRPC Server Addr:\t", viper.GetString("GrpcServer.Auth"))
+	fmt.Println("P4Runtime Server Addr:\t", viper.GetString("P4RuntimeServer.Addr"))
+	fmt.Println("P4Runtime Server Auth:\t", viper.GetString("P4RuntimeServer.Auth"))
 	fmt.Println("gNMI Server Addr:\t", viper.GetString("GnmiServer.Addr"))
-	fmt.Println("gRPC Server Addr:\t", viper.GetString("GrpcServer.Auth"))
+	fmt.Println("gNMI Server Auth:\t", viper.GetString("GnmiServer.Auth"))
+	fmt.Println("InfraManager Auth:\t", viper.GetString("InfraManagerAuth"))
 	fmt.Println("Log Level is set to :\t", viper.GetString("LogLevel"))
 }

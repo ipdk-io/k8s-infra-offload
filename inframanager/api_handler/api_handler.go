@@ -75,12 +75,12 @@ func GetLogLevel() string {
 func OpenP4RtC(ctx context.Context, high uint64, low uint64, stopCh <-chan struct{}) error {
 	var err error
 
-	log.Infof("Connecting to P4Runtime Server at %s", config.GrpcServer.Addr)
+	log.Infof("Connecting to P4Runtime Server at %s", config.P4RuntimeServer.Addr)
 
 	server := NewApiServer()
 
-	server.p4RtCConn, err = infratls.GrpcDial(config.GrpcServer.Addr,
-		infratls.GetAuthType(config.GnmiServer.Auth), 0)
+	server.p4RtCConn, err = infratls.GrpcDial(config.P4RuntimeServer.Addr,
+		infratls.GetAuthType(config.P4RuntimeServer.Auth), 0)
 	if err != nil {
 		log.Errorf("Cannot connect to P4Runtime Client: %v", err)
 		return err
@@ -219,7 +219,8 @@ func SetFwdPipe(ctx context.Context, binPath string,
 
 func CreateServer(log *log.Entry) *ApiServer {
 	logger := log.WithField("func", "CreateAndStartServer")
-	logger.Infof("Starting infra-manager gRPC server")
+	logger.Infof("Starting infra-manager gRPC server, auth: %s",
+		config.InfraManagerAuth)
 
 	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
 	listen, err := net.Listen(types.ServerNetProto, managerAddr)
@@ -230,7 +231,7 @@ func CreateServer(log *log.Entry) *ApiServer {
 	server := NewApiServer()
 	server.grpc, err = infratls.NewGrpcServer(infratls.ServerParams{
 		KeepAlive: true,
-		AuthType:  infratls.GetAuthType(config.GrpcServer.Auth),
+		AuthType:  infratls.GetAuthType(config.InfraManagerAuth),
 		Service:   infratls.InfraManager,
 		ConClient: infratls.InfraAgent,
 	})

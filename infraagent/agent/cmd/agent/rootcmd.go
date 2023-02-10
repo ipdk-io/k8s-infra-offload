@@ -90,7 +90,7 @@ func init() {
 
 	intfTypeOpts := newFlagOpts([]string{types.SriovPodInterface, types.IpvlanPodInterface, types.TapInterface}, types.SriovPodInterface)
 	rootCmd.PersistentFlags().Var(intfTypeOpts, "interfaceType", "Pod Interface type (sriov|ipvlan|tap)")
-	rootCmd.PersistentFlags().StringVar(&config.inframgrAuthType, "auth", "serversidetls", "Inframanager authentication type(insecure|serversidetls|mutualtls)")
+	rootCmd.PersistentFlags().StringVar(&config.inframgrAuthType, "auth", "mutualtls", "Inframanager authentication type(insecure|serversidetls|mutualtls)")
 	rootCmd.PersistentFlags().StringVar(&config.interfaceName, "interface", "", intfFlagHelpMsg)
 	rootCmd.PersistentFlags().StringVar(&config.cfgFile, "config", "/etc/infra/infraagent.yaml", "config file")
 	rootCmd.PersistentFlags().StringVar(&config.tapPrefix, "tapPrefix", types.TapInterfacePrefix, "Host TAP interface prefix for TAP interface type")
@@ -98,7 +98,7 @@ func init() {
 		fmt.Fprintf(os.Stderr, "There was an error while binding flags '%s'", err)
 		os.Exit(1)
 	}
-	if err := viper.BindPFlag("auth", rootCmd.PersistentFlags().Lookup("auth")); err != nil {
+	if err := viper.BindPFlag("inframgrAuthType", rootCmd.PersistentFlags().Lookup("auth")); err != nil {
 		fmt.Fprintf(os.Stderr, "There was an error while binding flags '%s'", err)
 		os.Exit(1)
 	}

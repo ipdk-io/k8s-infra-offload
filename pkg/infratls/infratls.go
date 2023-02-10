@@ -51,14 +51,15 @@ type ServerParams struct {
 }
 
 func GetAuthType(auth string) AuthType {
+	auth = strings.ToLower(auth)
 	switch auth {
-	case strings.ToLower("UnknownAuth"):
+	case "unknownauth":
 		return UnknownAuth
-	case strings.ToLower("Insecure"):
+	case "insecure":
 		return Insecure
-	case strings.ToLower("ServerSideTLS"):
+	case "serversidetls":
 		return ServerSideTLS
-	case strings.ToLower("MutualTLS"):
+	case "mutualtls":
 		return MutualTLS
 	default:
 		return UnknownAuth
@@ -297,6 +298,8 @@ func GrpcDial(target string, authType AuthType, c Service) (*grpc.ClientConn, er
 		}
 
 		creds = grpc.WithTransportCredentials(credentials.NewTLS(config))
+	default:
+		return nil, errors.New("Unknown authentication type")
 	}
 
 	return grpc.Dial(target, creds)

@@ -151,7 +151,7 @@ func getInterface(ifaceList []net.Interface, internalIP string, ifAddressGetter 
 		}
 		for _, addr := range addrs {
 			if strings.HasPrefix(addr.String(), internalIP) {
-				ifaceName = i.Name
+				return i.Name, nil
 			}
 		}
 	}

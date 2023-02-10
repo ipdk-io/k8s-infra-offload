@@ -16,22 +16,18 @@ package config
 
 // Configurations exported
 type Configuration struct {
-	GrpcServer GrpcServerConf
-	GnmiServer GnmiServerConf
-	NodeIP     string
-	LogLevel   string
-	P4InfoPath string
-	P4BinPath  string
-	DeviceId   uint64
+	P4RuntimeServer  ServerConf
+	GnmiServer       ServerConf
+	InfraManagerAuth string
+	NodeIP           string
+	LogLevel         string
+	P4InfoPath       string
+	P4BinPath        string
+	DeviceId         uint64
 }
 
 // ServerConfigurations exported
-type GnmiServerConf struct {
-	Addr string
-	Auth string
-}
-
-type GrpcServerConf struct {
+type ServerConf struct {
 	Addr string
 	Auth string
 }
