@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	grpcDial = grpc.Dial
+	grpcDial = grpcDialWithCred
 )
 
 type httpHealthServer interface {
@@ -81,6 +81,14 @@ func NewHealthCheckServer(l *logrus.Entry) (types.Server, error) {
 		Handler: mux,
 	}
 	return hs, nil
+}
+
+var grpcDialWithCred = func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	credentials, err := utils.GetClientCredentials()
+	if err != nil {
+		return nil, fmt.Errorf("error getting gRPC client credentials to connect to backend: %s", err.Error())
+	}
+	return grpc.Dial(target, grpc.WithTransportCredentials(credentials))
 }
 
 func (s *healtServer) checkGrpcServerStatus(target string) bool {

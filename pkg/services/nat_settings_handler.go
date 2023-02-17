@@ -21,14 +21,15 @@ import (
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 
+	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	pb "github.com/ipdk-io/k8s-infra-offload/proto"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 var (
 	grpcDial            = grpc.Dial
+	getCredentialFunc   = utils.GetClientCredentials
 	newInfraAgentClient = pb.NewInfraAgentClient
 )
 
@@ -43,7 +44,11 @@ func NewNatServiceHandler(log *logrus.Entry) *ServiceHandler {
 func (s *ServiceHandler) dialManager() (pb.InfraAgentClient, *grpc.ClientConn, error) {
 	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
 	s.log.Info("dialer using manager address: ", managerAddr)
-	conn, err := grpcDial(managerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	credentials, err := getCredentialFunc()
+	if err != nil {
+		return nil, nil, fmt.Errorf("error getting gRPC client credentials to connect to backend: %s", err.Error())
+	}
+	conn, err := grpcDial(managerAddr, grpc.WithTransportCredentials(credentials))
 	if err != nil {
 		s.log.Errorf("unable to dial Infra Manager. err %v", err)
 		return nil, nil, err

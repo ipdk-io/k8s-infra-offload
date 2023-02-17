@@ -32,6 +32,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 	"gopkg.in/tomb.v2"
@@ -73,6 +74,10 @@ var (
 
 func bufDialer(context.Context, string) (net.Conn, error) {
 	return listener.Dial()
+}
+
+func fakeGetCredential() (credentials.TransportCredentials, error) {
+	return insecure.NewCredentials(), nil
 }
 
 func TestServices(t *testing.T) {
@@ -136,6 +141,7 @@ var _ = AfterSuite(func() {
 
 var _ = Describe("proxy", func() {
 	var _ = BeforeEach(func() {
+		getCredentialFunc = fakeGetCredential
 		grpcDial = func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
 			return grpc.DialContext(context.TODO(), "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
 		}
