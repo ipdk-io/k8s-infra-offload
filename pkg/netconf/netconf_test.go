@@ -19,6 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 )
@@ -66,6 +67,7 @@ var _ = Describe("netconf", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		saveInterfaceConf = fakeSaveInterfaceConf
 		readInterfaceConf = fakeReadInterfaceConf
+		getCredentialFunc = fakeGetCredential
 	})
 
 	var _ = AfterEach(func() {
@@ -1813,4 +1815,8 @@ func fakeSetLinkAddress(link netlink.Link, containerIps []*proto.IPConfig) error
 
 func fakeSetLinkAddressErr(link netlink.Link, containerIps []*proto.IPConfig) error {
 	return errors.New("Fake error on setLinkAddress")
+}
+
+func fakeGetCredential() (credentials.TransportCredentials, error) {
+	return insecure.NewCredentials(), nil
 }

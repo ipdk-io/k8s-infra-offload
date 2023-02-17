@@ -31,7 +31,6 @@ import (
 	cniTypes "github.com/containernetworking/cni/pkg/types"
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
@@ -531,7 +530,7 @@ func getHealthServerResponse(conn *grpc.ClientConn) (*healthpb.HealthCheckRespon
 
 // CheckGrpcServerStatus will check gRPC server status using gRPC health check
 func CheckGrpcServerStatus(target string, log *log.Entry, grpcDial grpcDialType) (bool, error) {
-	conn, err := grpcDial(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpcDial(target)
 	defer func() {
 		if conn == nil {
 			return

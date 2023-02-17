@@ -28,7 +28,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 const nonTargetIP = "0.0.0.0/0"
@@ -42,6 +41,7 @@ var (
 	getIPFromIPAM                   = utils.GetIPFromIPAM
 	getNS                           = ns.GetNS
 	grpcDial                        = grpc.Dial
+	getCredentialFunc               = utils.GetClientCredentials
 	ipAddRoute                      = ip.AddRoute
 	linkByName                      = netlink.LinkByName
 	linkSetDown                     = netlink.LinkSetDown
@@ -220,7 +220,11 @@ func configureRouting(link netlink.Link, log *logrus.Entry) error {
 
 func sendSetupHostInterface(request *pb.SetupHostInterfaceRequest) error {
 	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
-	conn, err := grpcDial(managerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	credentials, err := getCredentialFunc()
+	if err != nil {
+		return fmt.Errorf("error getting gRPC client credentials to connect to backend: %s", err.Error())
+	}
+	conn, err := grpcDial(managerAddr, grpc.WithTransportCredentials(credentials))
 	if err != nil {
 		return err
 	}

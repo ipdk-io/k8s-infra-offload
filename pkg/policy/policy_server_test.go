@@ -18,6 +18,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 	"gopkg.in/tomb.v2"
 )
@@ -174,6 +176,7 @@ var _ = BeforeSuite(func() {
 		cc := &grpc.ClientConn{}
 		return cc, nil
 	}
+	getCredentialFunc = fakeGetCredential
 
 	cancellableListener = func(ctx context.Context) (net.Listener, error) {
 		return socketListener, nil
@@ -183,6 +186,10 @@ var _ = BeforeSuite(func() {
 		return nil
 	}
 })
+
+func fakeGetCredential() (credentials.TransportCredentials, error) {
+	return insecure.NewCredentials(), nil
+}
 
 func testPolicyMsg(bs []byte, callExpect *gomock.Call) {
 	var t tomb.Tomb
