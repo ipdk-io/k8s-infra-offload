@@ -34,7 +34,7 @@ func GetClientCredentials() (credentials.TransportCredentials, error) {
 		return insecure.NewCredentials(), nil
 	}
 
-	if viper.GetBool("mlts") {
+	if viper.GetBool("mtls") {
 		return getClientMTLSCredentials()
 	} else {
 		return getClientTLSCredentials()
