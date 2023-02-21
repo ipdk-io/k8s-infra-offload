@@ -38,6 +38,10 @@ spec:
         volumeMounts:
         - name: db
           mountPath: /var/lib/cni/inframanager
+        - name: client-certs
+          mountPath: /tmp/inframanager/client/
+        - name: server-certs
+          mountPath: /tmp/inframanager/server/
         command:
         - /inframanager
         env:
@@ -50,6 +54,14 @@ spec:
         hostPath:
           path: /var/lib/cni/inframanager
           type: DirectoryOrCreate
+      - name: client-certs
+        secret:
+          secretName: manager-client-secret
+          optional: true
+      - name: server-certs
+        secret:
+          secretName: manager-server-secret
+          optional: true
   updateStrategy:
     rollingUpdate:
       maxUnavailable: 1
