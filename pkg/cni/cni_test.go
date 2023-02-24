@@ -34,6 +34,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 	"gopkg.in/tomb.v2"
@@ -124,6 +125,10 @@ func (fns *fakeNetNS) Close() error {
 	return nil
 }
 
+func fakeGetCredential() (credentials.TransportCredentials, error) {
+	return insecure.NewCredentials(), nil
+}
+
 func TestCni(t *testing.T) {
 	mockCrtl = gomock.NewController(t)
 	mockClient = mock_proto.NewMockInfraAgentClient(mockCrtl)
@@ -145,6 +150,7 @@ var _ = Describe("CNI backend server", func() {
 	})
 
 	var _ = BeforeEach(func() {
+		getCredentialFunc = fakeGetCredential
 		grpcDial = func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
 			return grpc.DialContext(context.TODO(), "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
 		}

@@ -15,20 +15,18 @@
 package netconf
 
 import (
-	"github.com/ipdk-io/k8s-infra-offload/pkg/infratls"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	log "github.com/sirupsen/logrus"
 )
 
-func NewPodInterface(t string, log *log.Entry,
-	inframgrAuthType infratls.AuthType) (types.PodInterface, error) {
+func NewPodInterface(t string, log *log.Entry) (types.PodInterface, error) {
 	switch t {
 	case types.IpvlanPodInterface:
-		return NewIpvlanPodInterface(log, inframgrAuthType)
+		return NewIpvlanPodInterface(log)
 	case types.SriovPodInterface:
-		return NewSriovPodInterface(log, inframgrAuthType)
+		return NewSriovPodInterface(log)
 	case types.TapInterface:
-		return NewTapPodInterface(log, inframgrAuthType)
+		return NewTapPodInterface(log)
 	}
 	log.Errorf("invalid or unsupported interface type: %s", t)
 	return nil, nil

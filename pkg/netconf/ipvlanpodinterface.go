@@ -17,7 +17,6 @@ package netconf
 import (
 	"context"
 
-	"github.com/ipdk-io/k8s-infra-offload/pkg/infratls"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	pb "github.com/ipdk-io/k8s-infra-offload/proto"
 	"github.com/sirupsen/logrus"
@@ -25,21 +24,14 @@ import (
 )
 
 type ipvlanPodInterface struct {
-	log              *logrus.Entry
-	master           string
-	podMac           string
-	mode             netlink.IPVlanMode
-	inframgrAuthType infratls.AuthType
+	log    *logrus.Entry
+	master string
+	podMac string
+	mode   netlink.IPVlanMode
 }
 
-func NewIpvlanPodInterface(log *logrus.Entry,
-	inframgrAuthType infratls.AuthType) (types.PodInterface, error) {
-	return &ipvlanPodInterface{
-		log:              log,
-		master:           types.NodeInterfaceName,
-		mode:             netlink.IPVLAN_MODE_L3,
-		inframgrAuthType: inframgrAuthType,
-	}, nil
+func NewIpvlanPodInterface(log *logrus.Entry) (types.PodInterface, error) {
+	return &ipvlanPodInterface{log: log, master: types.NodeInterfaceName, mode: netlink.IPVLAN_MODE_L3}, nil
 }
 
 func (p *ipvlanPodInterface) CreatePodInterface(in *pb.AddRequest) (*types.InterfaceInfo, error) {

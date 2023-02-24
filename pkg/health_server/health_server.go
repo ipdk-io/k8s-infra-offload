@@ -21,7 +21,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ipdk-io/k8s-infra-offload/pkg/infratls"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	"github.com/sirupsen/logrus"
@@ -30,7 +29,7 @@ import (
 )
 
 var (
-	grpcDial = grpc.Dial
+	grpcDial = grpcDialWithCred
 )
 
 type httpHealthServer interface {
@@ -39,9 +38,8 @@ type httpHealthServer interface {
 }
 
 type healtServer struct {
-	log              *logrus.Entry
-	inframgrAuthType infratls.AuthType
-	srv              httpHealthServer
+	log *logrus.Entry
+	srv httpHealthServer
 }
 
 func getCheck(hs *healtServer) func(http.ResponseWriter, *http.Request) {
@@ -72,10 +70,9 @@ func getCheck(hs *healtServer) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func NewHealthCheckServer(l *logrus.Entry, authType infratls.AuthType) (types.Server, error) {
+func NewHealthCheckServer(l *logrus.Entry) (types.Server, error) {
 	hs := &healtServer{
-		log:              l,
-		inframgrAuthType: authType,
+		log: l,
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/check", getCheck(hs))
@@ -86,12 +83,16 @@ func NewHealthCheckServer(l *logrus.Entry, authType infratls.AuthType) (types.Se
 	return hs, nil
 }
 
-func (s *healtServer) checkGrpcServerStatus(target string,
-	authType infratls.AuthType, conClient infratls.Service) bool {
-	var grpcDialType utils.InfratlsGrpcDialType
+var grpcDialWithCred = func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	credentials, err := utils.GetClientCredentials()
+	if err != nil {
+		return nil, fmt.Errorf("error getting gRPC client credentials to connect to backend: %s", err.Error())
+	}
+	return grpc.Dial(target, grpc.WithTransportCredentials(credentials))
+}
 
-	status, err := utils.CheckGrpcServerStatus(target, s.log,
-		grpcDialType, authType, conClient)
+func (s *healtServer) checkGrpcServerStatus(target string) bool {
+	status, err := utils.CheckGrpcServerStatus(target, s.log, grpcDial)
 	if err != nil {
 		s.log.Errorf("error while checking %s: %s", target, err.Error())
 	}
@@ -100,14 +101,13 @@ func (s *healtServer) checkGrpcServerStatus(target string,
 
 func (s *healtServer) checkInfraManagerLiveness() bool {
 	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
-	return s.checkGrpcServerStatus(managerAddr, s.inframgrAuthType, infratls.InfraAgent)
-	//return true
+	return s.checkGrpcServerStatus(managerAddr)
 }
 
 func (s *healtServer) checkCniServerLiveness() bool {
 	// TODO change this to UDS when grpc start working using it
 	agentAddr := fmt.Sprintf("%s:%s", types.InfraAgentAddr, types.InfraAgentPort)
-	return s.checkGrpcServerStatus(agentAddr, infratls.Insecure, 0)
+	return s.checkGrpcServerStatus(agentAddr)
 }
 
 func (s *healtServer) checkServicesServerStatus() bool {

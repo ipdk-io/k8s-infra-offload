@@ -25,7 +25,6 @@ import (
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/cni"
 	healthserver "github.com/ipdk-io/k8s-infra-offload/pkg/health_server"
-	"github.com/ipdk-io/k8s-infra-offload/pkg/infratls"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/policy"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/services"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
@@ -39,7 +38,7 @@ type Agent interface {
 	Run()
 }
 
-func NewAgent(intfType string, ifName string, authType infratls.AuthType, logDir string, client kubernetes.Interface) (Agent, error) {
+func NewAgent(intfType string, ifName string, logDir string, client kubernetes.Interface) (Agent, error) {
 	err := logInit(logDir)
 	if err != nil {
 		return nil, err
@@ -49,7 +48,6 @@ func NewAgent(intfType string, ifName string, authType infratls.AuthType, logDir
 		log:              log.WithField("pkg", "infraagent"),
 		podInterfaceType: intfType,
 		nodeIntf:         ifName,
-		inframgrAuthType: authType,
 	}
 	return agent, nil
 }
@@ -59,7 +57,6 @@ type agent struct {
 	log              *log.Entry
 	podInterfaceType string
 	nodeIntf         string
-	inframgrAuthType infratls.AuthType
 	t                tomb.Tomb
 }
 
@@ -82,27 +79,25 @@ func (a *agent) prepareServers() ([]types.Server, error) {
 	servers := []types.Server{}
 	agentAddr := fmt.Sprintf("%s:%s", types.InfraAgentAddr, types.InfraAgentPort)
 
-	cs, err := cni.NewCniServer(a.log.WithField("pkg", "cni"),
-		a.podInterfaceType, a.inframgrAuthType, agentAddr, nil)
+	cs, err := cni.NewCniServer(a.log.WithField("pkg", "cni"), a.podInterfaceType, agentAddr, nil)
 	if err != nil {
 		return nil, err
 	}
 	servers = append(servers, cs)
 
-	srv, err := services.NewServiceServer(a.log.WithField("pkg", "services"), services.NewNatServiceHandler(a.log.WithField("pkg", "services"), a.inframgrAuthType), types.ServiceRefreshTimeInSeconds)
+	srv, err := services.NewServiceServer(a.log.WithField("pkg", "services"), services.NewNatServiceHandler(a.log.WithField("pkg", "services")), types.ServiceRefreshTimeInSeconds)
 	if err != nil {
 		return nil, err
 	}
 	servers = append(servers, srv)
 
-	hs, err := healthserver.NewHealthCheckServer(a.log.WithField("pkg", "healthserver"), a.inframgrAuthType)
+	hs, err := healthserver.NewHealthCheckServer(a.log.WithField("pkg", "healthserver"))
 	if err != nil {
 		return nil, err
 	}
 	servers = append(servers, hs)
 
-	p, err := policy.NewPolicyServer(a.log.WithField("pkg", "policy"),
-		a.inframgrAuthType)
+	p, err := policy.NewPolicyServer(a.log.WithField("pkg", "policy"))
 	if err != nil {
 		return nil, err
 	}

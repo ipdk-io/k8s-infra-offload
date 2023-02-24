@@ -6,4 +6,4 @@ metadata:
 data:
   infraagent.yaml: |
     interfaceType: tap
-    inframgrAuthType: MutualTLS
+    insecure: true

@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/infraagent"
-	"github.com/ipdk-io/k8s-infra-offload/pkg/infratls"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	"github.com/spf13/cobra"
@@ -33,11 +32,15 @@ const (
 )
 
 var config struct {
-	cfgFile          string
-	interfaceType    string
-	inframgrAuthType string
-	interfaceName    string
-	tapPrefix        string
+	cfgFile       string
+	interfaceType string
+	interfaceName string
+	tapPrefix     string
+	insecure      bool
+	mtls          bool
+	clientCert    string
+	clientKey     string
+	caCert        string
 }
 
 var rootCmd = &cobra.Command{
@@ -53,20 +56,16 @@ It off-loads K8s dataplane to Infrastructure components.
 	Run: func(_ *cobra.Command, _ []string) {
 		interfaceType := viper.GetString("interfaceType")
 		ifName := viper.GetString("interface")
-		config.inframgrAuthType = viper.GetString("inframgrAuthType")
-		//config.inframgrAuthType = infratls.GetAuthType(authType)
-		cfg, err := utils.GetK8sConfig()
+		config, err := utils.GetK8sConfig()
 		if err != nil {
 			exitWithError(err, 2)
 		}
 
-		client, err := utils.GetK8sClient(cfg)
+		client, err := utils.GetK8sClient(config)
 		if err != nil {
 			exitWithError(err, 3)
 		}
-		agent, err := infraagent.NewAgent(interfaceType, ifName,
-			infratls.GetAuthType(config.inframgrAuthType),
-			types.InfraAgentLogDir, client)
+		agent, err := infraagent.NewAgent(interfaceType, ifName, types.InfraAgentLogDir, client)
 		if err != nil {
 			exitWithError(err, 4)
 		}
@@ -90,15 +89,16 @@ func init() {
 
 	intfTypeOpts := newFlagOpts([]string{types.SriovPodInterface, types.IpvlanPodInterface, types.TapInterface}, types.SriovPodInterface)
 	rootCmd.PersistentFlags().Var(intfTypeOpts, "interfaceType", "Pod Interface type (sriov|ipvlan|tap)")
-	rootCmd.PersistentFlags().StringVar(&config.inframgrAuthType, "auth", "mutualtls", "Inframanager authentication type(insecure|serversidetls|mutualtls)")
 	rootCmd.PersistentFlags().StringVar(&config.interfaceName, "interface", "", intfFlagHelpMsg)
 	rootCmd.PersistentFlags().StringVar(&config.cfgFile, "config", "/etc/infra/infraagent.yaml", "config file")
 	rootCmd.PersistentFlags().StringVar(&config.tapPrefix, "tapPrefix", types.TapInterfacePrefix, "Host TAP interface prefix for TAP interface type")
+	rootCmd.PersistentFlags().BoolVar(&config.insecure, "insecure", false, "use insecure mode for internal communication with backend")
+	rootCmd.PersistentFlags().BoolVar(&config.mtls, "mtls", true, "use mTLS for internal communication with backend")
+	rootCmd.PersistentFlags().StringVar(&config.clientCert, "client-cert", types.AgentDefaultClientCert, "TLS Client cert file for mTLS")
+	rootCmd.PersistentFlags().StringVar(&config.clientKey, "client-key", types.AgentDefaultClientKey, "TLS Client key file for mTLS")
+	rootCmd.PersistentFlags().StringVar(&config.caCert, "ca-cert", types.AgentDefaultCACert, "TLS Client CA Cert file")
+
 	if err := viper.BindPFlag("interfaceType", rootCmd.PersistentFlags().Lookup("interfaceType")); err != nil {
-		fmt.Fprintf(os.Stderr, "There was an error while binding flags '%s'", err)
-		os.Exit(1)
-	}
-	if err := viper.BindPFlag("inframgrAuthType", rootCmd.PersistentFlags().Lookup("auth")); err != nil {
 		fmt.Fprintf(os.Stderr, "There was an error while binding flags '%s'", err)
 		os.Exit(1)
 	}
@@ -108,6 +108,27 @@ func init() {
 	}
 	if err := viper.BindPFlag("tapPrefix", rootCmd.PersistentFlags().Lookup("tapPrefix")); err != nil {
 		fmt.Fprintf(os.Stderr, "There was an error while binding flags '%s'", err)
+		os.Exit(1)
+	}
+
+	if err := viper.BindPFlag("insecure", rootCmd.PersistentFlags().Lookup("insecure")); err != nil {
+		fmt.Fprintf(os.Stderr, "There was an error while binding insecure flag '%s'", err)
+		os.Exit(1)
+	}
+	if err := viper.BindPFlag("mtls", rootCmd.PersistentFlags().Lookup("mtls")); err != nil {
+		fmt.Fprintf(os.Stderr, "There was an error while binding mtls flag '%s'", err)
+		os.Exit(1)
+	}
+	if err := viper.BindPFlag("client-cert", rootCmd.PersistentFlags().Lookup("client-cert")); err != nil {
+		fmt.Fprintf(os.Stderr, "There was an error while binding client-cert flag '%s'", err)
+		os.Exit(1)
+	}
+	if err := viper.BindPFlag("client-key", rootCmd.PersistentFlags().Lookup("client-key")); err != nil {
+		fmt.Fprintf(os.Stderr, "There was an error while binding client-key flag '%s'", err)
+		os.Exit(1)
+	}
+	if err := viper.BindPFlag("ca-cert", rootCmd.PersistentFlags().Lookup("ca-cert")); err != nil {
+		fmt.Fprintf(os.Stderr, "There was an error while binding ca-cert flag '%s'", err)
 		os.Exit(1)
 	}
 }
@@ -159,11 +180,6 @@ func validateConfigs() error {
 		err = fmt.Errorf("error validating interfaceType: %w", newErr)
 	}
 
-	inframgrAuthType := viper.GetString("inframgrAuthType")
-	if infratls.GetAuthType(inframgrAuthType) == infratls.UnknownAuth {
-		err = fmt.Errorf("Invalid authentication type for communicating with inframanager: %v",
-			inframgrAuthType)
-	}
 	// When validating other configs wrap add error msgs in one and then return it at the end.
 	// For example:
 	//
@@ -172,5 +188,16 @@ func validateConfigs() error {
 	// 	err = fmt.Errorf("%s;\nerror validating anotherField: %s", err, newErr)
 	// }
 
+	// If (--insecure==false && mtls==true) then validate that the cert,key,cacert files exist
+	if !viper.GetBool("insecure") {
+		if viper.GetBool("mtls") {
+			tlsFiles := []string{viper.GetString("client-cert"), viper.GetString("client-key"), viper.GetString("ca-cert")}
+			for _, file := range tlsFiles {
+				if _, lsErr := os.Lstat(file); os.IsNotExist(lsErr) {
+					err = fmt.Errorf("%s file not found", file)
+				}
+			}
+		}
+	}
 	return err
 }

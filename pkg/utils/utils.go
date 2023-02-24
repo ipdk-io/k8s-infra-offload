@@ -33,7 +33,6 @@ import (
 	"google.golang.org/grpc"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
-	"github.com/ipdk-io/k8s-infra-offload/pkg/infratls"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/vishvananda/netlink"
 	v1 "k8s.io/api/core/v1"
@@ -151,7 +150,7 @@ func getInterface(ifaceList []net.Interface, internalIP string, ifAddressGetter 
 		}
 		for _, addr := range addrs {
 			if strings.HasPrefix(addr.String(), internalIP) {
-				return i.Name, nil
+				ifaceName = i.Name
 			}
 		}
 	}
@@ -524,15 +523,14 @@ func VerifiedFilePath(fileName string, allowedDir string) (string, error) {
 }
 
 type grpcDialType func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error)
-type InfratlsGrpcDialType func(target string, authType infratls.AuthType, c infratls.Service) (*grpc.ClientConn, error)
 
 func getHealthServerResponse(conn *grpc.ClientConn) (*healthpb.HealthCheckResponse, error) {
 	return healthpb.NewHealthClient(conn).Check(context.Background(), &healthpb.HealthCheckRequest{Service: ""})
 }
 
 // CheckGrpcServerStatus will check gRPC server status using gRPC health check
-func CheckGrpcServerStatus(target string, log *log.Entry, grpcDial InfratlsGrpcDialType, authType infratls.AuthType, conClient infratls.Service) (bool, error) {
-	conn, err := infratls.GrpcDial(target, authType, conClient)
+func CheckGrpcServerStatus(target string, log *log.Entry, grpcDial grpcDialType) (bool, error) {
+	conn, err := grpcDial(target)
 	defer func() {
 		if conn == nil {
 			return

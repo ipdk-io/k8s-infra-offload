@@ -16,18 +16,27 @@ package config
 
 // Configurations exported
 type Configuration struct {
-	P4RuntimeServer  ServerConf
-	GnmiServer       ServerConf
-	InfraManagerAuth string
-	NodeIP           string
-	LogLevel         string
-	P4InfoPath       string
-	P4BinPath        string
-	DeviceId         uint64
+	P4RuntimeServer ServerConf  `yaml:"P4RuntimeServer"`
+	GnmiServer      ServerConf  `yaml:"GnmiServer"`
+	InfraManager    ManagerConf `yaml:"InfraManager"`
+	NodeIP          string
+	LogLevel        string
+	P4InfoPath      string
+	P4BinPath       string
+	DeviceId        uint64
 }
 
 // ServerConfigurations exported
 type ServerConf struct {
-	Addr string
-	Auth string
+	Addr       string `mapstructure:"addr"`
+	Conn       string `mapstructure:"conn"`
+	ClientCert string `mapstructure:"client-cert"`
+	ClientKey  string `mapstructure:"client-key"`
+	CACert     string `mapstructure:"ca-cert"`
+}
+type ManagerConf struct {
+	Conn       string `mapstructure:"conn"`
+	ServerCert string `mapstructure:"server-cert"`
+	ServerKey  string `mapstructure:"server-key"`
+	CACert     string `mapstructure:"ca-cert"`
 }

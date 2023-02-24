@@ -22,9 +22,9 @@ import (
 	"time"
 
 	"github.com/containernetworking/plugins/pkg/ns"
-	"github.com/ipdk-io/k8s-infra-offload/pkg/infratls"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/netconf"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	pb "github.com/ipdk-io/k8s-infra-offload/proto"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -44,13 +44,13 @@ type CniServer struct {
 	log              *log.Entry
 	name             string
 	podInterfaceType string
-	inframgrAuthType infratls.AuthType
 	podInterface     types.PodInterface
 	serveFunc        func() error
 }
 
 var (
 	newPodInterface     = netconf.NewPodInterface
+	getCredentialFunc   = utils.GetClientCredentials
 	grpcDial            = grpc.Dial
 	newInfraAgentClient = pb.NewInfraAgentClient
 
@@ -58,8 +58,7 @@ var (
 	getNSFunc  = ns.GetNS
 )
 
-func NewCniServer(log *log.Entry, t string, authType infratls.AuthType,
-	uri string, serveFunc func() error) (types.Server, error) {
+func NewCniServer(log *log.Entry, t, uri string, serveFunc func() error) (types.Server, error) {
 	listen, err := listenFunc(types.ServerNetProto, uri)
 	if err != nil {
 		log.WithError(err).Error("failed to listen on socket")
@@ -68,7 +67,7 @@ func NewCniServer(log *log.Entry, t string, authType infratls.AuthType,
 	log.Infof("Listen on addr: %s", listen.Addr().String())
 	kp := grpc.KeepaliveParams(keepalive.ServerParameters{MaxConnectionAge: time.Duration(time.Second * 10), MaxConnectionAgeGrace: time.Duration(time.Second * 30)})
 
-	pi, err := newPodInterface(t, log.WithField("pkg", "netconf"), authType)
+	pi, err := newPodInterface(t, log.WithField("pkg", "netconf"))
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +77,6 @@ func NewCniServer(log *log.Entry, t string, authType infratls.AuthType,
 		log:              log,
 		name:             "cni-server",
 		podInterfaceType: t,
-		inframgrAuthType: authType,
 		podInterface:     pi,
 		serveFunc:        serveFunc,
 	}
@@ -140,11 +138,13 @@ func (s *CniServer) Add(ctx context.Context, in *pb.AddRequest) (*pb.AddReply, e
 		out.ErrorMessage = err.Error()
 		return out, nil
 	}
-
-	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr,
-		types.InfraManagerPort)
-	conn, err := infratls.GrpcDial(managerAddr, s.inframgrAuthType,
-		infratls.InfraAgent)
+	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
+	credentials, err := getCredentialFunc()
+	if err != nil {
+		s.log.WithError(err).Error("error getting gRPC client credentials to connect to backend")
+		return out, nil
+	}
+	conn, err := grpcDial(managerAddr, grpc.WithTransportCredentials(credentials))
 	defer grpcClose(conn, s.log, "failed to close connnection, not fatal")
 
 	if err != nil {
@@ -194,8 +194,12 @@ func (s *CniServer) Del(ctx context.Context, in *pb.DelRequest) (*pb.DelReply, e
 	}
 
 	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
-	conn, err := infratls.GrpcDial(managerAddr, infratls.Insecure,
-		infratls.InfraAgent)
+	credentials, err := getCredentialFunc()
+	if err != nil {
+		s.log.WithError(err).Error("error getting gRPC client credentials to connect to backend")
+		return out, nil
+	}
+	conn, err := grpcDial(managerAddr, grpc.WithTransportCredentials(credentials))
 	defer grpcClose(conn, s.log, "failed to close connnection")
 
 	if err != nil {

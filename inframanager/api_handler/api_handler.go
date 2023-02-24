@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ipdk-io/k8s-infra-offload/pkg/infratls"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	"github.com/ipdk-io/k8s-infra-offload/proto"
@@ -79,8 +78,8 @@ func OpenP4RtC(ctx context.Context, high uint64, low uint64, stopCh <-chan struc
 
 	server := NewApiServer()
 
-	server.p4RtCConn, err = infratls.GrpcDial(config.P4RuntimeServer.Addr,
-		infratls.GetAuthType(config.P4RuntimeServer.Auth), 0)
+	server.p4RtCConn, err = utils.GrpcDial(config.P4RuntimeServer.Addr,
+		utils.GetConnType(config.P4RuntimeServer.Conn), utils.P4RuntimeServer)
 	if err != nil {
 		log.Errorf("Cannot connect to P4Runtime Client: %v", err)
 		return err
@@ -142,8 +141,8 @@ func OpenGNMICCon() error {
 
 	server := NewApiServer()
 
-	server.gNMICConn, err = infratls.GrpcDial(config.GnmiServer.Addr,
-		infratls.Insecure, 0)
+	server.gNMICConn, err = utils.GrpcDial(config.GnmiServer.Addr,
+		utils.GetConnType(config.GnmiServer.Conn), utils.GnmiServer)
 	if err != nil {
 		log.Errorf("Cannot connect to gNMI Server: %v", err)
 		return err
@@ -220,7 +219,7 @@ func SetFwdPipe(ctx context.Context, binPath string,
 func CreateServer(log *log.Entry) *ApiServer {
 	logger := log.WithField("func", "CreateAndStartServer")
 	logger.Infof("Starting infra-manager gRPC server, auth: %s",
-		config.InfraManagerAuth)
+		config.InfraManager.Conn)
 
 	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
 	listen, err := net.Listen(types.ServerNetProto, managerAddr)
@@ -229,11 +228,10 @@ func CreateServer(log *log.Entry) *ApiServer {
 	}
 
 	server := NewApiServer()
-	server.grpc, err = infratls.NewGrpcServer(infratls.ServerParams{
+	server.grpc, err = utils.NewGrpcServer(utils.ServerParams{
 		KeepAlive: true,
-		AuthType:  infratls.GetAuthType(config.InfraManagerAuth),
-		Service:   infratls.InfraManager,
-		ConClient: infratls.InfraAgent,
+		ConnType:  utils.GetConnType(config.InfraManager.Conn),
+		ConClient: utils.InfraAgent,
 	})
 
 	if err != nil {

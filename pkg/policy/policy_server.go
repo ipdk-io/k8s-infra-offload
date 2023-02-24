@@ -20,8 +20,8 @@ import (
 	"net"
 	"os"
 
-	"github.com/ipdk-io/k8s-infra-offload/pkg/infratls"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	pb "github.com/ipdk-io/k8s-infra-offload/proto"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -31,27 +31,25 @@ import (
 
 var (
 	grpcDial              = grpc.Dial
+	getCredentialFunc     = utils.GetClientCredentials
 	pbNewInfraAgentClient = pb.NewInfraAgentClient
 	cancellableListener   = getCancellableListener
 	removeSocket          = os.RemoveAll
 )
 
 type PolicyServer struct {
-	log              *logrus.Entry
-	nextSeqNumber    uint64
-	exiting          chan bool
-	name             string
-	inframgrAuthType infratls.AuthType
+	log           *logrus.Entry
+	nextSeqNumber uint64
+	exiting       chan bool
+	name          string
 }
 
-func NewPolicyServer(log *logrus.Entry,
-	authType infratls.AuthType) (types.Server, error) {
+func NewPolicyServer(log *logrus.Entry) (types.Server, error) {
 	return &PolicyServer{
-		log:              log,
-		nextSeqNumber:    0,
-		exiting:          make(chan bool),
-		name:             "felix-policy-server",
-		inframgrAuthType: authType}, nil
+		log:           log,
+		nextSeqNumber: 0,
+		exiting:       make(chan bool),
+		name:          "felix-policy-server"}, nil
 }
 
 func (s *PolicyServer) GetName() string {
@@ -547,8 +545,11 @@ func (s *PolicyServer) handleGlobalBGPConfigUpdate(msg *pb.GlobalBGPConfigUpdate
 
 func (s *PolicyServer) dialManager() (pb.InfraAgentClient, error) {
 	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
-	conn, err := infratls.GrpcDial(managerAddr, s.inframgrAuthType,
-		infratls.InfraAgent)
+	credentials, err := getCredentialFunc()
+	if err != nil {
+		return nil, fmt.Errorf("error getting gRPC client credentials to connect to backend: %s", err.Error())
+	}
+	conn, err := grpcDial(managerAddr, grpc.WithTransportCredentials(credentials))
 	if err != nil {
 		s.log.WithField("func", "dialManager")
 		s.log.Errorf("unable to dial Infra Manager. err %v", err)

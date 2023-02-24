@@ -85,6 +85,8 @@ spec:
           mountPath: /var/lib/cni/networks
         - name: kubeconfig
           mountPath: /root/.kube
+        - name: client-certs
+          mountPath: /tmp/infraagent/client/
         command:
         - /infraagent
       volumes:
@@ -120,6 +122,10 @@ spec:
       - name: cni-cache
         hostPath:
           path: /var/lib/cni/networks
+      - name: client-certs
+        secret:
+          secretName: agent-client-secret
+          optional: true
   updateStrategy:
     rollingUpdate:
       maxUnavailable: 1
