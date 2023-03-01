@@ -2,9 +2,10 @@ IMAGE_REGISTRY?=localhost:5000/
 IMAGE_VERSION?=latest
 KUBECONFIG?=$(HOME)/.kube/config
 KUBENAMESPACE?=kube-system
-K8S_SECRETE_MGR_SERVER?=manager-server-secret
-K8S_SECRETE_MGR_CLIENT?=manager-client-secret
-K8S_SECRETE_AGENT_CLIENT?=agent-client-secret
+K8S_SECRET_MGR_SERVER?=manager-server-secret
+K8S_SECRET_MGR_CLIENT?=manager-client-secret
+K8S_SECRET_AGENT_CLIENT?=agent-client-secret
+K8S_SECRET_SRC_DIR?=./scripts/tls/certs
 
 # KUBECONFIG_CM: ConfigMap with kubeconfig used by Infra Agent.
 # If you change the ConfigMap name here dont forget to update the configMap
@@ -119,19 +120,19 @@ delete-kubeconfig-cm:
 	kubectl -n kube-system delete configmap $(KUBECONFIG_CM)
 
 .PHONY : tls-secret
-tls-secrets: gen-certs
+tls-secrets:
 	# Do clean up first if there's any left-over secrets
-	kubectl -n $(KUBENAMESPACE) delete secret $(K8S_SECRETE_MGR_SERVER) || true
-	kubectl -n $(KUBENAMESPACE) delete secret $(K8S_SECRETE_MGR_CLIENT) || true
-	kubectl -n $(KUBENAMESPACE) delete secret $(K8S_SECRETE_AGENT_CLIENT) || true
+	kubectl -n $(KUBENAMESPACE) delete secret $(K8S_SECRET_MGR_SERVER) || true
+	kubectl -n $(KUBENAMESPACE) delete secret $(K8S_SECRET_MGR_CLIENT) || true
+	kubectl -n $(KUBENAMESPACE) delete secret $(K8S_SECRET_AGENT_CLIENT) || true
 	# Create new secrets from generated certs
-	kubectl -n $(KUBENAMESPACE) create secret generic $(K8S_SECRETE_MGR_SERVER) --from-file=./hack/tls/certs/inframanager/server/
-	kubectl -n $(KUBENAMESPACE) create secret generic $(K8S_SECRETE_MGR_CLIENT) --from-file=./hack/tls/certs/inframanager/client/
-	kubectl -n $(KUBENAMESPACE) create secret generic $(K8S_SECRETE_AGENT_CLIENT) --from-file=./hack/tls/certs/infraagent/client/
+	kubectl -n $(KUBENAMESPACE) create secret generic $(K8S_SECRET_MGR_SERVER) --from-file=$(K8S_SECRET_SRC_DIR)/inframanager/server/
+	kubectl -n $(KUBENAMESPACE) create secret generic $(K8S_SECRET_MGR_CLIENT) --from-file=$(K8S_SECRET_SRC_DIR)/inframanager/client/
+	kubectl -n $(KUBENAMESPACE) create secret generic $(K8S_SECRET_AGENT_CLIENT) --from-file=$(K8S_SECRET_SRC_DIR)/infraagent/client/
 
 .PHONY : gen-certs
 gen-certs:
-	 ./hack/tls/gen_certs.sh
+	 ./scripts/tls/gen_certs.sh
 
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
