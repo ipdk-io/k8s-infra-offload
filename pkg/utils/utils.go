@@ -549,6 +549,14 @@ func CheckGrpcServerStatus(target string, log *log.Entry, grpcDial grpcDialType)
 	return resp.Status == healthpb.HealthCheckResponse_SERVING, nil
 }
 
+func GrpcDialWithCred(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	credentials, err := GetClientCredentials()
+	if err != nil {
+		return nil, fmt.Errorf("error getting gRPC client credentials to connect to backend: %s", err.Error())
+	}
+	return grpc.Dial(target, grpc.WithTransportCredentials(credentials))
+}
+
 func IsIn(str string, s []string) bool {
 	for _, v := range s {
 		if v == str {
