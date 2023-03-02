@@ -24,12 +24,11 @@ import (
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 	"gopkg.in/tomb.v2"
 )
 
 var (
-	grpcDial = grpcDialWithCred
+	grpcDial = utils.GrpcDialWithCred
 )
 
 type httpHealthServer interface {
@@ -81,14 +80,6 @@ func NewHealthCheckServer(l *logrus.Entry) (types.Server, error) {
 		Handler: mux,
 	}
 	return hs, nil
-}
-
-var grpcDialWithCred = func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
-	credentials, err := utils.GetClientCredentials()
-	if err != nil {
-		return nil, fmt.Errorf("error getting gRPC client credentials to connect to backend: %s", err.Error())
-	}
-	return grpc.Dial(target, grpc.WithTransportCredentials(credentials))
 }
 
 func (s *healtServer) checkGrpcServerStatus(target string) bool {
