@@ -480,6 +480,7 @@ var _ = Describe("proxy", func() {
 
 var _ = Describe("NAT settings handler", func() {
 	var _ = BeforeEach(func() {
+		getCredentialFunc = fakeGetCredential
 		grpcDial = func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
 			return grpc.DialContext(context.TODO(), "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()))
 		}
@@ -572,6 +573,7 @@ var _ = Describe("NAT settings handler", func() {
 
 var _ = Describe("NAT settings handler connection", func() {
 	var _ = BeforeEach(func() {
+		getCredentialFunc = fakeGetCredential
 		grpcDial = func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
 			return nil, errors.New("Connection error")
 		}
