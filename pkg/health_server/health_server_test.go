@@ -90,6 +90,7 @@ var _ = BeforeSuite(func() {
 		ctx := context.Background()
 		return grpc.DialContext(ctx, "bufnet", grpc.WithContextDialer(bufDialer), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	}
+	grpcDialForMgr = grpcDial
 	gRPChs = &testHS{res: []*grpc_health_v1.HealthCheckResponse{{Status: grpc_health_v1.HealthCheckResponse_SERVING}}, srv: grpc.NewServer()}
 	grpc_health_v1.RegisterHealthServer(gRPChs.srv, gRPChs)
 	go func() {

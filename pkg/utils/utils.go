@@ -522,14 +522,14 @@ func VerifiedFilePath(fileName string, allowedDir string) (string, error) {
 	return path, nil
 }
 
-type grpcDialType func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error)
+type GrpcDialType func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error)
 
 func getHealthServerResponse(conn *grpc.ClientConn) (*healthpb.HealthCheckResponse, error) {
 	return healthpb.NewHealthClient(conn).Check(context.Background(), &healthpb.HealthCheckRequest{Service: ""})
 }
 
 // CheckGrpcServerStatus will check gRPC server status using gRPC health check
-func CheckGrpcServerStatus(target string, log *log.Entry, grpcDial grpcDialType) (bool, error) {
+func CheckGrpcServerStatus(target string, log *log.Entry, grpcDial GrpcDialType) (bool, error) {
 	conn, err := grpcDial(target)
 	defer func() {
 		if conn == nil {
