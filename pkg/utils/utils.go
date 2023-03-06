@@ -31,6 +31,7 @@ import (
 	cniTypes "github.com/containernetworking/cni/pkg/types"
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
@@ -522,14 +523,14 @@ func VerifiedFilePath(fileName string, allowedDir string) (string, error) {
 	return path, nil
 }
 
-type grpcDialType func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error)
+type GrpcDialType func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error)
 
 func getHealthServerResponse(conn *grpc.ClientConn) (*healthpb.HealthCheckResponse, error) {
 	return healthpb.NewHealthClient(conn).Check(context.Background(), &healthpb.HealthCheckRequest{Service: ""})
 }
 
 // CheckGrpcServerStatus will check gRPC server status using gRPC health check
-func CheckGrpcServerStatus(target string, log *log.Entry, grpcDial grpcDialType) (bool, error) {
+func CheckGrpcServerStatus(target string, log *log.Entry, grpcDial GrpcDialType) (bool, error) {
 	conn, err := grpcDial(target)
 	defer func() {
 		if conn == nil {
@@ -547,6 +548,18 @@ func CheckGrpcServerStatus(target string, log *log.Entry, grpcDial grpcDialType)
 		return false, err
 	}
 	return resp.Status == healthpb.HealthCheckResponse_SERVING, nil
+}
+
+func GrpcDialWithCred(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	credentials, err := GetClientCredentials()
+	if err != nil {
+		return nil, fmt.Errorf("error getting gRPC client credentials to connect to backend: %s", err.Error())
+	}
+	return grpc.Dial(target, grpc.WithTransportCredentials(credentials))
+}
+
+func GrpcDialInsecure(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
+	return grpc.Dial(target, grpc.WithTransportCredentials(insecure.NewCredentials()))
 }
 
 func IsIn(str string, s []string) bool {

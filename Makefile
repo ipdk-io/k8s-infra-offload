@@ -118,7 +118,7 @@ create-kubeconfig-cm:
 delete-kubeconfig-cm:
 	kubectl -n kube-system delete configmap $(KUBECONFIG_CM)
 
-.PHONY : tls-secret
+.PHONY : tls-secrets
 tls-secrets: gen-certs
 	# Do clean up first if there's any left-over secrets
 	kubectl -n $(KUBENAMESPACE) delete secret $(K8S_SECRETE_MGR_SERVER) || true

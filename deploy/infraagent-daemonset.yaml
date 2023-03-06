@@ -51,6 +51,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        volumeMounts:
+        - name: client-certs
+          mountPath: /tmp/infraagent/client/
+
       containers:
       - name: agent
         image: infraagent:latest

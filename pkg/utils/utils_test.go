@@ -1071,11 +1071,11 @@ func fakeGetHealthServerResponseErr(conn *grpc.ClientConn) (*healthpb.HealthChec
 	return nil, fmt.Errorf("Fake error on getHealthServerResponse")
 }
 
-func fakeCheckHealth(target string, log *logrus.Entry, grpcDial grpcDialType) (bool, error) {
+func fakeCheckHealth(target string, log *logrus.Entry, grpcDial GrpcDialType) (bool, error) {
 	return true, nil
 }
 
-func fakeCheckHealthErr(target string, log *logrus.Entry, grpcDial grpcDialType) (bool, error) {
+func fakeCheckHealthErr(target string, log *logrus.Entry, grpcDial GrpcDialType) (bool, error) {
 	return false, fmt.Errorf("Fake error on checkHealth")
 }
 

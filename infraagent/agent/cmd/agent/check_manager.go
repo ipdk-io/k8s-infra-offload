@@ -24,7 +24,10 @@ import (
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"google.golang.org/grpc"
+)
+
+var (
+	grpcDialFunc = utils.GrpcDialWithCred
 )
 
 const sleepDuration = time.Millisecond * 100
@@ -56,7 +59,7 @@ var checkManager = &cobra.Command{
 		}
 
 		managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
-		watcher := utils.NewGrpcWatcher(timeout, sleepDuration, managerAddr, grpc.Dial, utils.CheckGrpcServerStatus)
+		watcher := utils.NewGrpcWatcher(timeout, sleepDuration, managerAddr, grpcDialFunc, utils.CheckGrpcServerStatus)
 		if err := utils.WaitFor(watcher); err != nil {
 			return err
 		}

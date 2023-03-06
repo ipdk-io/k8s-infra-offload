@@ -21,13 +21,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type checkGrpcServerStatusType func(target string, log *logrus.Entry, grpcDial grpcDialType) (bool, error)
+type checkGrpcServerStatusType func(target string, log *logrus.Entry, grpcDial GrpcDialType) (bool, error)
 
 type grpcWatcher struct {
 	sleepDuration time.Duration
 	timeout       time.Duration
 	target        string
-	dialFunc      grpcDialType
+	dialFunc      GrpcDialType
 	checkHealth   checkGrpcServerStatusType
 	done          chan bool
 	quit          chan bool
@@ -36,7 +36,7 @@ type grpcWatcher struct {
 }
 
 // NewGrpcWatcher returns new gRPC watcher
-func NewGrpcWatcher(timeout, sleepDuration time.Duration, target string, dialFunc grpcDialType, checkHealth checkGrpcServerStatusType) *grpcWatcher {
+func NewGrpcWatcher(timeout, sleepDuration time.Duration, target string, dialFunc GrpcDialType, checkHealth checkGrpcServerStatusType) *grpcWatcher {
 	done := make(chan bool)
 	quit := make(chan bool)
 	errors := make(chan error)

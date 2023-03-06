@@ -24,12 +24,12 @@ import (
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 	"gopkg.in/tomb.v2"
 )
 
 var (
-	grpcDial = grpcDialWithCred
+	grpcDial       = utils.GrpcDialInsecure
+	grpcDialForMgr = utils.GrpcDialWithCred
 )
 
 type httpHealthServer interface {
@@ -47,6 +47,7 @@ func getCheck(hs *healtServer) func(http.ResponseWriter, *http.Request) {
 		hs.log.Infof("Receive request %v", r)
 		// check status of infra manager
 		if ok := hs.checkInfraManagerLiveness(); !ok {
+
 			hs.log.Infof("infra manager report failure")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -83,15 +84,7 @@ func NewHealthCheckServer(l *logrus.Entry) (types.Server, error) {
 	return hs, nil
 }
 
-var grpcDialWithCred = func(target string, opts ...grpc.DialOption) (*grpc.ClientConn, error) {
-	credentials, err := utils.GetClientCredentials()
-	if err != nil {
-		return nil, fmt.Errorf("error getting gRPC client credentials to connect to backend: %s", err.Error())
-	}
-	return grpc.Dial(target, grpc.WithTransportCredentials(credentials))
-}
-
-func (s *healtServer) checkGrpcServerStatus(target string) bool {
+func (s *healtServer) checkGrpcServerStatus(target string, grpcDial utils.GrpcDialType) bool {
 	status, err := utils.CheckGrpcServerStatus(target, s.log, grpcDial)
 	if err != nil {
 		s.log.Errorf("error while checking %s: %s", target, err.Error())
@@ -101,13 +94,13 @@ func (s *healtServer) checkGrpcServerStatus(target string) bool {
 
 func (s *healtServer) checkInfraManagerLiveness() bool {
 	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
-	return s.checkGrpcServerStatus(managerAddr)
+	return s.checkGrpcServerStatus(managerAddr, grpcDialForMgr)
 }
 
 func (s *healtServer) checkCniServerLiveness() bool {
 	// TODO change this to UDS when grpc start working using it
 	agentAddr := fmt.Sprintf("%s:%s", types.InfraAgentAddr, types.InfraAgentPort)
-	return s.checkGrpcServerStatus(agentAddr)
+	return s.checkGrpcServerStatus(agentAddr, grpcDial)
 }
 
 func (s *healtServer) checkServicesServerStatus() bool {
