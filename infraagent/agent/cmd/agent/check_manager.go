@@ -26,11 +26,11 @@ import (
 	"github.com/spf13/viper"
 )
 
+const sleepDuration = time.Millisecond * 100
+
 var (
 	grpcDialFunc = utils.GrpcDialWithCred
 )
-
-const sleepDuration = time.Millisecond * 100
 
 func init() {
 	var timeoutString string

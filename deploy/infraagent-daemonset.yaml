@@ -53,8 +53,7 @@ spec:
               fieldPath: spec.nodeName
         volumeMounts:
         - name: client-certs
-          mountPath: /tmp/infraagent/client/
-
+          mountPath: /tmp/infraagent/cert/client/
       containers:
       - name: agent
         image: infraagent:latest
@@ -90,7 +89,7 @@ spec:
         - name: kubeconfig
           mountPath: /root/.kube
         - name: client-certs
-          mountPath: /tmp/infraagent/client/
+          mountPath: /tmp/infraagent/cert/client/
         command:
         - /infraagent
       volumes:

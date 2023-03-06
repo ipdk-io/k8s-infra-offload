@@ -23,7 +23,6 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -66,15 +65,12 @@ type ServerParams struct {
 // otherwise only server side validation with CA added in client CA pool
 func GetClientCredentials() (credentials.TransportCredentials, error) {
 	if viper.GetBool("insecure") {
-		log.Infof("Getting insecure credentials")
 		return insecure.NewCredentials(), nil
 	}
 
 	if viper.GetBool("mtls") {
-		log.Infof("Getting mtls credentials")
 		return getClientMTLSCredentials()
 	} else {
-		log.Infof("Getting tls credentials")
 		return getClientTLSCredentials()
 	}
 }

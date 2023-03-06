@@ -51,15 +51,15 @@ const (
 	HostInterfaceAddr           = "200.1.1.2/32"
 	HostInterfaceMTU            = 1280
 	ArpProxyDefaultPort         = 0
-	AgentDefaultClientCert      = "/tmp/infraagent/client/tls.crt"
-	AgentDefaultClientKey       = "/tmp/infraagent/client/tls.key"
-	AgentDefaultCACert          = "/tmp/infraagent/client/ca.crt"
-	ManagerDefaultClientCert    = "/tmp/inframanager/client/tls.crt"
-	ManagerDefaultClientKey     = "/tmp/inframanager/client/tls.key"
-	ManagerDefaultClientCA      = "/tmp/inframanager/client/ca.crt"
-	ManagerDefaultServerCert    = "/tmp/inframanager/server/tls.crt"
-	ManagerDefaultServerKey     = "/tmp/inframanager/server/tls.key"
-	ManagerDefaultServerCA      = "/tmp/inframanager/server/ca.crt"
+	AgentDefaultClientCert      = "/tmp/infraagent/cert/client/tls.crt"
+	AgentDefaultClientKey       = "/tmp/infraagent/cert/client/tls.key"
+	AgentDefaultCACert          = "/tmp/infraagent/cert/client/ca.crt"
+	ManagerDefaultClientCert    = "/tmp/inframanager/cert/client/tls.crt"
+	ManagerDefaultClientKey     = "/tmp/inframanager/cert/client/tls.key"
+	ManagerDefaultClientCA      = "/tmp/inframanager/cert/client/ca.crt"
+	ManagerDefaultServerCert    = "/tmp/inframanager/cert/server/tls.crt"
+	ManagerDefaultServerKey     = "/tmp/inframanager/cert/server/tls.key"
+	ManagerDefaultServerCA      = "/tmp/inframanager/cert/server/ca.crt"
 )
 
 var (
