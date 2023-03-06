@@ -44,8 +44,8 @@ const (
 	UnknownService Service = iota
 	InfraAgent
 	InfraManager
-	P4RuntimeServer
-	GnmiServer
+	Infrap4dGrpcServer
+	Infrap4dGnmiServer
 )
 const (
 	UnknownMod Conn = iota
@@ -146,10 +146,10 @@ func getServiceString(service Service) string {
 		return "InfraManager"
 	case InfraAgent:
 		return "InfraAgent"
-	case GnmiServer:
-		return "GnmiServer"
-	case P4RuntimeServer:
-		return "P4RuntimeServer"
+	case Infrap4dGnmiServer:
+		return "Infrap4dGnmiServer"
+	case Infrap4dGrpcServer:
+		return "Infrap4dGrpcServer"
 	default:
 		return "UnknownService"
 	}
@@ -175,11 +175,11 @@ func loadCA(s Service) ([]byte, error) {
 		*/
 		ca = viper.GetString("InfraManager.ca-cert")
 		return ioutil.ReadFile(ca)
-	case GnmiServer:
-		ca = viper.GetString("GnmiServer.ca-cert")
+	case Infrap4dGnmiServer:
+		ca = viper.GetString("Infrap4dGnmiServer.ca-cert")
 		return ioutil.ReadFile(ca)
-	case P4RuntimeServer:
-		ca = viper.GetString("P4RuntimeServer.ca-cert")
+	case Infrap4dGrpcServer:
+		ca = viper.GetString("Infrap4dGrpcServer.ca-cert")
 		return ioutil.ReadFile(ca)
 	default:
 		err := fmt.Errorf("No CA for service %s",

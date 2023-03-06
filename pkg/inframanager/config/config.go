@@ -33,17 +33,17 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 
 	viper.SetConfigType("yaml")
 
-	viper.SetDefault("P4RuntimeServer.Addr", "localhost:9559")
-	viper.SetDefault("P4RuntimeServer.conn", "insecure")
-	viper.SetDefault("P4RuntimeServer.client-cert", types.ManagerDefaultClientCert)
-	viper.SetDefault("P4RuntimeServer.client-key", types.ManagerDefaultClientKey)
-	viper.SetDefault("P4RuntimeServer.ca-cert", types.ManagerDefaultClientCA)
+	viper.SetDefault("Infrap4dGrpcServer.Addr", "localhost:9559")
+	viper.SetDefault("Infrap4dGrpcServer.conn", "insecure")
+	viper.SetDefault("Infrap4dGrpcServer.client-cert", types.ManagerDefaultClientCert)
+	viper.SetDefault("Infrap4dGrpcServer.client-key", types.ManagerDefaultClientKey)
+	viper.SetDefault("Infrap4dGrpcServer.ca-cert", types.ManagerDefaultClientCA)
 
-	viper.SetDefault("GnmiServer.Addr", "localhost:9339")
-	viper.SetDefault("GnmiServer.conn", "insecure")
-	viper.SetDefault("GnmiServer.client-cert", types.ManagerDefaultClientCert)
-	viper.SetDefault("GnmiServer.client-key", types.ManagerDefaultClientKey)
-	viper.SetDefault("GnmiServer.ca-cert", types.ManagerDefaultClientCA)
+	viper.SetDefault("Infrap4dGnmiServer.Addr", "localhost:9339")
+	viper.SetDefault("Infrap4dGnmiServer.conn", "insecure")
+	viper.SetDefault("Infrap4dGnmiServer.client-cert", types.ManagerDefaultClientCert)
+	viper.SetDefault("Infrap4dGnmiServer.client-key", types.ManagerDefaultClientKey)
+	viper.SetDefault("Infrap4dGnmiServer.ca-cert", types.ManagerDefaultClientCA)
 
 	viper.SetDefault("InfraManager.conn", "mtls")
 	viper.SetDefault("InfraManager.server-cert", types.ManagerDefaultServerCA)
@@ -60,10 +60,10 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 	}
 
 	// Reading variables without using the model
-	fmt.Println("P4Runtime Server Addr:\t", viper.GetString("P4RuntimeServer.Addr"))
-	fmt.Println("P4Runtime Server Con:\t", viper.GetString("P4RuntimeServer.Conn"))
-	fmt.Println("gNMI Server Addr:\t", viper.GetString("GnmiServer.Addr"))
-	fmt.Println("gNMI Server Con:\t", viper.GetString("GnmiServer.Conn"))
+	fmt.Println("Infrap4d GRPC Server Addr:\t", viper.GetString("Infrap4dGrpcServer.Addr"))
+	fmt.Println("Infrap4d GRPC Server Con:\t", viper.GetString("Infrap4dGrpcServer.Conn"))
+	fmt.Println("Infrap4dGNMI Server Addr:\t", viper.GetString("Infrap4dGnmiServer.Addr"))
+	fmt.Println("Infrap4dGNMI Server Con:\t", viper.GetString("Infrap4dGnmiServer.Conn"))
 	fmt.Println("InfraManager Con:\t", viper.GetString("InfraManager.Conn"))
 	fmt.Println("Log Level is set to :\t", viper.GetString("LogLevel"))
 }

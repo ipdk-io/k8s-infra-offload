@@ -1,4 +1,4 @@
-P4RuntimeServer:
+Infrap4dGrpcServer:
   addr: localhost:9559
 # Possible connnection types
 #  - insecure
@@ -13,7 +13,7 @@ P4RuntimeServer:
 #      ca-cert: "/tmp/inframanager/client/ca.crt"
   conn: insecure
 
-GnmiServer:
+Infrap4dGnmiServer:
   addr: localhost:9339
 # Possible connection types
 #  - insecure
