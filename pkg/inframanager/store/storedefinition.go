@@ -65,10 +65,53 @@ type ServiceCollection struct {
 	ServiceLock *sync.Mutex
 }
 
+type Policy struct {
+	PolicyName string
+	PolicyId   map[string]PolicyID
+}
+
+type PolicyID struct {
+	PoId      string
+	Direction string
+	Protocol  string
+	RuleId    map[string]Rule
+}
+
+type Rule struct {
+	RuId      string
+	PortRange []int
+	RuleMask  int //hex
+	Cidr      string
+	IpSetID   string
+}
+
+type IpSet struct {
+	IpsetId    string
+	PolicyId   string
+	PolicyName string
+	RuleId     string
+	IpAddr     []string
+}
+
+type PolicyWorkerEndPoint struct {
+	WorkerEp   string
+	PolicyName []string
+}
+
+type PolicyCollection struct {
+	PolicyMap   map[string]Policy
+	IpSetMap    map[string]IpSet
+	WorkerEpMap map[string]PolicyWorkerEndPoint
+	PolicyLock  *sync.Mutex
+}
+
 var ServiceSet *ServiceCollection
 var EndPointSet *EndPointCollection
+var PolicySet *PolicyCollection
+
 var once sync.Once
 var onceService sync.Once
+var oncePolicy sync.Once
 
 var (
 	JsonMarshalIndent = json.MarshalIndent
@@ -89,5 +132,14 @@ func NewService() {
 	onceService.Do(func() {
 		ServiceSet = &ServiceCollection{ServiceMap: make(map[string]Service),
 			ServiceLock: &sync.Mutex{}}
+	})
+}
+
+func NewPolicy() {
+	oncePolicy.Do(func() {
+		PolicySet = &PolicyCollection{PolicyMap: make(map[string]Policy),
+			IpSetMap:    make(map[string]IpSet),
+			WorkerEpMap: make(map[string]PolicyWorkerEndPoint),
+			PolicyLock:  &sync.Mutex{}}
 	})
 }

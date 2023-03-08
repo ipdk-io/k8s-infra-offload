@@ -1,0 +1,344 @@
+package store
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"reflect"
+
+	log "github.com/sirupsen/logrus"
+)
+
+type retflag int
+
+const (
+	Fail retflag = iota
+	Zerolength
+	Datapresent
+)
+
+const (
+	PolicyFile   = storePath + "policy_db.json"
+	IpsetFile    = storePath + "ipset_db.json"
+	WorkerepFile = storePath + "workerep_db.json"
+)
+
+func IsPolicyStoreEmpty() bool {
+	if len(PolicySet.PolicyMap) == 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
+func IsIpsetStoreEmpty() bool {
+	if len(PolicySet.IpSetMap) == 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
+func IsWorkerepStoreEmpty() bool {
+	if len(PolicySet.WorkerEpMap) == 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
+func OpenPolicyStoreFiles(fileName string, flags int) (retflag, []byte) {
+	var f retflag
+	file, err := NewOpenFile(fileName, flags, 0600)
+	if err != nil {
+		log.Error("Failed to open", fileName)
+		f = Fail
+		return f, nil
+	}
+	file.Close()
+
+	data, err := NewReadFile(fileName)
+	if err != nil {
+		log.Error("Error reading ", fileName, err)
+		f = Fail
+		return f, nil
+	}
+
+	if len(data) == 0 {
+		f = Zerolength
+		return f, nil
+	}
+
+	f = Datapresent
+	return f, data
+}
+
+func InitPolicyStore(setFwdPipe bool) bool {
+	flags := os.O_CREATE
+
+	/*
+	   Initialize the store to empty while setting the
+	   forwarding pipeline. It indicates that the p4-ovs
+	   server has just started and pipeline is set.
+	   And no stale forwarding rules should exist in the store.
+	   Truncate if any entries from previous server runs.
+	*/
+	if setFwdPipe {
+		flags = flags | os.O_TRUNC
+	}
+
+	if _, err := os.Stat(storePath); errors.Is(err, os.ErrNotExist) {
+		err := os.Mkdir(storePath, 0640)
+		if err != nil {
+			log.Error("Failed to create directory ", storePath)
+			return false
+		}
+	}
+
+	/* Create the store file if it doesn't exist */
+	ret, data := OpenPolicyStoreFiles(PolicyFile, flags)
+	if ret == Fail {
+		return false
+	} else if ret == Zerolength {
+		return true
+	} else {
+		err := JsonUnmarshal(data, &PolicySet.PolicyMap)
+		if err != nil {
+			log.Error("Error unmarshalling data from ", PolicyFile, err)
+			return false
+		}
+		return true
+	}
+
+	ret, data = OpenPolicyStoreFiles(IpsetFile, flags)
+	if ret == Fail {
+		return false
+	} else if ret == Zerolength {
+		return true
+	} else {
+		err := JsonUnmarshal(data, &PolicySet.IpSetMap)
+		if err != nil {
+			log.Error("Error unmarshalling data from ", IpsetFile, err)
+			return false
+		}
+		return true
+	}
+
+	ret, data = OpenPolicyStoreFiles(WorkerepFile, flags)
+	if ret == Fail {
+		return false
+	} else if ret == Zerolength {
+		return true
+	} else {
+		err := JsonUnmarshal(data, &PolicySet.WorkerEpMap)
+		if err != nil {
+			log.Error("Error unmarshalling data from ", WorkerepFile, err)
+			return false
+		}
+		return true
+	}
+
+}
+
+func (policyadd Policy) WriteToStore() bool {
+	PolicySet.PolicyLock.Lock()
+	PolicySet.PolicyMap[policyadd.PolicyName] = policyadd
+	PolicySet.PolicyLock.Unlock()
+	return true
+}
+
+func (ipsetadd IpSet) WriteToStore() bool {
+	PolicySet.PolicyLock.Lock()
+	PolicySet.IpSetMap[ipsetadd.IpsetId] = ipsetadd
+	PolicySet.PolicyLock.Unlock()
+	return true
+}
+
+func (workerepadd PolicyWorkerEndPoint) WriteToStore() bool {
+	PolicySet.PolicyLock.Lock()
+	PolicySet.WorkerEpMap[workerepadd.WorkerEp] = workerepadd
+	PolicySet.PolicyLock.Unlock()
+	return true
+}
+
+func remove(s []string, r string) ([]string, bool) {
+	ret := false
+	for i, v := range s {
+		if v == r {
+			ret = true
+			return append(s[:i], s[i+1:]...), ret
+		}
+		ret = false
+	}
+	return s, ret
+}
+
+func (policydel Policy) DeleteFromStore() bool {
+	//delete the corresponding ipsetid from ipset map
+	var f bool
+	for policyid, _ := range policydel.PolicyId {
+		for ruleid, _ := range policydel.PolicyId[policyid].RuleId {
+			ipsetid := policydel.PolicyId[policyid].RuleId[ruleid].IpSetID
+			if ipsetid != "" {
+				PolicySet.PolicyLock.Lock()
+				delete(PolicySet.IpSetMap, ipsetid)
+				PolicySet.PolicyLock.Unlock()
+			}
+		}
+	}
+	PolicySet.PolicyLock.Lock()
+	delete(PolicySet.PolicyMap, policydel.PolicyName)
+	PolicySet.PolicyLock.Unlock()
+
+	//delete corresponding policy name from worker ep map as well
+	for ep, val := range PolicySet.WorkerEpMap {
+		val.PolicyName, f = remove(val.PolicyName, policydel.PolicyName)
+		if f {
+			PolicySet.WorkerEpMap[ep] = val
+		}
+	}
+
+	return true
+}
+
+func (ipsetdel IpSet) DeleteFromStore() bool {
+	policyid := ipsetdel.PolicyId
+	ruleid := ipsetdel.RuleId
+
+	res := PolicySet.PolicyMap[ipsetdel.PolicyName]
+	if reflect.DeepEqual(res, Policy{}) {
+		return false
+	} else {
+		PolicySet.PolicyLock.Lock()
+		if p, ok1 := res.PolicyId[policyid]; ok1 {
+			if r, ok2 := p.RuleId[ruleid]; ok2 {
+				r.IpSetID = ""
+				p.RuleId[ruleid] = r
+			}
+			res.PolicyId[policyid] = p
+		}
+		PolicySet.PolicyLock.Unlock()
+	}
+
+	PolicySet.PolicyLock.Lock()
+	delete(PolicySet.IpSetMap, ipsetdel.IpsetId)
+	PolicySet.PolicyLock.Unlock()
+
+	return true
+}
+
+func (workerepdel PolicyWorkerEndPoint) DeleteFromStore() bool {
+	PolicySet.PolicyLock.Lock()
+	delete(PolicySet.WorkerEpMap, workerepdel.WorkerEp)
+	PolicySet.PolicyLock.Unlock()
+	return true
+}
+
+func (policyget Policy) GetFromStore() store {
+	res := PolicySet.PolicyMap[policyget.PolicyName]
+
+	if reflect.DeepEqual(res, Policy{}) {
+		return nil
+	} else {
+		return res
+	}
+
+	return res
+}
+
+func (ipsetget IpSet) GetFromStore() store {
+	res := PolicySet.IpSetMap[ipsetget.IpsetId]
+	if reflect.DeepEqual(res, IpSet{}) {
+		return nil
+	} else {
+		return res
+	}
+
+	return res
+}
+
+func (workerepget PolicyWorkerEndPoint) GetFromStore() store {
+	res := PolicySet.WorkerEpMap[workerepget.WorkerEp]
+	if reflect.DeepEqual(res, PolicyWorkerEndPoint{}) {
+		return nil
+	} else {
+		return res
+	}
+
+	return res
+}
+
+//update to store for policy struct, should invoke delete first and then invoke
+//write call, modify later
+func (policymod Policy) UpdateToStore() bool {
+	policyEntry := PolicySet.PolicyMap[policymod.PolicyName]
+	if reflect.DeepEqual(policyEntry, Policy{}) {
+		return false
+	}
+
+	ret := policyEntry.DeleteFromStore()
+	if !ret {
+		return false
+	}
+
+	return policymod.WriteToStore()
+}
+
+func (ipsetmod IpSet) UpdateToStore() bool {
+	ipsetEntry := PolicySet.IpSetMap[ipsetmod.IpsetId]
+	if reflect.DeepEqual(ipsetEntry, IpSet{}) {
+		return false
+	}
+
+	ipsetEntry.IpAddr = nil
+	ipsetEntry.IpAddr = ipsetmod.IpAddr
+	return ipsetEntry.WriteToStore()
+}
+
+func (workerepmod PolicyWorkerEndPoint) UpdateToStore() bool {
+	workerepEntry := PolicySet.WorkerEpMap[workerepmod.WorkerEp]
+	if reflect.DeepEqual(workerepEntry, PolicyWorkerEndPoint{}) {
+		return false
+	}
+
+	workerepEntry.PolicyName = workerepmod.PolicyName
+	return workerepEntry.WriteToStore()
+}
+
+func RunSyncPolicyInfo() bool {
+	jsonStr, err := json.MarshalIndent(PolicySet.PolicyMap, "", " ")
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
+	_ = ioutil.WriteFile(PolicyFile, jsonStr, 0777)
+
+	return true
+}
+
+func RunSyncIpSetInfo() bool {
+	jsonStr, err := json.MarshalIndent(PolicySet.IpSetMap, "", " ")
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
+	_ = ioutil.WriteFile(IpsetFile, jsonStr, 0777)
+
+	return true
+}
+
+func RunSyncWorkerEpInfo() bool {
+	jsonStr, err := json.MarshalIndent(PolicySet.WorkerEpMap, "", " ")
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
+	_ = ioutil.WriteFile(WorkerepFile, jsonStr, 0777)
+
+	return true
+}
