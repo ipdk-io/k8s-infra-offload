@@ -6,4 +6,3 @@ metadata:
 data:
   infraagent.yaml: |
     interfaceType: tap
-    insecure: true

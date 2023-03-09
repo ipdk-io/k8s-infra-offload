@@ -17,6 +17,7 @@ package config
 import (
 	"fmt"
 
+	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/spf13/viper"
 )
 
@@ -32,6 +33,23 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 
 	viper.SetConfigType("yaml")
 
+	viper.SetDefault("Infrap4dGrpcServer.Addr", "localhost:9559")
+	viper.SetDefault("Infrap4dGrpcServer.conn", "insecure")
+	viper.SetDefault("Infrap4dGrpcServer.client-cert", types.ManagerDefaultClientCert)
+	viper.SetDefault("Infrap4dGrpcServer.client-key", types.ManagerDefaultClientKey)
+	viper.SetDefault("Infrap4dGrpcServer.ca-cert", types.ManagerDefaultClientCA)
+
+	viper.SetDefault("Infrap4dGnmiServer.Addr", "localhost:9339")
+	viper.SetDefault("Infrap4dGnmiServer.conn", "insecure")
+	viper.SetDefault("Infrap4dGnmiServer.client-cert", types.ManagerDefaultClientCert)
+	viper.SetDefault("Infrap4dGnmiServer.client-key", types.ManagerDefaultClientKey)
+	viper.SetDefault("Infrap4dGnmiServer.ca-cert", types.ManagerDefaultClientCA)
+
+	viper.SetDefault("InfraManager.conn", "mtls")
+	viper.SetDefault("InfraManager.server-cert", types.ManagerDefaultServerCA)
+	viper.SetDefault("InfraManager.server-key", types.ManagerDefaultServerKey)
+	viper.SetDefault("InfraManager.ca-cert", types.ManagerDefaultServerCA)
+
 	if err := viper.ReadInConfig(); err != nil {
 		fmt.Printf("Error reading config file, %s", err)
 	}
@@ -42,7 +60,10 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 	}
 
 	// Reading variables without using the model
-	fmt.Println("gRPC Server Addr:\t", viper.GetString("GrpcServer.Addr"))
-	fmt.Println("gNMI Server Addr:\t", viper.GetString("GnmiServer.Addr"))
+	fmt.Println("Infrap4d GRPC Server Addr:\t", viper.GetString("Infrap4dGrpcServer.Addr"))
+	fmt.Println("Infrap4d GRPC Server Con:\t", viper.GetString("Infrap4dGrpcServer.Conn"))
+	fmt.Println("Infrap4dGNMI Server Addr:\t", viper.GetString("Infrap4dGnmiServer.Addr"))
+	fmt.Println("Infrap4dGNMI Server Con:\t", viper.GetString("Infrap4dGnmiServer.Conn"))
+	fmt.Println("InfraManager Con:\t", viper.GetString("InfraManager.Conn"))
 	fmt.Println("Log Level is set to :\t", viper.GetString("LogLevel"))
 }

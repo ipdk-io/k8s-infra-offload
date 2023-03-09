@@ -24,12 +24,11 @@ import (
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 	"gopkg.in/tomb.v2"
 )
 
 var (
-	grpcDial       = grpc.Dial
+	grpcDial       = utils.GrpcDialInsecure
 	grpcDialForMgr = utils.GrpcDialWithCred
 )
 
@@ -48,6 +47,7 @@ func getCheck(hs *healtServer) func(http.ResponseWriter, *http.Request) {
 		hs.log.Infof("Receive request %v", r)
 		// check status of infra manager
 		if ok := hs.checkInfraManagerLiveness(); !ok {
+
 			hs.log.Infof("infra manager report failure")
 			w.WriteHeader(http.StatusInternalServerError)
 			return

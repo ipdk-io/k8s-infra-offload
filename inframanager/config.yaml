@@ -1,8 +1,54 @@
-GrpcServer:
+Infrap4dGrpcServer:
   addr: localhost:9559
+# Possible connnection types
+#  - insecure
+#  - mtls
+#    For mtls, also provide the below fields
+#      client-cert: "cert_path"
+#      client-key: "key_path"
+#      ca-cert: "ca_path"
+#    If not specified, the default values are
+#      client-cert: "/tmp/inframanager/client/tls.crt"
+#      client-key: "/tmp/inframanager/client/tls.key"
+#      ca-cert: "/tmp/inframanager/client/ca.crt"
+  conn: insecure
 
-GnmiServer:
+Infrap4dGnmiServer:
   addr: localhost:9339
+# Possible connection types
+#  - insecure
+#  - mtls
+#    For mtls, also provide the below fields
+#      client-cert: "cert_path"
+#      client-key: "key_path"
+#      ca-cert: "ca_path"
+#    If not specified, the default values are
+#      client-cert: "/tmp/inframanager/client/tls.crt"
+#      client-key: "/tmp/inframanager/client/tls.key"
+#      ca-cert: "/tmp/inframanager/client/ca.crt"
+  conn: insecure
+
+InfraManager: 
+# Possible connection types
+#  - insecure
+#  - tls
+#    For tls, also provide the ca-cert
+#      ca-cert: "ca_path"
+#    If not specified, the default value is
+#      ca-cert: "/tmp/inframanager/server/ca.crt"
+#  - mtls
+#    For mtls, also provide the below fields
+#      client-cert: "cert_path"
+#      client-key: "key_path"
+#      ca-cert: "ca_path"
+#    If not specified, the default values are
+#      client-cert: "/tmp/inframanager/server/tls.crt"
+#      client-key: "/tmp/inframanager/server/tls.key"
+#      ca-cert: "/tmp/inframanager/server/ca.crt"
+  conn: mtls
+  server-cert: "/tmp/inframanager/cert/server/tls.crt"
+  server-key: "/tmp/inframanager/cert/server/tls.key"
+  ca-cert: "/tmp/inframanager/cert/server/ca.crt"
 
 P4InfoPath: k8s_dp/p4Info.txt
 p4BinPath: k8s_dp/k8s_dp.pb.bin

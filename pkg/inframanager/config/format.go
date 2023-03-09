@@ -16,20 +16,27 @@ package config
 
 // Configurations exported
 type Configuration struct {
-	GrpcServer GrpcServerConf
-	GnmiServer GnmiServerConf
-	NodeIP     string
-	LogLevel   string
-	P4InfoPath string
-	P4BinPath  string
-	DeviceId   uint64
+	Infrap4dGrpcServer ServerConf  `yaml:"Infrap4dGrpcServer"`
+	Infrap4dGnmiServer ServerConf  `yaml:"Infrap4dGnmiServer"`
+	InfraManager       ManagerConf `yaml:"InfraManager"`
+	NodeIP             string
+	LogLevel           string
+	P4InfoPath         string
+	P4BinPath          string
+	DeviceId           uint64
 }
 
 // ServerConfigurations exported
-type GnmiServerConf struct {
-	Addr string
+type ServerConf struct {
+	Addr       string `mapstructure:"addr"`
+	Conn       string `mapstructure:"conn"`
+	ClientCert string `mapstructure:"client-cert"`
+	ClientKey  string `mapstructure:"client-key"`
+	CACert     string `mapstructure:"ca-cert"`
 }
-
-type GrpcServerConf struct {
-	Addr string
+type ManagerConf struct {
+	Conn       string `mapstructure:"conn"`
+	ServerCert string `mapstructure:"server-cert"`
+	ServerKey  string `mapstructure:"server-key"`
+	CACert     string `mapstructure:"ca-cert"`
 }

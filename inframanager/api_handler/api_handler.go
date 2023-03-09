@@ -37,9 +37,7 @@ import (
 	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/grpc/keepalive"
 )
 
 var config *conf.Configuration
@@ -76,12 +74,12 @@ func GetLogLevel() string {
 func OpenP4RtC(ctx context.Context, high uint64, low uint64, stopCh <-chan struct{}) error {
 	var err error
 
-	log.Infof("Connecting to P4Runtime Server at %s", config.GrpcServer.Addr)
+	log.Infof("Connecting to P4Runtime Server at %s", config.Infrap4dGrpcServer.Addr)
 
 	server := NewApiServer()
 
-	server.p4RtCConn, err = grpc.Dial(config.GrpcServer.Addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	server.p4RtCConn, err = utils.GrpcDial(config.Infrap4dGrpcServer.Addr,
+		utils.GetConnType(config.Infrap4dGrpcServer.Conn), utils.Infrap4dGrpcServer)
 	if err != nil {
 		log.Errorf("Cannot connect to P4Runtime Client: %v", err)
 		return err
@@ -143,8 +141,8 @@ func OpenGNMICCon() error {
 
 	server := NewApiServer()
 
-	server.gNMICConn, err = grpc.Dial(config.GnmiServer.Addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	server.gNMICConn, err = utils.GrpcDial(config.Infrap4dGnmiServer.Addr,
+		utils.GetConnType(config.Infrap4dGnmiServer.Conn), utils.Infrap4dGnmiServer)
 	if err != nil {
 		log.Errorf("Cannot connect to gNMI Server: %v", err)
 		return err
@@ -220,17 +218,26 @@ func SetFwdPipe(ctx context.Context, binPath string,
 
 func CreateServer(log *log.Entry) *ApiServer {
 	logger := log.WithField("func", "CreateAndStartServer")
-	logger.Infof("Starting infra-manager gRPC server")
+	logger.Infof("Starting infra-manager gRPC server, auth: %s",
+		config.InfraManager.Conn)
 
 	managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
 	listen, err := net.Listen(types.ServerNetProto, managerAddr)
 	if err != nil {
 		logger.Fatalf("failed to listen on %s://%s, err: %v", types.ServerNetProto, managerAddr, err)
 	}
-	kp := grpc.KeepaliveParams(keepalive.ServerParameters{MaxConnectionAge: time.Duration(time.Second * 10), MaxConnectionAgeGrace: time.Duration(time.Second * 30)})
 
 	server := NewApiServer()
-	server.grpc = grpc.NewServer(kp)
+	server.grpc, err = utils.NewGrpcServer(utils.ServerParams{
+		KeepAlive: true,
+		ConnType:  utils.GetConnType(config.InfraManager.Conn),
+		ConClient: utils.InfraAgent,
+	})
+
+	if err != nil {
+		logger.Fatalf("Failed to start inframanager grpc server")
+	}
+
 	server.listener = listen
 	server.log = log
 

@@ -17,13 +17,47 @@ package utils
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"strings"
+	"time"
 
 	"github.com/spf13/viper"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
 )
+
+type ConnType int
+type Service int
+type Conn int
+
+const (
+	UnknownConn ConnType = iota
+	Insecure
+	TLS
+	MTLS
+)
+const (
+	UnknownService Service = iota
+	InfraAgent
+	InfraManager
+	Infrap4dGrpcServer
+	Infrap4dGnmiServer
+)
+const (
+	UnknownMod Conn = iota
+	Client
+	Server
+)
+
+type ServerParams struct {
+	KeepAlive bool
+	ConnType  ConnType
+	ConClient Service
+}
 
 // GetClientCredentials returns gRPC client credential based on user provided configuration.
 // if "--insecure=true" it will provide insecure.NewCredentials
@@ -90,4 +124,214 @@ func getClientTLSCredentials() (credentials.TransportCredentials, error) {
 	}
 
 	return credentials.NewTLS(tlsConfig), nil
+}
+
+func GetConnType(conn string) ConnType {
+	conn = strings.ToLower(conn)
+	switch conn {
+	case "insecure":
+		return Insecure
+	case "tls":
+		return TLS
+	case "mtls":
+		return MTLS
+	default:
+		return UnknownConn
+	}
+}
+
+func getServiceString(service Service) string {
+	switch service {
+	case InfraManager:
+		return "InfraManager"
+	case InfraAgent:
+		return "InfraAgent"
+	case Infrap4dGnmiServer:
+		return "Infrap4dGnmiServer"
+	case Infrap4dGrpcServer:
+		return "Infrap4dGrpcServer"
+	default:
+		return "UnknownService"
+	}
+}
+func getConnString(c Conn) string {
+	switch c {
+	case Server:
+		return "Server"
+	case Client:
+		return "Client"
+	default:
+		return "Unknown"
+	}
+}
+
+func loadCA(s Service) ([]byte, error) {
+	var ca string
+
+	switch s {
+	case InfraAgent, InfraManager:
+		/*
+			The CA for infraagent and inframanager is same.
+		*/
+		ca = viper.GetString("InfraManager.ca-cert")
+		return ioutil.ReadFile(ca)
+	case Infrap4dGnmiServer:
+		ca = viper.GetString("Infrap4dGnmiServer.ca-cert")
+		return ioutil.ReadFile(ca)
+	case Infrap4dGrpcServer:
+		ca = viper.GetString("Infrap4dGrpcServer.ca-cert")
+		return ioutil.ReadFile(ca)
+	default:
+		err := fmt.Errorf("No CA for service %s",
+			getServiceString(s))
+		return nil, err
+	}
+}
+
+func getCertFile(c Conn) string {
+	switch c {
+	case Server:
+		return viper.GetString("InfraManager.server-cert")
+	case Client:
+		return viper.GetString("InfraManager.client-cert")
+	default:
+		return ""
+	}
+}
+
+func getKeyFile(c Conn) string {
+	switch c {
+	case Server:
+		return viper.GetString("InfraManager.server-key")
+	case Client:
+		return viper.GetString("InfraManager.client-key")
+	default:
+		return ""
+	}
+}
+
+func loadMgrCert(c Conn) (tls.Certificate, error) {
+	certFile := getCertFile(c)
+	if len(certFile) == 0 {
+		err := fmt.Errorf("Inframanager %s cert file not found.", getConnString(c))
+		return tls.Certificate{}, err
+	}
+	keyFile := getKeyFile(c)
+	if len(certFile) == 0 {
+		err := fmt.Errorf("Inframanager %s key file not found.", getConnString(c))
+		return tls.Certificate{}, err
+	}
+	return tls.LoadX509KeyPair(certFile, keyFile)
+}
+
+func NewGrpcServer(params ServerParams) (*grpc.Server, error) {
+	opt := []grpc.ServerOption{}
+	if params.KeepAlive {
+		kp := grpc.KeepaliveParams(keepalive.ServerParameters{MaxConnectionAge: time.Duration(time.Second * 10),
+			MaxConnectionAgeGrace: time.Duration(time.Second * 30)})
+		opt = append(opt, kp)
+
+	}
+
+	switch params.ConnType {
+	case Insecure:
+
+	case TLS:
+		serverCert, err := loadMgrCert(Server)
+		if err != nil {
+			return nil, err
+		}
+
+		config := &tls.Config{
+			Certificates: []tls.Certificate{serverCert},
+			ClientAuth:   tls.NoClientCert,
+		}
+
+		creds := credentials.NewTLS(config)
+		opt = append(opt, grpc.Creds(creds))
+
+	case MTLS:
+		serverCert, err := loadMgrCert(Server)
+		if err != nil {
+			return nil, err
+		}
+
+		clientCA, err := loadCA(params.ConClient)
+		if err != nil {
+			return nil, err
+		}
+
+		certPool := x509.NewCertPool()
+		if !certPool.AppendCertsFromPEM(clientCA) {
+			err := errors.New("Failed to append cert to the pool")
+			return nil, err
+		}
+		config := &tls.Config{
+			Certificates: []tls.Certificate{serverCert},
+			ClientAuth:   tls.RequireAndVerifyClientCert,
+			ClientCAs:    certPool,
+		}
+
+		creds := credentials.NewTLS(config)
+		opt = append(opt, grpc.Creds(creds))
+	default:
+		err := fmt.Errorf("Invalid authentication type")
+		return nil, err
+	}
+
+	return grpc.NewServer(opt...), nil
+}
+
+func GrpcDial(target string, connType ConnType, s Service) (*grpc.ClientConn, error) {
+	var creds grpc.DialOption
+
+	switch connType {
+	case Insecure:
+		creds = grpc.WithTransportCredentials(insecure.NewCredentials())
+	case TLS:
+		serverCA, err := loadCA(s)
+		if err != nil {
+			return nil, err
+		}
+
+		certPool := x509.NewCertPool()
+		if !certPool.AppendCertsFromPEM(serverCA) {
+			err := errors.New("Failed to append cert to the pool")
+			return nil, err
+		}
+		config := &tls.Config{
+			RootCAs: certPool,
+		}
+
+		creds = grpc.WithTransportCredentials(credentials.NewTLS(config))
+	case MTLS:
+		/*
+			Load inframanager's client cert
+		*/
+		clientCert, err := loadMgrCert(Client)
+		if err != nil {
+			return nil, err
+		}
+
+		serverCA, err := loadCA(s)
+		if err != nil {
+			return nil, err
+		}
+
+		certPool := x509.NewCertPool()
+		if !certPool.AppendCertsFromPEM(serverCA) {
+			err := errors.New("Failed to append cert to the pool")
+			return nil, err
+		}
+		config := &tls.Config{
+			Certificates: []tls.Certificate{clientCert},
+			RootCAs:      certPool,
+		}
+
+		creds = grpc.WithTransportCredentials(credentials.NewTLS(config))
+	default:
+		return nil, errors.New("Unknown authentication type")
+	}
+
+	return grpc.Dial(target, creds)
 }
