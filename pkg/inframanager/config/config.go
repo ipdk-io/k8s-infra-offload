@@ -46,7 +46,7 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 	viper.SetDefault("Infrap4dGnmiServer.ca-cert", types.ManagerDefaultClientCA)
 
 	viper.SetDefault("InfraManager.conn", "mtls")
-	viper.SetDefault("InfraManager.server-cert", types.ManagerDefaultServerCA)
+	viper.SetDefault("InfraManager.server-cert", types.ManagerDefaultServerCert)
 	viper.SetDefault("InfraManager.server-key", types.ManagerDefaultServerKey)
 	viper.SetDefault("InfraManager.ca-cert", types.ManagerDefaultServerCA)
 

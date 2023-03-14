@@ -245,6 +245,9 @@ func NewGrpcServer(params ServerParams) (*grpc.Server, error) {
 		config := &tls.Config{
 			Certificates: []tls.Certificate{serverCert},
 			ClientAuth:   tls.NoClientCert,
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			},
 		}
 
 		creds := credentials.NewTLS(config)
@@ -270,6 +273,9 @@ func NewGrpcServer(params ServerParams) (*grpc.Server, error) {
 			Certificates: []tls.Certificate{serverCert},
 			ClientAuth:   tls.RequireAndVerifyClientCert,
 			ClientCAs:    certPool,
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			},
 		}
 
 		creds := credentials.NewTLS(config)
