@@ -266,8 +266,8 @@ func (workerepget PolicyWorkerEndPoint) GetFromStore() store {
 	}
 }
 
-//update to store for policy struct, should invoke delete first and then invoke
-//write call, modify later
+// update to store for policy struct, should invoke delete first and then invoke
+// write call, modify later
 func (policymod Policy) UpdateToStore() bool {
 	policyEntry := PolicySet.PolicyMap[policymod.PolicyName]
 	if reflect.DeepEqual(policyEntry, Policy{}) {
