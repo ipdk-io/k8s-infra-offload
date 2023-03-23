@@ -109,7 +109,6 @@ func InitPolicyStore(setFwdPipe bool) bool {
 			log.Error("Error unmarshalling data from ", PolicyFile, err)
 			return false
 		}
-		return true
 	}
 
 	ret, data = OpenPolicyStoreFiles(IpsetFile, flags)
@@ -123,7 +122,6 @@ func InitPolicyStore(setFwdPipe bool) bool {
 			log.Error("Error unmarshalling data from ", IpsetFile, err)
 			return false
 		}
-		return true
 	}
 
 	ret, data = OpenPolicyStoreFiles(WorkerepFile, flags)
@@ -194,7 +192,11 @@ func (policydel Policy) DeleteFromStore() bool {
 
 	//delete corresponding policy name from worker ep map as well
 	for ep, val := range PolicySet.WorkerEpMap {
-		val.PolicyName, f = remove(val.PolicyName, policydel.PolicyName)
+		val.PolicyNameIngress, f = remove(val.PolicyNameIngress, policydel.PolicyName)
+		if f {
+			PolicySet.WorkerEpMap[ep] = val
+		}
+		val.PolicyNameEgress, f = remove(val.PolicyNameEgress, policydel.PolicyName)
 		if f {
 			PolicySet.WorkerEpMap[ep] = val
 		}
@@ -244,8 +246,6 @@ func (policyget Policy) GetFromStore() store {
 	} else {
 		return res
 	}
-
-	return res
 }
 
 func (ipsetget IpSet) GetFromStore() store {
@@ -255,8 +255,6 @@ func (ipsetget IpSet) GetFromStore() store {
 	} else {
 		return res
 	}
-
-	return res
 }
 
 func (workerepget PolicyWorkerEndPoint) GetFromStore() store {
@@ -266,8 +264,6 @@ func (workerepget PolicyWorkerEndPoint) GetFromStore() store {
 	} else {
 		return res
 	}
-
-	return res
 }
 
 //update to store for policy struct, should invoke delete first and then invoke
@@ -275,7 +271,8 @@ func (workerepget PolicyWorkerEndPoint) GetFromStore() store {
 func (policymod Policy) UpdateToStore() bool {
 	policyEntry := PolicySet.PolicyMap[policymod.PolicyName]
 	if reflect.DeepEqual(policyEntry, Policy{}) {
-		return false
+		//		return false
+		return policymod.WriteToStore()
 	}
 
 	ret := policyEntry.DeleteFromStore()
@@ -303,7 +300,8 @@ func (workerepmod PolicyWorkerEndPoint) UpdateToStore() bool {
 		return false
 	}
 
-	workerepEntry.PolicyName = workerepmod.PolicyName
+	workerepEntry.PolicyNameIngress = workerepmod.PolicyNameIngress
+	workerepEntry.PolicyNameEgress = workerepmod.PolicyNameEgress
 	return workerepEntry.WriteToStore()
 }
 

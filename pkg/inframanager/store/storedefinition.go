@@ -71,7 +71,7 @@ type Policy struct {
 }
 
 type PolicyID struct {
-	PoId      string
+	PoId      uint16
 	Direction string
 	Protocol  string
 	RuleId    map[string]Rule
@@ -94,8 +94,9 @@ type IpSet struct {
 }
 
 type PolicyWorkerEndPoint struct {
-	WorkerEp   string
-	PolicyName []string
+	WorkerEp          string
+	PolicyNameIngress []string
+	PolicyNameEgress  []string
 }
 
 type PolicyCollection struct {
