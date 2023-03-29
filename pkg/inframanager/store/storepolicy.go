@@ -50,29 +50,24 @@ func IsWorkerepStoreEmpty() bool {
 }
 
 func OpenPolicyStoreFiles(fileName string, flags int) (retflag, []byte) {
-	var f retflag
 	file, err := NewOpenFile(fileName, flags, 0600)
 	if err != nil {
 		log.Error("Failed to open", fileName)
-		f = Fail
-		return f, nil
+		return Fail, nil
 	}
 	file.Close()
 
 	data, err := NewReadFile(fileName)
 	if err != nil {
 		log.Error("Error reading ", fileName, err)
-		f = Fail
-		return f, nil
+		return Fail, nil
 	}
 
 	if len(data) == 0 {
-		f = Zerolength
-		return f, nil
+		return Zerolength, nil
 	}
 
-	f = Datapresent
-	return f, data
+	return Datapresent, data
 }
 
 func InitPolicyStore(setFwdPipe bool) bool {
@@ -149,7 +144,7 @@ func (policyadd Policy) WriteToStore() bool {
 
 func (ipsetadd IpSet) WriteToStore() bool {
 	PolicySet.PolicyLock.Lock()
-	PolicySet.IpSetMap[ipsetadd.IpsetId] = ipsetadd
+	PolicySet.IpSetMap[ipsetadd.IpsetID] = ipsetadd
 	PolicySet.PolicyLock.Unlock()
 	return true
 }
@@ -176,9 +171,9 @@ func remove(s []string, r string) ([]string, bool) {
 func (policydel Policy) DeleteFromStore() bool {
 	//delete the corresponding ipsetid from ipset map
 	var f bool
-	for policyid, _ := range policydel.PolicyId {
-		for ruleid, _ := range policydel.PolicyId[policyid].RuleId {
-			ipsetid := policydel.PolicyId[policyid].RuleId[ruleid].IpSetID
+	for policyid, _ := range policydel.PolicyID {
+		for ruleid, _ := range policydel.PolicyID[policyid].RuleID {
+			ipsetid := policydel.PolicyID[policyid].RuleID[ruleid].IpSetID
 			if ipsetid != "" {
 				PolicySet.PolicyLock.Lock()
 				delete(PolicySet.IpSetMap, ipsetid)
@@ -206,26 +201,26 @@ func (policydel Policy) DeleteFromStore() bool {
 }
 
 func (ipsetdel IpSet) DeleteFromStore() bool {
-	policyid := ipsetdel.PolicyId
-	ruleid := ipsetdel.RuleId
+	policyid := ipsetdel.PolicyID
+	ruleid := ipsetdel.RuleID
 
 	res := PolicySet.PolicyMap[ipsetdel.PolicyName]
 	if reflect.DeepEqual(res, Policy{}) {
 		return false
 	} else {
 		PolicySet.PolicyLock.Lock()
-		if p, ok1 := res.PolicyId[policyid]; ok1 {
-			if r, ok2 := p.RuleId[ruleid]; ok2 {
+		if p, ok1 := res.PolicyID[policyid]; ok1 {
+			if r, ok2 := p.RuleID[ruleid]; ok2 {
 				r.IpSetID = ""
-				p.RuleId[ruleid] = r
+				p.RuleID[ruleid] = r
 			}
-			res.PolicyId[policyid] = p
+			res.PolicyID[policyid] = p
 		}
 		PolicySet.PolicyLock.Unlock()
 	}
 
 	PolicySet.PolicyLock.Lock()
-	delete(PolicySet.IpSetMap, ipsetdel.IpsetId)
+	delete(PolicySet.IpSetMap, ipsetdel.IpsetID)
 	PolicySet.PolicyLock.Unlock()
 
 	return true
@@ -249,7 +244,7 @@ func (policyget Policy) GetFromStore() store {
 }
 
 func (ipsetget IpSet) GetFromStore() store {
-	res := PolicySet.IpSetMap[ipsetget.IpsetId]
+	res := PolicySet.IpSetMap[ipsetget.IpsetID]
 	if reflect.DeepEqual(res, IpSet{}) {
 		return nil
 	} else {
@@ -284,7 +279,7 @@ func (policymod Policy) UpdateToStore() bool {
 }
 
 func (ipsetmod IpSet) UpdateToStore() bool {
-	ipsetEntry := PolicySet.IpSetMap[ipsetmod.IpsetId]
+	ipsetEntry := PolicySet.IpSetMap[ipsetmod.IpsetID]
 	if reflect.DeepEqual(ipsetEntry, IpSet{}) {
 		return false
 	}

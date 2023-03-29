@@ -67,18 +67,18 @@ type ServiceCollection struct {
 
 type Policy struct {
 	PolicyName string
-	PolicyId   map[uint16]PolicyID
+	PolicyID   map[uint16]PolicyID
 }
 
 type PolicyID struct {
-	PoId      uint16
+	PoID      uint16
 	Direction string
 	Protocol  string
-	RuleId    map[string]Rule
+	RuleID    map[string]Rule
 }
 
 type Rule struct {
-	RuId      string
+	RuID      string
 	PortRange []uint16
 	RuleMask  uint8 //hex
 	Cidr      string
@@ -86,10 +86,10 @@ type Rule struct {
 }
 
 type IpSet struct {
-	IpsetId    string
-	PolicyId   uint16
+	IpsetID    string
+	PolicyID   uint16
 	PolicyName string
-	RuleId     string
+	RuleID     string
 	IpAddr     []string
 }
 
