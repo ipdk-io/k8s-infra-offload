@@ -71,14 +71,14 @@ type Policy struct {
 }
 
 type PolicyID struct {
-	PoID      uint16
+	ID        uint16
 	Direction string
 	Protocol  string
 	RuleID    map[string]Rule
 }
 
 type Rule struct {
-	RuID      string
+	RuleID    string
 	PortRange []uint16
 	RuleMask  uint8 //hex
 	Cidr      string
