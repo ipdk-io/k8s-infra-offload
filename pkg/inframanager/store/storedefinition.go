@@ -67,11 +67,11 @@ type ServiceCollection struct {
 
 type Policy struct {
 	PolicyName string
-	PolicyID   map[uint16]PolicyID
+	IpSetIDx   map[uint16]IpSetIDX
 }
 
-type PolicyID struct {
-	ID        uint16
+type IpSetIDX struct {
+	IpSetIDx  uint16
 	Direction string
 	Protocol  string
 	RuleID    map[string]Rule
@@ -87,7 +87,7 @@ type Rule struct {
 
 type IpSet struct {
 	IpsetID    string
-	PolicyID   uint16
+	IpSetIDx   uint16
 	PolicyName string
 	RuleID     string
 	IpAddr     []string

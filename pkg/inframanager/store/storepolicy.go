@@ -171,9 +171,9 @@ func remove(s []string, r string) ([]string, bool) {
 func (policydel Policy) DeleteFromStore() bool {
 	//delete the corresponding ipsetid from ipset map
 	var f bool
-	for policyid, _ := range policydel.PolicyID {
-		for ruleid, _ := range policydel.PolicyID[policyid].RuleID {
-			ipsetid := policydel.PolicyID[policyid].RuleID[ruleid].IpSetID
+	for ipsetidx, _ := range policydel.IpSetIDx {
+		for ruleid, _ := range policydel.IpSetIDx[ipsetidx].RuleID {
+			ipsetid := policydel.IpSetIDx[ipsetidx].RuleID[ruleid].IpSetID
 			if ipsetid != "" {
 				PolicySet.PolicyLock.Lock()
 				delete(PolicySet.IpSetMap, ipsetid)
@@ -201,7 +201,7 @@ func (policydel Policy) DeleteFromStore() bool {
 }
 
 func (ipsetdel IpSet) DeleteFromStore() bool {
-	policyid := ipsetdel.PolicyID
+	ipsetidx := ipsetdel.IpSetIDx
 	ruleid := ipsetdel.RuleID
 
 	res := PolicySet.PolicyMap[ipsetdel.PolicyName]
@@ -209,12 +209,12 @@ func (ipsetdel IpSet) DeleteFromStore() bool {
 		return false
 	} else {
 		PolicySet.PolicyLock.Lock()
-		if p, ok1 := res.PolicyID[policyid]; ok1 {
+		if p, ok1 := res.IpSetIDx[ipsetidx]; ok1 {
 			if r, ok2 := p.RuleID[ruleid]; ok2 {
 				r.IpSetID = ""
 				p.RuleID[ruleid] = r
 			}
-			res.PolicyID[policyid] = p
+			res.IpSetIDx[ipsetidx] = p
 		}
 		PolicySet.PolicyLock.Unlock()
 	}
