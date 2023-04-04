@@ -10,6 +10,8 @@
 
 set -e
 
+STRATUM_DIR="/usr/share/stratum"
+
 check_infrap4d_env()
 {
   var_names=("$@")
@@ -54,6 +56,25 @@ function is_power_of_two () {
   (( n > 0 && (n & (n - 1)) == 0 ))
 }
 
+function copy_certs() {
+  if [ -d "./scripts/tls/certs/infrap4d/certs" ]; then
+    if [ ! -d $STRATUM_DIR ]; then
+        echo "stratum directory not found."
+        exit 1
+    fi
+    mkdir -p $STRATUM_DIR/certs
+    rm -rf $STRATUM_DIR/certs/ca.crt
+    rm -rf $STRATUM_DIR/certs/client.crt
+    rm -rf $STRATUM_DIR/certs/client.key
+    rm -rf $STRATUM_DIR/certs/stratum.crt
+    rm -rf $STRATUM_DIR/certs/stratum.key
+    cp -r ./scripts/tls/certs/infrap4d/certs/* /usr/share/stratum/certs
+  else
+    echo "Missing infrap4d certificates. Run \"make gen-certs\" and try again."
+    exit 1
+  fi
+}
+
 if [ "$#" -lt 1 ]; then
   echo " "
   echo "Usage: $0 <max_ifs>"
@@ -82,6 +103,8 @@ then
 else
   sed -i 's/\bTAP/P4TAP_/g' /usr/share/stratum/dpdk/dpdk_port_config.pb.txt
 fi
+
+copy_certs
 
 # Run infrap4d
 run_infrap4d
