@@ -384,6 +384,16 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   ```
  
 ## P4-K8s Deployment
+  Generate the certificates required for mTLS connection between infraagent, inframanager and infrap4d
+  ```bash
+  # make gen-certs
+  ```
+
+  Copy the infrap4d certificates to the default cert path of the infrap4d server. This is required because unlike the infrap4d, the gnmi-cli binary does not have an option to pass the cert path and it always looks for the CA cert and the client cert in the default path "/usr/share/stratum". These certs are used for connecting to infrap4d server and to create tap interfaces.
+  ```bash
+  cp -r ./scripts/tls/certs/infrap4d/certs /usr/share/stratum
+  ```
+ 
   Run create_interfaces.sh script which, in addition to creating specified number of TAP interfaces, sets up the huge pages and starts infrap4d.
   Scripts requires following env variables to be set - SDE_INSTALL, IPDK_RECIPE, DEPEND_INSTALL . These env variables are defined in networking-recipe/main/docs/ipdk-dpdk.md
 
@@ -424,6 +434,13 @@ Kubernetes is known to not work well with Linux swap and hence, it should be tur
   ```bash
   # kubectl taint node <node-name> node-role.kubernetes.io/control-plane-
   ```
+  Create k8s secrets from the generated certificates. The infraagent and the manager reads the certificates from the secrets.
+
+  ```bash
+  make tls-secrets
+  ```
+
+  Start the deployment.
   ```bash
   # make deploy
   # make deploy-calico
