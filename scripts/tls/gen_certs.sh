@@ -25,7 +25,7 @@ openssl req -x509                                          \
   -subj /C=US/ST=CA/L=SJ/O=IPDK/CN=infra-server_ca/        \
   -config $OPENSSL_CNF                                     \
   -extensions v3_ca                                        \
-  -sha256
+  -sha384
 
 
 # Copy CA cert to Agent and Manager specific dirs
@@ -51,7 +51,7 @@ openssl x509 -req                                       \
   -out $MGR_SERVER/tls.crt                              \
   -extfile $OPENSSL_CNF                                 \
   -extensions v3_server                                 \
-  -sha256
+  -sha384
 openssl verify -verbose -CAfile $CERTS/ca.crt $MGR_SERVER/tls.crt
 rm $MGR_SERVER/server.csr
 
@@ -73,7 +73,7 @@ openssl x509 -req                                       \
   -out $MGR_CLIENT/tls.crt                              \
   -extfile $OPENSSL_CNF                                 \
   -extensions v3_server                                 \
-  -sha256
+  -sha384
 openssl verify -verbose -CAfile $CERTS/ca.crt $MGR_CLIENT/tls.crt
 rm $MGR_CLIENT/client.csr
 
@@ -96,6 +96,6 @@ openssl x509 -req                                       \
   -out $AGENT_CLIENT/tls.crt                            \
   -extfile $OPENSSL_CNF                                 \
   -extensions v3_server                                 \
-  -sha256
+  -sha384
 openssl verify -verbose -CAfile $CERTS/ca.crt $AGENT_CLIENT/tls.crt
 rm $AGENT_CLIENT/client.csr

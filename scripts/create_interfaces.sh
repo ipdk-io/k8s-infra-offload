@@ -10,6 +10,8 @@
 
 set -e
 
+STRATUM_DIR="/usr/share/stratum"
+
 check_infrap4d_env()
 {
   var_names=("$@")
@@ -45,12 +47,32 @@ function run_infrap4d () {
   getPid=$(pgrep -f infrap4d)  #  kill if already runnning
   [[ $getPid ]] && kill $getPid
   sleep 1
-  $IPDK_RECIPE/install/sbin/infrap4d -grpc_open_insecure_mode=true
+  $IPDK_RECIPE/install/sbin/infrap4d
+  #$IPDK_RECIPE/install/sbin/infrap4d -grpc_open_insecure_mode=true
 }
 
 function is_power_of_two () {
   declare -i n=($IF_MAX)
   (( n > 0 && (n & (n - 1)) == 0 ))
+}
+
+function copy_certs() {
+  if [ -d "./scripts/tls/certs/infrap4d/certs" ]; then
+    if [ ! -d $STRATUM_DIR ]; then
+        echo "stratum directory not found."
+        exit 1
+    fi
+    mkdir -p $STRATUM_DIR/certs
+    rm -rf $STRATUM_DIR/certs/ca.crt
+    rm -rf $STRATUM_DIR/certs/client.crt
+    rm -rf $STRATUM_DIR/certs/client.key
+    rm -rf $STRATUM_DIR/certs/stratum.crt
+    rm -rf $STRATUM_DIR/certs/stratum.key
+    cp -r ./scripts/tls/certs/infrap4d/certs/* /usr/share/stratum/certs
+  else
+    echo "Missing infrap4d certificates. Run \"make gen-certs\" and try again."
+    exit 1
+  fi
 }
 
 if [ "$#" -lt 1 ]; then
@@ -82,6 +104,8 @@ else
   sed -i 's/\bTAP/P4TAP_/g' /usr/share/stratum/dpdk/dpdk_port_config.pb.txt
 fi
 
+copy_certs
+
 # Run infrap4d
 run_infrap4d
 sleep 3
@@ -90,6 +114,7 @@ max=$(($IF_MAX - 1))
 for i in $(seq 0 $max);
 do
   echo "creating P4TAP_$i"
-  $IPDK_RECIPE/install/bin/gnmi-ctl set "device:virtual-device,name:P4TAP_$i,pipeline-name:pipe,mempool-name:MEMPOOL0,mtu:1500,port-type:TAP" -grpc_use_insecure_mode=true
+  $IPDK_RECIPE/install/bin/gnmi-ctl set "device:virtual-device,name:P4TAP_$i,pipeline-name:pipe,mempool-name:MEMPOOL0,mtu:1500,port-type:TAP"
+  #$IPDK_RECIPE/install/bin/gnmi-ctl set "device:virtual-device,name:P4TAP_$i,pipeline-name:pipe,mempool-name:MEMPOOL0,mtu:1500,port-type:TAP" -grpc_use_insecure_mode=true
   ifconfig P4TAP_$i mtu 1280 up
 done

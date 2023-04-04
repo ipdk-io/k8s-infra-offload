@@ -35,8 +35,9 @@ type ServerConf struct {
 	CACert     string `mapstructure:"ca-cert"`
 }
 type ManagerConf struct {
-	Conn       string `mapstructure:"conn"`
-	ServerCert string `mapstructure:"server-cert"`
-	ServerKey  string `mapstructure:"server-key"`
-	CACert     string `mapstructure:"ca-cert"`
+	Conn         string   `mapstructure:"conn"`
+	ServerCert   string   `mapstructure:"server-cert"`
+	ServerKey    string   `mapstructure:"server-key"`
+	CACert       string   `mapstructure:"ca-cert"`
+	CipherSuites []string `mapstructure:"ciphersuites"`
 }

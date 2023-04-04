@@ -32,6 +32,8 @@ import (
 )
 
 func main() {
+	utils.CreateCipherMap()
+
 	config := &conf.Configuration{}
 	conf.ReadConfig(config, "./config.yaml")
 
