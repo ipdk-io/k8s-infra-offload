@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	"github.com/spf13/viper"
 )
 
@@ -37,18 +38,21 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 	viper.SetDefault("Infrap4dGrpcServer.conn", "insecure")
 	viper.SetDefault("Infrap4dGrpcServer.client-cert", types.ManagerDefaultClientCert)
 	viper.SetDefault("Infrap4dGrpcServer.client-key", types.ManagerDefaultClientKey)
-	viper.SetDefault("Infrap4dGrpcServer.ca-cert", types.ManagerDefaultClientCA)
+	viper.SetDefault("Infrap4dGrpcServer.ca-cert", types.ManagerDefaultCACert)
 
 	viper.SetDefault("Infrap4dGnmiServer.Addr", "localhost:9339")
 	viper.SetDefault("Infrap4dGnmiServer.conn", "insecure")
 	viper.SetDefault("Infrap4dGnmiServer.client-cert", types.ManagerDefaultClientCert)
 	viper.SetDefault("Infrap4dGnmiServer.client-key", types.ManagerDefaultClientKey)
-	viper.SetDefault("Infrap4dGnmiServer.ca-cert", types.ManagerDefaultClientCA)
+	viper.SetDefault("Infrap4dGnmiServer.ca-cert", types.ManagerDefaultCACert)
 
 	viper.SetDefault("InfraManager.conn", "mtls")
 	viper.SetDefault("InfraManager.server-cert", types.ManagerDefaultServerCert)
 	viper.SetDefault("InfraManager.server-key", types.ManagerDefaultServerKey)
-	viper.SetDefault("InfraManager.ca-cert", types.ManagerDefaultServerCA)
+	viper.SetDefault("InfraManager.client-cert", types.ManagerDefaultClientCert)
+	viper.SetDefault("InfraManager.client-key", types.ManagerDefaultClientKey)
+	viper.SetDefault("InfraManager.ca-cert", types.ManagerDefaultCACert)
+	viper.SetDefault("InfraManager.ciphersuites", utils.DefaultCipherSuites())
 
 	if err := viper.ReadInConfig(); err != nil {
 		fmt.Printf("Error reading config file, %s", err)

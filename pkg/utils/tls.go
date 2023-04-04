@@ -59,6 +59,44 @@ type ServerParams struct {
 	ConClient Service
 }
 
+var CipherMap map[string]uint16
+
+func CreateCipherMap() {
+	ciphers := tls.CipherSuites()
+	ciphers = append(ciphers, tls.InsecureCipherSuites()...)
+	CipherMap = map[string]uint16{}
+
+	for _, c := range ciphers {
+		CipherMap[c.Name] = c.ID
+	}
+}
+
+func DefaultCipherSuites() []string {
+	return []string{
+		"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+		"TLS_AES_256_GCM_SHA384",
+	}
+}
+
+func ConvertCiphers(ciphers []string) ([]uint16, error) {
+	if len(ciphers) == 0 {
+		err := errors.New("Empty cipher list")
+		return []uint16{}, err
+	}
+
+	cc := []uint16{}
+	for _, c := range ciphers {
+		cipher, ok := CipherMap[c]
+		if !ok {
+			err := fmt.Errorf("Unknown cipher %s", c)
+			return []uint16{}, err
+		}
+		cc = append(cc, cipher)
+
+	}
+	return cc, nil
+}
+
 // GetClientCredentials returns gRPC client credential based on user provided configuration.
 // if "--insecure=true" it will provide insecure.NewCredentials
 // if "--insecure=false" && "--mtls=true" it will provide mTLS credentials
@@ -242,12 +280,16 @@ func NewGrpcServer(params ServerParams) (*grpc.Server, error) {
 			return nil, err
 		}
 
+		ciphers := viper.GetStringSlice("InfraManager.ciphersuites")
+		ciphersuites, err := ConvertCiphers(ciphers)
+		if err != nil {
+			return nil, err
+		}
+
 		config := &tls.Config{
 			Certificates: []tls.Certificate{serverCert},
 			ClientAuth:   tls.NoClientCert,
-			CipherSuites: []uint16{
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			},
+			CipherSuites: ciphersuites,
 		}
 
 		creds := credentials.NewTLS(config)
@@ -269,13 +311,18 @@ func NewGrpcServer(params ServerParams) (*grpc.Server, error) {
 			err := errors.New("Failed to append cert to the pool")
 			return nil, err
 		}
+
+		ciphers := viper.GetStringSlice("InfraManager.ciphersuites")
+		ciphersuites, err := ConvertCiphers(ciphers)
+		if err != nil {
+			return nil, err
+		}
+
 		config := &tls.Config{
 			Certificates: []tls.Certificate{serverCert},
 			ClientAuth:   tls.RequireAndVerifyClientCert,
 			ClientCAs:    certPool,
-			CipherSuites: []uint16{
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			},
+			CipherSuites: ciphersuites,
 		}
 
 		creds := credentials.NewTLS(config)
