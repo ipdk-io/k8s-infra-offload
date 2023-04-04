@@ -65,7 +65,7 @@ build:
 	@echo "Building project for $(tagname)"
 	go build -o ./bin/infraagent ./infraagent/agent/main.go
 	go build -o ./bin/felix-api-proxy ./infraagent/felix_api_proxy/main.go
-	go build -o ./bin/inframanager ./inframanager/cmd/main.go 
+	go build -tags $(tagname) -o ./bin/inframanager ./inframanager/cmd/main.go 
 	go build -o ./bin/arp_proxy ./arp-proxy/cmd/main.go
 
 clean:
