@@ -26,8 +26,8 @@ import (
 type InterfaceType int
 
 type IpsetidxStack struct {
-    data []int
-    top int
+	data []int
+	top  int
 }
 
 var oncest sync.Once
@@ -137,42 +137,41 @@ func Pack32BinaryIP4(ip4Address string) []byte {
 }
 
 func NewIpsetidxStack() *IpsetidxStack {
-    var IpsetidxSt *IpsetidxStack
-    oncest.Do(func() {
-        IpsetidxSt = &IpsetidxStack{
-                        data: make([]int, 256),
-                        top: -1,
-                    }
-        })
-    return IpsetidxSt
+	var IpsetidxSt *IpsetidxStack
+	oncest.Do(func() {
+		IpsetidxSt = &IpsetidxStack{
+			data: make([]int, 256),
+			top:  -1,
+		}
+	})
+	return IpsetidxSt
 }
 
 func (st *IpsetidxStack) Push(value int) {
-    st.top++
-    st.data[st.top] = value
+	st.top++
+	st.data[st.top] = value
 }
 
 func (st *IpsetidxStack) Pop() int {
-    if st.IsStackEmpty() {
-        return 0
-    }
-    value := st.data[st.top]
-    st.data[st.top] = 0
-    st.top--
-    return value
+	if st.IsStackEmpty() {
+		return 0
+	}
+	value := st.data[st.top]
+	st.data[st.top] = 0
+	st.top--
+	return value
 }
 
 func (st *IpsetidxStack) IsStackEmpty() bool {
-    if st.top==-1 {
-        return true
-    } else {
-        return false
-    }
+	if st.top == -1 {
+		return true
+	} else {
+		return false
+	}
 }
 
 func (st *IpsetidxStack) InitIpsetidxStack() {
-    for i:=0; i<256; i++ {
-        st.Push(i+1)
-    }
+	for i := 0; i < 256; i++ {
+		st.Push(i + 1)
+	}
 }
-

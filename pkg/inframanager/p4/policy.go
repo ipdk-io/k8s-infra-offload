@@ -29,9 +29,9 @@ import (
 type tabletype int
 
 const (
-    denyall tabletype = iota
-    NormalEntry
-    SpecialEntry
+	denyall tabletype = iota
+	NormalEntry
+	SpecialEntry
 )
 
 func AclSrcIPProtoTable(ctx context.Context, p4RtC *client.Client,
@@ -399,8 +399,8 @@ func UdpDstPortRcTable(ctx context.Context, p4RtC *client.Client,
 }
 
 func InsertPolicyTableEntries(tbltype tabletype, workerep string) bool {
-	case NormalEntry:
-	//[]policyname = store.workerepmap[workerep] //get the policy name from
-	//worker ep
+	//	case NormalEntry:
 	//
-		
+	// []policyname = store.workerepmap[workerep] //get the policy name from
+	// worker ep
+}
