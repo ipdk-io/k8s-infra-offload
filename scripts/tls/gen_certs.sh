@@ -8,12 +8,14 @@ OPENSSL_CNF=openssl.cnf
 AGENT_CLIENT=$CERTS/infraagent/client
 MGR_CLIENT=$CERTS/inframanager/client
 MGR_SERVER=$CERTS/inframanager/server
+INFRAP4D=$CERTS/infrap4d/certs
 
 [ -d $CERTS ] && rm -rf $CERTS
 mkdir -p $CERTS
 mkdir -p $AGENT_CLIENT
 mkdir -p $MGR_CLIENT
 mkdir -p $MGR_SERVER
+mkdir -p $INFRAP4D
 
 # Create common self-signed CA cert 
 openssl req -x509                                          \
@@ -32,9 +34,10 @@ openssl req -x509                                          \
 cp $CERTS/ca.crt $AGENT_CLIENT
 cp $CERTS/ca.crt $MGR_CLIENT
 cp $CERTS/ca.crt $MGR_SERVER
+cp $CERTS/ca.crt $INFRAP4D
 
 # Generate inframanager server csr and sign it
-# with server CA.
+# with CA.
 openssl genrsa -out $MGR_SERVER/tls.key 4096
 openssl req -new                                        \
   -key $MGR_SERVER/tls.key                              \
@@ -56,7 +59,7 @@ openssl verify -verbose -CAfile $CERTS/ca.crt $MGR_SERVER/tls.crt
 rm $MGR_SERVER/server.csr
 
 # Generate inframanager client csr and sign it
-# with client CA.
+# with CA.
 openssl genrsa -out $MGR_CLIENT/tls.key 4096
 openssl req -new                                        \
   -key $MGR_CLIENT/tls.key                              \
@@ -69,7 +72,7 @@ openssl x509 -req                                       \
   -CAkey $CERTS/ca.key                                  \
   -CA $CERTS/ca.crt                                     \
   -days 365                                             \
-  -set_serial 1000                                      \
+  -set_serial 1001                                      \
   -out $MGR_CLIENT/tls.crt                              \
   -extfile $OPENSSL_CNF                                 \
   -extensions v3_server                                 \
@@ -79,7 +82,7 @@ rm $MGR_CLIENT/client.csr
 
 
 # Generate infraagent client csr and sign it
-# with client CA.
+# with CA.
 openssl genrsa -out $AGENT_CLIENT/tls.key 4096
 openssl req -new                                        \
   -key $AGENT_CLIENT/tls.key                            \
@@ -92,10 +95,56 @@ openssl x509 -req                                       \
   -CAkey $CERTS/ca.key                                  \
   -CA $CERTS/ca.crt                                     \
   -days 365                                             \
-  -set_serial 1000                                      \
+  -set_serial 1002                                      \
   -out $AGENT_CLIENT/tls.crt                            \
   -extfile $OPENSSL_CNF                                 \
   -extensions v3_server                                 \
   -sha384
 openssl verify -verbose -CAfile $CERTS/ca.crt $AGENT_CLIENT/tls.crt
 rm $AGENT_CLIENT/client.csr
+
+# Generate infrap4d server csr and sign it
+# with CA.
+openssl genrsa -out $INFRAP4D/stratum.key 4096
+openssl req -new                                        \
+  -key $INFRAP4D/stratum.key                            \
+  -out $INFRAP4D/stratum.csr                            \
+  -subj /C=US/ST=CA/L=SJ/O=IPDK/CN=localhost/           \
+  -config $OPENSSL_CNF                                  \
+  -reqexts v3_stratum_server
+openssl x509 -req                                       \
+  -in $INFRAP4D/stratum.csr                             \
+  -CAkey $CERTS/ca.key                                  \
+  -CA $CERTS/ca.crt                                     \
+  -days 365                                             \
+  -set_serial 1003                                      \
+  -out $INFRAP4D/stratum.crt                            \
+  -extfile $OPENSSL_CNF                                 \
+  -extensions v3_stratum_server                         \
+  -sha512
+openssl verify -verbose -CAfile $CERTS/ca.crt $INFRAP4D/stratum.crt
+rm $INFRAP4D/stratum.csr
+
+# Generate infrap4d client csr and sign it
+# with CA.
+openssl genrsa -out $INFRAP4D/client.key 4096
+openssl req -new                                                  \
+  -key $INFRAP4D/client.key                                       \
+  -out $INFRAP4D/client.csr                                       \
+  -subj /C=US/ST=CA/L=SJ/O=IPDK/CN="Stratum client certificate"/  \
+  -config $OPENSSL_CNF                                            \
+  -reqexts v3_stratum_server
+openssl x509 -req                                                 \
+  -in $INFRAP4D/client.csr                                        \
+  -CAkey $CERTS/ca.key                                            \
+  -CA $CERTS/ca.crt                                               \
+  -days 365                                                       \
+  -set_serial 1004                                                \
+  -out $INFRAP4D/client.crt                                       \
+  -extfile $OPENSSL_CNF                                 \
+  -extensions v3_stratum_server                         \
+  -sha512
+openssl verify -verbose -CAfile $CERTS/ca.crt $INFRAP4D/client.crt
+rm $INFRAP4D/client.csr
+
+
