@@ -56,10 +56,9 @@ const (
 	AgentDefaultCACert          = "/tmp/infraagent/cert/client/ca.crt"
 	ManagerDefaultClientCert    = "/tmp/inframanager/cert/client/tls.crt"
 	ManagerDefaultClientKey     = "/tmp/inframanager/cert/client/tls.key"
-	ManagerDefaultClientCA      = "/tmp/inframanager/cert/client/ca.crt"
 	ManagerDefaultServerCert    = "/tmp/inframanager/cert/server/tls.crt"
 	ManagerDefaultServerKey     = "/tmp/inframanager/cert/server/tls.key"
-	ManagerDefaultServerCA      = "/tmp/inframanager/cert/server/ca.crt"
+	ManagerDefaultCACert        = "/tmp/inframanager/cert/client/ca.crt"
 )
 
 var (

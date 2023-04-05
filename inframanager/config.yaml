@@ -11,7 +11,7 @@ Infrap4dGrpcServer:
 #      client-cert: "/tmp/inframanager/client/tls.crt"
 #      client-key: "/tmp/inframanager/client/tls.key"
 #      ca-cert: "/tmp/inframanager/client/ca.crt"
-  conn: insecure
+  conn: mtls
 
 Infrap4dGnmiServer:
   addr: localhost:9339
@@ -26,7 +26,7 @@ Infrap4dGnmiServer:
 #      client-cert: "/tmp/inframanager/client/tls.crt"
 #      client-key: "/tmp/inframanager/client/tls.key"
 #      ca-cert: "/tmp/inframanager/client/ca.crt"
-  conn: insecure
+  conn: mtls
 
 InfraManager: 
 # Possible connection types
@@ -41,14 +41,27 @@ InfraManager:
 #      client-cert: "cert_path"
 #      client-key: "key_path"
 #      ca-cert: "ca_path"
-#    If not specified, the default values are
-#      client-cert: "/tmp/inframanager/server/tls.crt"
-#      client-key: "/tmp/inframanager/server/tls.key"
-#      ca-cert: "/tmp/inframanager/server/ca.crt"
+#        If not specified, the default values are
+#          server-cert: "/tmp/inframanager/server/tls.crt"
+#          server-key: "/tmp/inframanager/server/tls.key"
+#          ca-cert: "/tmp/inframanager/server/ca.crt"
+#      ciphersuites: []
+#        If not specified, the default values are
+#        [
+#          "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+#          "TLS_AES_256_GCM_SHA384",
+#        ]
+#        Check https://pkg.go.dev/crypto/tls
+#        for the list of supported ciphersuites.
+#
   conn: mtls
   server-cert: "/tmp/inframanager/cert/server/tls.crt"
   server-key: "/tmp/inframanager/cert/server/tls.key"
   ca-cert: "/tmp/inframanager/cert/server/ca.crt"
+  ciphersuites : [
+          "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+          "TLS_AES_256_GCM_SHA384",
+        ]
 
 P4InfoPath: k8s_dp/p4Info.txt
 p4BinPath: k8s_dp/k8s_dp.pb.bin
