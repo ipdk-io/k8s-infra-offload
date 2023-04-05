@@ -20,10 +20,18 @@ import (
 	"context"
 	"fmt"
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
-	//	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
 	//	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
 	log "github.com/sirupsen/logrus"
 	//	"net"
+)
+
+type tabletype int
+
+const (
+    denyall tabletype = iota
+    NormalEntry
+    SpecialEntry
 )
 
 func AclSrcIPProtoTable(ctx context.Context, p4RtC *client.Client,
@@ -389,3 +397,10 @@ func UdpDstPortRcTable(ctx context.Context, p4RtC *client.Client,
 
 	return nil
 }
+
+func InsertPolicyTableEntries(tbltype tabletype, workerep string) bool {
+	case NormalEntry:
+	//[]policyname = store.workerepmap[workerep] //get the policy name from
+	//worker ep
+	//
+		
