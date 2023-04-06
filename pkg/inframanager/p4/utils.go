@@ -105,6 +105,16 @@ func valueToBytes16(value uint16) []byte {
 	return buf.Bytes()
 }
 
+func valueToBytes8(value uint8) []byte {
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.BigEndian, value)
+	if err != nil {
+		fmt.Println("binary.Write failed:", err)
+	}
+	fmt.Printf("% x", buf.Bytes())
+	return buf.Bytes()
+}
+
 func valueToBytesStr(value string) []byte {
 	buf := new(bytes.Buffer)
 	err := binary.Write(buf, binary.BigEndian, value)
@@ -174,4 +184,12 @@ func (st *IpsetidxStack) InitIpsetidxStack() {
 	for i := 0; i < 256; i++ {
 		st.Push(i + 1)
 	}
+}
+
+// this function to generate rulemask or ipsetmask for each rule under each
+// ipsetidx
+var Mask = []uint8{1, 2, 4, 8, 16, 32, 64, 128}
+
+func GenerateMask(index int) uint8 {
+	return Mask[index]
 }

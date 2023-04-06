@@ -75,6 +75,7 @@ type IpSetIDX struct {
 	Direction string
 	Protocol  string
 	RuleID    map[string]Rule
+	Rc        []uint16
 }
 
 type Rule struct {

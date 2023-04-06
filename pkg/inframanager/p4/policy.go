@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
+	"strconv"
+	"strings"
 	//	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
 	log "github.com/sirupsen/logrus"
 	//	"net"
@@ -30,11 +32,15 @@ type tabletype int
 
 const (
 	denyall tabletype = iota
-	NormalEntry
-	SpecialEntry
+	policyadd
+	policydel
+	policyupdate
+	workloadadd
+	workloadupdate
+	workloaddel
 )
 
-func AclSrcIPProtoTable(ctx context.Context, p4RtC *client.Client,
+func AclPodIpProtoTableEgress(ctx context.Context, p4RtC *client.Client,
 	protocol string, workerep string, polID uint16, rangeID uint16,
 	action InterfaceType) error {
 	switch action {
@@ -111,7 +117,7 @@ func AclSrcIPProtoTable(ctx context.Context, p4RtC *client.Client,
 	return nil
 }
 
-func AclDstIPProtoTable(ctx context.Context, p4RtC *client.Client,
+func AclPodIpProtoTableIngress(ctx context.Context, p4RtC *client.Client,
 	protocol string, workerep string, polID uint16, rangeID uint16,
 	action InterfaceType) error {
 	switch action {
@@ -188,9 +194,11 @@ func AclDstIPProtoTable(ctx context.Context, p4RtC *client.Client,
 	return nil
 }
 
-func AclDstIpSetTable(ctx context.Context, p4RtC *client.Client,
-	polID uint16, ipsetIP string, plen int32,
-	mask uint32, action InterfaceType) error {
+func AclIpSetMatchTableEgress(ctx context.Context, p4RtC *client.Client,
+	polID uint16, cidr string, mask uint8, action InterfaceType) error {
+	res := strings.Split(cidr, "/")
+	ip := res[0]
+	plen, _ := strconv.Atoi(res[1])
 	switch action {
 	case Insert:
 		entryAdd := p4RtC.NewTableEntry(
@@ -200,12 +208,12 @@ func AclDstIpSetTable(ctx context.Context, p4RtC *client.Client,
 					Value: valueToBytes16(polID),
 				},
 				"hdr.ipv4.dst_addr": &client.LpmMatch{
-					Value: Pack32BinaryIP4(ipsetIP),
-					PLen:  plen,
+					Value: Pack32BinaryIP4(ip),
+					PLen:  int32(plen),
 				},
 			},
 			p4RtC.NewTableActionDirect("k8s_dp_control.acl_rip_allowed",
-				[][]byte{valueToBytes(mask)}),
+				[][]byte{valueToBytes8(mask)}),
 			nil,
 		)
 		if err := p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
@@ -221,8 +229,8 @@ func AclDstIpSetTable(ctx context.Context, p4RtC *client.Client,
 					Value: valueToBytes16(polID),
 				},
 				"hdr.ipv4.dst_addr": &client.LpmMatch{
-					Value: Pack32BinaryIP4(ipsetIP),
-					PLen:  plen,
+					Value: Pack32BinaryIP4(ip),
+					PLen:  int32(plen),
 				},
 			},
 			nil,
@@ -237,9 +245,11 @@ func AclDstIpSetTable(ctx context.Context, p4RtC *client.Client,
 	return nil
 }
 
-func AclSrcIpSetTable(ctx context.Context, p4RtC *client.Client,
-	polID uint16, ipsetIP string, plen int32,
-	mask uint32, action InterfaceType) error {
+func AclIpSetMatchTableIngress(ctx context.Context, p4RtC *client.Client,
+	polID uint16, cidr string, mask uint8, action InterfaceType) error {
+	res := strings.Split(cidr, "/")
+	ip := res[0]
+	plen, _ := strconv.Atoi(res[1])
 	switch action {
 	case Insert:
 		entryAdd := p4RtC.NewTableEntry(
@@ -249,12 +259,12 @@ func AclSrcIpSetTable(ctx context.Context, p4RtC *client.Client,
 					Value: valueToBytes16(polID),
 				},
 				"hdr.ipv4.src_addr": &client.LpmMatch{
-					Value: Pack32BinaryIP4(ipsetIP),
-					PLen:  plen,
+					Value: Pack32BinaryIP4(ip),
+					PLen:  int32(plen),
 				},
 			},
 			p4RtC.NewTableActionDirect("k8s_dp_control.acl_rip_allowed",
-				[][]byte{valueToBytes(mask)}),
+				[][]byte{valueToBytes8(mask)}),
 			nil,
 		)
 		if err := p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
@@ -270,8 +280,8 @@ func AclSrcIpSetTable(ctx context.Context, p4RtC *client.Client,
 					Value: valueToBytes16(polID),
 				},
 				"hdr.ipv4.src_addr": &client.LpmMatch{
-					Value: Pack32BinaryIP4(ipsetIP),
-					PLen:  plen,
+					Value: Pack32BinaryIP4(ip),
+					PLen:  int32(plen),
 				},
 			},
 			nil,
@@ -287,7 +297,7 @@ func AclSrcIpSetTable(ctx context.Context, p4RtC *client.Client,
 }
 
 func TcpDstPortRcTable(ctx context.Context, p4RtC *client.Client,
-	polID uint16, portrange []uint32,
+	polID uint16, portrange []uint16,
 	action InterfaceType) error {
 	switch action {
 	case Insert:
@@ -299,26 +309,58 @@ func TcpDstPortRcTable(ctx context.Context, p4RtC *client.Client,
 				},
 			},
 			p4RtC.NewTableActionDirect("k8s_dp_control.do_range_check_tcp",
-				[][]byte{valueToBytes(portrange[0]),
-					valueToBytes(portrange[1]),
-					valueToBytes(portrange[2]),
-					valueToBytes(portrange[3]),
-					valueToBytes(portrange[4]),
-					valueToBytes(portrange[5]),
-					valueToBytes(portrange[6]),
-					valueToBytes(portrange[7]),
-					valueToBytes(portrange[8]),
-					valueToBytes(portrange[9]),
-					valueToBytes(portrange[10]),
-					valueToBytes(portrange[11]),
-					valueToBytes(portrange[12]),
-					valueToBytes(portrange[13]),
-					valueToBytes(portrange[14]),
-					valueToBytes(portrange[15])}),
+				[][]byte{valueToBytes16(portrange[0]),
+					valueToBytes16(portrange[1]),
+					valueToBytes16(portrange[2]),
+					valueToBytes16(portrange[3]),
+					valueToBytes16(portrange[4]),
+					valueToBytes16(portrange[5]),
+					valueToBytes16(portrange[6]),
+					valueToBytes16(portrange[7]),
+					valueToBytes16(portrange[8]),
+					valueToBytes16(portrange[9]),
+					valueToBytes16(portrange[10]),
+					valueToBytes16(portrange[11]),
+					valueToBytes16(portrange[12]),
+					valueToBytes16(portrange[13]),
+					valueToBytes16(portrange[14]),
+					valueToBytes16(portrange[15])}),
 			nil,
 		)
 		if err := p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
 			log.Errorf("Cannot insert entry into 'tcp_dst_port_rc_table': %v", err)
+			return err
+		}
+
+	case Update:
+		entryMod := p4RtC.NewTableEntry(
+			"k8s_dp_control.tcp_dst_port_rc_table",
+			map[string]client.MatchInterface{
+				"meta.acl_pol_id": &client.ExactMatch{
+					Value: valueToBytes16(polID),
+				},
+			},
+			p4RtC.NewTableActionDirect("k8s_dp_control.do_range_check_tcp",
+				[][]byte{valueToBytes16(portrange[0]),
+					valueToBytes16(portrange[1]),
+					valueToBytes16(portrange[2]),
+					valueToBytes16(portrange[3]),
+					valueToBytes16(portrange[4]),
+					valueToBytes16(portrange[5]),
+					valueToBytes16(portrange[6]),
+					valueToBytes16(portrange[7]),
+					valueToBytes16(portrange[8]),
+					valueToBytes16(portrange[9]),
+					valueToBytes16(portrange[10]),
+					valueToBytes16(portrange[11]),
+					valueToBytes16(portrange[12]),
+					valueToBytes16(portrange[13]),
+					valueToBytes16(portrange[14]),
+					valueToBytes16(portrange[15])}),
+			nil,
+		)
+		if err := p4RtC.ModifyTableEntry(ctx, entryMod); err != nil {
+			log.Errorf("Cannot update entry to 'tcp_dst_port_rc_table': %v", err)
 			return err
 		}
 
@@ -343,7 +385,7 @@ func TcpDstPortRcTable(ctx context.Context, p4RtC *client.Client,
 }
 
 func UdpDstPortRcTable(ctx context.Context, p4RtC *client.Client,
-	polID uint16, portrange []uint32,
+	polID uint16, portrange []uint16,
 	action InterfaceType) error {
 	switch action {
 	case Insert:
@@ -355,26 +397,58 @@ func UdpDstPortRcTable(ctx context.Context, p4RtC *client.Client,
 				},
 			},
 			p4RtC.NewTableActionDirect("k8s_dp_control.do_range_check_udp",
-				[][]byte{valueToBytes(portrange[0]),
-					valueToBytes(portrange[1]),
-					valueToBytes(portrange[2]),
-					valueToBytes(portrange[3]),
-					valueToBytes(portrange[4]),
-					valueToBytes(portrange[5]),
-					valueToBytes(portrange[6]),
-					valueToBytes(portrange[7]),
-					valueToBytes(portrange[8]),
-					valueToBytes(portrange[9]),
-					valueToBytes(portrange[10]),
-					valueToBytes(portrange[11]),
-					valueToBytes(portrange[12]),
-					valueToBytes(portrange[13]),
-					valueToBytes(portrange[14]),
-					valueToBytes(portrange[15])}),
+				[][]byte{valueToBytes16(portrange[0]),
+					valueToBytes16(portrange[1]),
+					valueToBytes16(portrange[2]),
+					valueToBytes16(portrange[3]),
+					valueToBytes16(portrange[4]),
+					valueToBytes16(portrange[5]),
+					valueToBytes16(portrange[6]),
+					valueToBytes16(portrange[7]),
+					valueToBytes16(portrange[8]),
+					valueToBytes16(portrange[9]),
+					valueToBytes16(portrange[10]),
+					valueToBytes16(portrange[11]),
+					valueToBytes16(portrange[12]),
+					valueToBytes16(portrange[13]),
+					valueToBytes16(portrange[14]),
+					valueToBytes16(portrange[15])}),
 			nil,
 		)
 		if err := p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
 			log.Errorf("Cannot insert entry into 'udp_dst_port_rc_table': %v", err)
+			return err
+		}
+
+	case Update:
+		entryMod := p4RtC.NewTableEntry(
+			"k8s_dp_control.udp_dst_port_rc_table",
+			map[string]client.MatchInterface{
+				"meta.acl_pol_id": &client.ExactMatch{
+					Value: valueToBytes16(polID),
+				},
+			},
+			p4RtC.NewTableActionDirect("k8s_dp_control.do_range_check_udp",
+				[][]byte{valueToBytes16(portrange[0]),
+					valueToBytes16(portrange[1]),
+					valueToBytes16(portrange[2]),
+					valueToBytes16(portrange[3]),
+					valueToBytes16(portrange[4]),
+					valueToBytes16(portrange[5]),
+					valueToBytes16(portrange[6]),
+					valueToBytes16(portrange[7]),
+					valueToBytes16(portrange[8]),
+					valueToBytes16(portrange[9]),
+					valueToBytes16(portrange[10]),
+					valueToBytes16(portrange[11]),
+					valueToBytes16(portrange[12]),
+					valueToBytes16(portrange[13]),
+					valueToBytes16(portrange[14]),
+					valueToBytes16(portrange[15])}),
+			nil,
+		)
+		if err := p4RtC.ModifyTableEntry(ctx, entryMod); err != nil {
+			log.Errorf("Cannot update entry in 'udp_dst_port_rc_table': %v", err)
 			return err
 		}
 
@@ -398,9 +472,244 @@ func UdpDstPortRcTable(ctx context.Context, p4RtC *client.Client,
 	return nil
 }
 
-func InsertPolicyTableEntries(tbltype tabletype, workerep string) bool {
-	//	case NormalEntry:
-	//
-	// []policyname = store.workerepmap[workerep] //get the policy name from
-	// worker ep
+func IsNamePresent(substr string, strslice []string) bool {
+	for _, str := range strslice {
+		if strings.Contains(str, substr) {
+			return true
+		}
+	}
+	return false
+}
+
+func IsSame(slice1 []uint16, slice2 []uint16) bool {
+	for i := range slice1 {
+		if slice1[i] != slice2[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func InsertPolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype tabletype, policy *store.Policy, workloadep *store.PolicyWorkerEndPoint) bool {
+	switch tbltype {
+	case policyadd:
+		for ipsetidx, _ := range policy.IpSetIDx {
+			for ruleid, _ := range policy.IpSetIDx[ipsetidx].RuleID {
+				cidr := policy.IpSetIDx[ipsetidx].RuleID[ruleid].Cidr
+				mask := policy.IpSetIDx[ipsetidx].RuleID[ruleid].RuleMask
+				if policy.IpSetIDx[ipsetidx].Direction == "TX" {
+					AclIpSetMatchTableEgress(ctx, p4RtC, ipsetidx, cidr, mask, Insert)
+				} else {
+					AclIpSetMatchTableIngress(ctx, p4RtC, ipsetidx, cidr, mask, Insert)
+				}
+			}
+			if len(policy.IpSetIDx[ipsetidx].Rc) != 0 {
+				TcpDstPortRcTable(ctx, p4RtC, ipsetidx, policy.IpSetIDx[ipsetidx].Rc, Insert)
+			} else {
+				UdpDstPortRcTable(ctx, p4RtC, ipsetidx, policy.IpSetIDx[ipsetidx].Rc, Insert)
+			}
+		}
+
+	case policydel:
+		for ipsetidx, _ := range policy.IpSetIDx {
+			for ruleid, _ := range policy.IpSetIDx[ipsetidx].RuleID {
+				cidr := policy.IpSetIDx[ipsetidx].RuleID[ruleid].Cidr
+				if policy.IpSetIDx[ipsetidx].Direction == "TX" {
+					AclIpSetMatchTableEgress(ctx, p4RtC, ipsetidx, cidr, 0, Delete)
+				} else {
+					AclIpSetMatchTableIngress(ctx, p4RtC, ipsetidx, cidr, 0, Delete)
+				}
+			}
+			if len(policy.IpSetIDx[ipsetidx].Rc) != 0 {
+				if policy.IpSetIDx[ipsetidx].Protocol == "TCP" {
+					TcpDstPortRcTable(ctx, p4RtC, ipsetidx, nil, Delete)
+				} else {
+					UdpDstPortRcTable(ctx, p4RtC, ipsetidx, nil, Delete)
+				}
+			}
+		}
+
+	case policyupdate:
+		policyold := store.PolicySet.PolicyMap[policy.PolicyName]
+		oldrules := make([]string, 0)
+		newrules := make([]string, 0)
+		var index int
+		//create slice of existing rules
+		for ipsetidx, _ := range policyold.IpSetIDx {
+			for ruleid, _ := range policyold.IpSetIDx[ipsetidx].RuleID {
+				oldrules = append(oldrules, ruleid)
+			}
+		}
+		//create slice of new rules
+		for ipsetidx, _ := range policy.IpSetIDx {
+			for ruleid, _ := range policy.IpSetIDx[ipsetidx].RuleID {
+				newrules = append(newrules, ruleid)
+			}
+		}
+		//delete old rules if its not part of updated set of rules
+		for ipsetidx, _ := range policyold.IpSetIDx {
+			rc := make([]uint16, 16)
+			for ruleid, _ := range policyold.IpSetIDx[ipsetidx].RuleID {
+				index++
+				if IsNamePresent(ruleid, newrules) {
+					if len(policyold.IpSetIDx[ipsetidx].RuleID[ruleid].PortRange) != 0 {
+						i := index
+						j := i + 1
+						rc[i] = policyold.IpSetIDx[ipsetidx].RuleID[ruleid].PortRange[0]
+						rc[j] = policyold.IpSetIDx[ipsetidx].RuleID[ruleid].PortRange[1]
+					}
+				} else { //if rule is not present, then delete only that rule from pipeline
+					if len(policyold.IpSetIDx[ipsetidx].RuleID[ruleid].PortRange) != 0 {
+						i := index
+						j := i + 1
+						rc[i] = 0
+						rc[j] = 0
+					}
+					cidr := policyold.IpSetIDx[ipsetidx].RuleID[ruleid].Cidr
+					if policyold.IpSetIDx[ipsetidx].Direction == "TX" {
+						AclIpSetMatchTableEgress(ctx, p4RtC, ipsetidx, cidr, 0, Delete)
+					} else {
+						AclIpSetMatchTableIngress(ctx, p4RtC, ipsetidx, cidr, 0, Delete)
+					}
+				}
+			}
+			index = 0
+			if len(rc) == 0 {
+				if policyold.IpSetIDx[ipsetidx].Protocol == "TCP" {
+					TcpDstPortRcTable(ctx, p4RtC, ipsetidx, nil, Delete)
+				} else {
+					UdpDstPortRcTable(ctx, p4RtC, ipsetidx, nil, Delete)
+				}
+			} else {
+				if policyold.IpSetIDx[ipsetidx].Protocol == "TCP" {
+					TcpDstPortRcTable(ctx, p4RtC, ipsetidx, rc, Update)
+				} else {
+					UdpDstPortRcTable(ctx, p4RtC, ipsetidx, rc, Update)
+				}
+			}
+		}
+		//add newly added rules to the pipeline
+		for ipsetidx, _ := range policy.IpSetIDx {
+			rc := make([]uint16, 16)
+			for ruleid, _ := range policy.IpSetIDx[ipsetidx].RuleID {
+				index++
+				if IsNamePresent(ruleid, oldrules) {
+					if len(policy.IpSetIDx[ipsetidx].RuleID[ruleid].PortRange) != 0 {
+						i := index
+						j := i + 1
+						rc[i] = policy.IpSetIDx[ipsetidx].RuleID[ruleid].PortRange[0]
+						rc[j] = policy.IpSetIDx[ipsetidx].RuleID[ruleid].PortRange[1]
+					}
+				} else { //if rule is not present, then insert only that rule to pipeline
+					if len(policy.IpSetIDx[ipsetidx].RuleID[ruleid].PortRange) != 0 {
+						i := index
+						j := i + 1
+						rc[i] = policy.IpSetIDx[ipsetidx].RuleID[ruleid].PortRange[0]
+						rc[j] = policy.IpSetIDx[ipsetidx].RuleID[ruleid].PortRange[1]
+					}
+					cidr := policy.IpSetIDx[ipsetidx].RuleID[ruleid].Cidr
+					mask := policy.IpSetIDx[ipsetidx].RuleID[ruleid].RuleMask
+					if policy.IpSetIDx[ipsetidx].Direction == "TX" {
+						AclIpSetMatchTableEgress(ctx, p4RtC, ipsetidx, cidr, mask, Delete)
+					} else {
+						AclIpSetMatchTableIngress(ctx, p4RtC, ipsetidx, cidr, mask, Delete)
+					}
+				}
+			}
+			index = 0
+			if len(rc) != 0 {
+				if len(policyold.IpSetIDx[ipsetidx].Rc) == 0 { //if new rule has port range and previously we have not added any port range for same ipsetidx, then insert port range for that ipsetidx
+					if policy.IpSetIDx[ipsetidx].Protocol == "TCP" {
+						TcpDstPortRcTable(ctx, p4RtC, ipsetidx, rc, Insert)
+					} else {
+						UdpDstPortRcTable(ctx, p4RtC, ipsetidx, rc, Insert)
+					}
+				}
+			} else if len(rc) != 0 && len(policyold.IpSetIDx[ipsetidx].Rc) != 0 { //if old port range and new port range for a ipsetidx are different
+				if !IsSame(rc, policyold.IpSetIDx[ipsetidx].Rc) {
+					if policy.IpSetIDx[ipsetidx].Protocol == "TCP" {
+						TcpDstPortRcTable(ctx, p4RtC, ipsetidx, rc, Update)
+					} else {
+						UdpDstPortRcTable(ctx, p4RtC, ipsetidx, rc, Update)
+					}
+				}
+			} else {
+			}
+		}
+
+	case workloadadd:
+		for _, policyname := range workloadep.PolicyNameIngress {
+			policy := store.PolicySet.PolicyMap[policyname]
+			for ipsetidx, _ := range policy.IpSetIDx {
+				AclPodIpProtoTableIngress(ctx, p4RtC, policy.IpSetIDx[ipsetidx].Protocol, workloadep.WorkerEp, ipsetidx, ipsetidx, Insert)
+			}
+		}
+
+		for _, policyname := range workloadep.PolicyNameEgress {
+			policy := store.PolicySet.PolicyMap[policyname]
+			for ipsetidx, _ := range policy.IpSetIDx {
+				AclPodIpProtoTableEgress(ctx, p4RtC, policy.IpSetIDx[ipsetidx].Protocol, workloadep.WorkerEp, ipsetidx, ipsetidx, Insert)
+			}
+		}
+
+	case workloaddel:
+		for _, policyname := range workloadep.PolicyNameIngress {
+			policy := store.PolicySet.PolicyMap[policyname]
+			for ipsetidx, _ := range policy.IpSetIDx {
+				AclPodIpProtoTableIngress(ctx, p4RtC, policy.IpSetIDx[ipsetidx].Protocol, workloadep.WorkerEp, ipsetidx, ipsetidx, Delete)
+			}
+		}
+
+		for _, policyname := range workloadep.PolicyNameEgress {
+			policy := store.PolicySet.PolicyMap[policyname]
+			for ipsetidx, _ := range policy.IpSetIDx {
+				AclPodIpProtoTableEgress(ctx, p4RtC, policy.IpSetIDx[ipsetidx].Protocol, workloadep.WorkerEp, ipsetidx, ipsetidx, Delete)
+			}
+		}
+
+	case workloadupdate:
+		workloadepold := store.PolicySet.WorkerEpMap[workloadep.WorkerEp]
+		//ingress policy names
+		//delete from policy tables for removed policies
+		for _, policyname := range workloadepold.PolicyNameIngress {
+			if !IsNamePresent(policyname, workloadep.PolicyNameIngress) { //if policyname from old store entry is not present in new entry, then delete
+				policydel := store.PolicySet.PolicyMap[policyname]
+				for ipsetidx, _ := range policydel.IpSetIDx {
+					AclPodIpProtoTableIngress(ctx, p4RtC, policydel.IpSetIDx[ipsetidx].Protocol, workloadep.WorkerEp, 0, 0, Delete)
+				}
+			}
+		}
+		//insert to policy tables the new policies
+		for _, policyname := range workloadep.PolicyNameIngress {
+			if !IsNamePresent(policyname, workloadepold.PolicyNameIngress) {
+				policyadd := store.PolicySet.PolicyMap[policyname]
+				for ipsetidx, _ := range policyadd.IpSetIDx {
+					AclPodIpProtoTableIngress(ctx, p4RtC, policyadd.IpSetIDx[ipsetidx].Protocol, workloadep.WorkerEp, ipsetidx, ipsetidx, Insert)
+				}
+			}
+		}
+
+		//egress policy names
+		//delete from policy tables for removed policies
+		for _, policyname := range workloadepold.PolicyNameEgress {
+			if !IsNamePresent(policyname, workloadep.PolicyNameEgress) { //if policyname from old store entry is not present in new entry, then delete
+				policydel := store.PolicySet.PolicyMap[policyname]
+				for ipsetidx, _ := range policydel.IpSetIDx {
+					AclPodIpProtoTableEgress(ctx, p4RtC, policydel.IpSetIDx[ipsetidx].Protocol, workloadep.WorkerEp, 0, 0, Delete)
+				}
+			}
+		}
+		//insert to policy tables the new policies
+		for _, policyname := range workloadep.PolicyNameEgress {
+			if !IsNamePresent(policyname, workloadepold.PolicyNameEgress) {
+				policyadd := store.PolicySet.PolicyMap[policyname]
+				for ipsetidx, _ := range policyadd.IpSetIDx {
+					AclPodIpProtoTableEgress(ctx, p4RtC, policyadd.IpSetIDx[ipsetidx].Protocol, workloadep.WorkerEp, ipsetidx, ipsetidx, Insert)
+				}
+			}
+		}
+
+	}
+	return true
+
 }
