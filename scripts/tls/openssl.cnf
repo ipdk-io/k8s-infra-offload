@@ -18,6 +18,12 @@ subjectKeyIdentifier    = hash
 keyUsage                = critical,digitalSignature,keyEncipherment,keyAgreement
 subjectAltName          = @server_alt_names
 
+[v3_stratum_server]
+basicConstraints        = critical,CA:FALSE
+subjectKeyIdentifier    = hash
+keyUsage                = critical,digitalSignature,keyEncipherment,keyAgreement
+subjectAltName          = DNS:localhost
+
 [server_alt_names]
 DNS.1 = *.intel.com
 DNS.2 = k8s
