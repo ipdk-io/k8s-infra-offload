@@ -13,11 +13,25 @@
  ************* C O N S T A N T S   A N D   T Y P E S  *******************
 **************************************************************************/
 
+const bit<48> MULTICAST_MAC = 0x010000000000;
+
 const bit<16> ETHERTYPE_TPID = 0x8100;
 const bit<16> ETHERTYPE_IPV4 = 0x0800;
 const bit<16> ETHERTYPE_ARP  = 0x0806;
 const bit<8>  IP_PROTO_TCP   = 0x06;
-const bit<8> IP_PROTO_UDP = 0x11;
+const bit<8>  IP_PROTO_UDP   = 0x11;
+const bit<8>  IP_PROTO_ICMP  = 0x01;
+const bit<8>  IP_PROTO_SCTP  = 0x84;
+const bit<8>  IP_PROTO_UDPL  = 0x88;
+
+/* LSB for Remote IP address & MSB for L4 field */
+const bit<8> ALLOW_ALL      = 0x0;
+const bit<8> MATCH_IPSET    = 0x1;
+const bit<8> MATCH_RULE     = 0x3;
+
+typedef bit<32> PacketCounter_t;
+typedef bit<48> ByteCounter_t;
+typedef bit<16> FlowIdx_t;
 
 typedef bit<16> ActionRef_t;
 typedef bit<24> ModDataPtr_t;
@@ -25,6 +39,16 @@ typedef bit<24> ModDataPtr_t;
 const ActionRef_t WRITE_SRC_IP = (ActionRef_t) 1;
 const ActionRef_t WRITE_DEST_IP = (ActionRef_t) 2;
 const ActionRef_t NO_MODIFY =  (ActionRef_t) 0;
+
+typedef bit<8> RuleMatchMask_t;
+typedef bit<8> RangeCheckRefType_t;
+typedef bit<8> AclPolicyId_t;
+
+const RangeCheckRefType_t CHECK_TCP_DST_PORT_RANGE = (RangeCheckRefType_t) 1;
+const RangeCheckRefType_t CHECK_UDP_DST_PORT_RANGE = (RangeCheckRefType_t) 2;
+const RangeCheckRefType_t CHECK_SCTP_DST_PORT_RANGE = (RangeCheckRefType_t) 3;
+const RangeCheckRefType_t CHECK_UDPL_DST_PORT_RANGE = (RangeCheckRefType_t) 4;
+const RangeCheckRefType_t CHECK_ICMP_TYPE_CODE = (RangeCheckRefType_t) 5;
 
 const ExpireTimeProfileId_t EXPIRE_TIME_CT = (ExpireTimeProfileId_t) 2;
 
@@ -72,6 +96,11 @@ header ipv4_t {
 	bit<32> dst_addr;
 }
 
+header icmp_t {
+    bit<16> type_code;
+    bit<16> checksum;
+}
+
 header tcp_t {
 	bit<16> src_port;
 	bit<16> dst_port;
@@ -91,13 +120,30 @@ header udp_t {
 	bit<16> checksum;
 }
 
+header sctp_t {
+        bit<16> src_port;
+        bit<16> dst_port;
+        bit<32> verif_tag;
+        bit<32> checksum;
+}
+
+header udpl_t {
+        bit<16> src_port;
+        bit<16> dst_port;
+        bit<16> csum_coverage;
+        bit<16> checksum;
+}
+
 struct headers_t {
-	ethernet_t ethernet;
-	vlan_tag_h vlan_tag;
-	ipv4_t ipv4;
-	tcp_t tcp;
-	udp_t udp;
-	arp_t arp;
+        ethernet_t ethernet;
+        vlan_tag_h vlan_tag;
+        ipv4_t ipv4;
+        tcp_t tcp;
+        udp_t udp;
+        sctp_t sctp;
+        udpl_t udpl;
+        arp_t arp;
+        icmp_t icmp;
 }
 
 struct clb_pinned_flows_hit_params_t {
@@ -117,6 +163,12 @@ struct main_metadata_t {
 	ActionRef_t mod_action;
 	ModDataPtr_t mod_blob_ptr_dnat;
 	ModDataPtr_t mod_blob_ptr_snat;
+        PNA_Direction_t direction;
+        bit<8> acl_status;
+        AclPolicyId_t acl_pol_id;
+        RangeCheckRefType_t range_check_ref;
+        RuleMatchMask_t ipset_check_result;
+        RuleMatchMask_t range_check_result;
 }
 
 #define ARP_REQUEST	 1
@@ -185,6 +237,9 @@ parser packet_parser(
 		transition select(hdr.ipv4.protocol) {
 			IP_PROTO_TCP:   parse_tcp;
 			IP_PROTO_UDP:   parse_udp;
+                        IP_PROTO_SCTP:  parse_sctp;
+                        IP_PROTO_UDPL:  parse_udpl;
+                        IP_PROTO_ICMP:  parse_icmp;
 			default     :   accept;
 		}
 	}
@@ -198,6 +253,21 @@ parser packet_parser(
 		pkt.extract(hdr.udp);
 		transition accept;
 	}
+
+        state parse_sctp {
+                pkt.extract(hdr.sctp);
+                transition accept;
+        }
+
+        state parse_udpl {
+                pkt.extract(hdr.udpl);
+                transition accept;
+        }
+
+        state parse_icmp {
+                pkt.extract(hdr.icmp);
+                transition accept;
+        }
 
 	state parse_arp {
 		pkt.extract(hdr.arp);
@@ -217,6 +287,9 @@ control k8s_dp_control(
 	InternetChecksum() ck;
 	InternetChecksum() ck1;
 	ExpireTimeProfileId_t new_expire_time_profile_id;
+
+        Counter<PacketCounter_t, FlowIdx_t>(1024, PNA_CounterType_t.PACKETS) pkt_cntr;
+        Counter<ByteCounter_t, FlowIdx_t>(1024, PNA_CounterType_t.BYTES) byte_cntr;
 
 	action update_src_ip(bit<32> new_ip, bit<16> new_port) {
 		ck.clear();
@@ -270,7 +343,7 @@ control k8s_dp_control(
 			hdr.ethernet.dst_mac = new_dmac;
 		}
 		send_to_port(p);
-    }
+        }
 
 	action set_dest_vport(PortId_t p) {
 		send_to_port(p);
@@ -501,6 +574,247 @@ control k8s_dp_control(
 		const default_action = NoAction();
 	}
 	
+        action acl_deny() {
+            pkt_cntr.count(80);
+            drop_packet();
+        }
+
+        action set_range_check_ref (AclPolicyId_t pol_id,
+                                    RangeCheckRefType_t range_check_ref) {
+            meta.acl_status = MATCH_RULE;
+            meta.acl_pol_id = pol_id;
+            meta.range_check_ref = range_check_ref;
+            pkt_cntr.count(42);
+        }
+
+        action set_status_match_ipset_only (AclPolicyId_t pol_id) {
+            meta.acl_status = MATCH_IPSET;
+            meta.acl_pol_id = pol_id;
+            pkt_cntr.count(41);
+        }
+
+        action set_status_deny_all() {
+            pkt_cntr.count(40);
+            acl_deny();
+        }
+
+        table acl_pod_ip_proto_table_egress {
+            key = {
+                hdr.ipv4.src_addr : exact;
+                hdr.ipv4.protocol : lpm;
+            }
+            actions = {
+                set_status_match_ipset_only;
+                set_range_check_ref;
+                set_status_deny_all;
+                NoAction;   /* set_status_allow_all */
+            }
+            const default_action = NoAction();
+        }
+
+        table acl_pod_ip_proto_table_ingress {
+            key = {
+                hdr.ipv4.dst_addr : exact;
+                hdr.ipv4.protocol : lpm;
+            }
+            actions = {
+                set_status_match_ipset_only;
+                set_range_check_ref;
+                set_status_deny_all;
+                NoAction;   /* set_status_allow_all */
+            }
+            const default_action = NoAction();
+        }
+
+        action do_range_check_tcp(
+            bit<16> min0, bit<16> max0,
+            bit<16> min1, bit<16> max1,
+            bit<16> min2, bit<16> max2,
+            bit<16> min3, bit<16> max3,
+            bit<16> min4, bit<16> max4,
+            bit<16> min5, bit<16> max5,
+            bit<16> min6, bit<16> max6,
+            bit<16> min7, bit<16> max7)
+        {
+            meta.range_check_result[0:0] = (bit<1>)((min0 <= hdr.tcp.dst_port) && (hdr.tcp.dst_port <= max0));
+            meta.range_check_result[1:1] = (bit<1>)((min1 <= hdr.tcp.dst_port) && (hdr.tcp.dst_port <= max1));
+            meta.range_check_result[2:2] = (bit<1>)((min2 <= hdr.tcp.dst_port) && (hdr.tcp.dst_port <= max2));
+            meta.range_check_result[3:3] = (bit<1>)((min3 <= hdr.tcp.dst_port) && (hdr.tcp.dst_port <= max3));
+            meta.range_check_result[4:4] = (bit<1>)((min4 <= hdr.tcp.dst_port) && (hdr.tcp.dst_port <= max4));
+            meta.range_check_result[5:5] = (bit<1>)((min5 <= hdr.tcp.dst_port) && (hdr.tcp.dst_port <= max5));
+            meta.range_check_result[6:6] = (bit<1>)((min6 <= hdr.tcp.dst_port) && (hdr.tcp.dst_port <= max6));
+            meta.range_check_result[7:7] = (bit<1>)((min7 <= hdr.tcp.dst_port) && (hdr.tcp.dst_port <= max7));
+        }
+
+        action do_range_check_udp(
+            bit<16> min0, bit<16> max0,
+            bit<16> min1, bit<16> max1,
+            bit<16> min2, bit<16> max2,
+            bit<16> min3, bit<16> max3,
+            bit<16> min4, bit<16> max4,
+            bit<16> min5, bit<16> max5,
+            bit<16> min6, bit<16> max6,
+            bit<16> min7, bit<16> max7)
+        {
+            meta.range_check_result[0:0] = (bit<1>)((min0 <= hdr.udp.dst_port) && (hdr.udp.dst_port <= max0));
+            meta.range_check_result[1:1] = (bit<1>)((min1 <= hdr.udp.dst_port) && (hdr.udp.dst_port <= max1));
+            meta.range_check_result[2:2] = (bit<1>)((min2 <= hdr.udp.dst_port) && (hdr.udp.dst_port <= max2));
+            meta.range_check_result[3:3] = (bit<1>)((min3 <= hdr.udp.dst_port) && (hdr.udp.dst_port <= max3));
+            meta.range_check_result[4:4] = (bit<1>)((min4 <= hdr.udp.dst_port) && (hdr.udp.dst_port <= max4));
+            meta.range_check_result[5:5] = (bit<1>)((min5 <= hdr.udp.dst_port) && (hdr.udp.dst_port <= max5));
+            meta.range_check_result[6:6] = (bit<1>)((min6 <= hdr.udp.dst_port) && (hdr.udp.dst_port <= max6));
+            meta.range_check_result[7:7] = (bit<1>)((min7 <= hdr.udp.dst_port) && (hdr.udp.dst_port <= max7));
+        }
+
+        action do_range_check_sctp(
+            bit<16> min0, bit<16> max0,
+            bit<16> min1, bit<16> max1,
+            bit<16> min2, bit<16> max2,
+            bit<16> min3, bit<16> max3,
+            bit<16> min4, bit<16> max4,
+            bit<16> min5, bit<16> max5,
+            bit<16> min6, bit<16> max6,
+            bit<16> min7, bit<16> max7)
+        {
+            meta.range_check_result[0:0] = (bit<1>)((min0 <= hdr.sctp.dst_port) && (hdr.sctp.dst_port <= max0));
+            meta.range_check_result[1:1] = (bit<1>)((min1 <= hdr.sctp.dst_port) && (hdr.sctp.dst_port <= max1));
+            meta.range_check_result[2:2] = (bit<1>)((min2 <= hdr.sctp.dst_port) && (hdr.sctp.dst_port <= max2));
+            meta.range_check_result[3:3] = (bit<1>)((min3 <= hdr.sctp.dst_port) && (hdr.sctp.dst_port <= max3));
+            meta.range_check_result[4:4] = (bit<1>)((min4 <= hdr.sctp.dst_port) && (hdr.sctp.dst_port <= max4));
+            meta.range_check_result[5:5] = (bit<1>)((min5 <= hdr.sctp.dst_port) && (hdr.sctp.dst_port <= max5));
+            meta.range_check_result[6:6] = (bit<1>)((min6 <= hdr.sctp.dst_port) && (hdr.sctp.dst_port <= max6));
+            meta.range_check_result[7:7] = (bit<1>)((min7 <= hdr.sctp.dst_port) && (hdr.sctp.dst_port <= max7));
+        }
+
+        action do_range_check_udplite(
+            bit<16> min0, bit<16> max0,
+            bit<16> min1, bit<16> max1,
+            bit<16> min2, bit<16> max2,
+            bit<16> min3, bit<16> max3,
+            bit<16> min4, bit<16> max4,
+            bit<16> min5, bit<16> max5,
+            bit<16> min6, bit<16> max6,
+            bit<16> min7, bit<16> max7)
+        {
+            meta.range_check_result[0:0] = (bit<1>)((min0 <= hdr.udpl.dst_port) && (hdr.udpl.dst_port <= max0));
+            meta.range_check_result[1:1] = (bit<1>)((min1 <= hdr.udpl.dst_port) && (hdr.udpl.dst_port <= max1));
+            meta.range_check_result[2:2] = (bit<1>)((min2 <= hdr.udpl.dst_port) && (hdr.udpl.dst_port <= max2));
+            meta.range_check_result[3:3] = (bit<1>)((min3 <= hdr.udpl.dst_port) && (hdr.udpl.dst_port <= max3));
+            meta.range_check_result[4:4] = (bit<1>)((min4 <= hdr.udpl.dst_port) && (hdr.udpl.dst_port <= max4));
+            meta.range_check_result[5:5] = (bit<1>)((min5 <= hdr.udpl.dst_port) && (hdr.udpl.dst_port <= max5));
+            meta.range_check_result[6:6] = (bit<1>)((min6 <= hdr.udpl.dst_port) && (hdr.udpl.dst_port <= max6));
+            meta.range_check_result[7:7] = (bit<1>)((min7 <= hdr.udpl.dst_port) && (hdr.udpl.dst_port <= max7));
+        }
+
+        action do_icmp_type_code_check(
+            bit<16> min0, bit<16> max0,
+            bit<16> min1, bit<16> max1,
+            bit<16> min2, bit<16> max2,
+            bit<16> min3, bit<16> max3,
+            bit<16> min4, bit<16> max4,
+            bit<16> min5, bit<16> max5,
+            bit<16> min6, bit<16> max6,
+            bit<16> min7, bit<16> max7)
+        {
+            meta.range_check_result[0:0] = (bit<1>)((min0 <= hdr.icmp.type_code) && (hdr.icmp.type_code <= max0));
+            meta.range_check_result[1:1] = (bit<1>)((min1 <= hdr.icmp.type_code) && (hdr.icmp.type_code <= max1));
+            meta.range_check_result[2:2] = (bit<1>)((min2 <= hdr.icmp.type_code) && (hdr.icmp.type_code <= max2));
+            meta.range_check_result[3:3] = (bit<1>)((min3 <= hdr.icmp.type_code) && (hdr.icmp.type_code <= max3));
+            meta.range_check_result[4:4] = (bit<1>)((min4 <= hdr.icmp.type_code) && (hdr.icmp.type_code <= max4));
+            meta.range_check_result[5:5] = (bit<1>)((min5 <= hdr.icmp.type_code) && (hdr.icmp.type_code <= max5));
+            meta.range_check_result[6:6] = (bit<1>)((min6 <= hdr.icmp.type_code) && (hdr.icmp.type_code <= max6));
+            meta.range_check_result[7:7] = (bit<1>)((min7 <= hdr.icmp.type_code) && (hdr.icmp.type_code <= max7));
+        }
+
+        table tcp_dport_rc_table {
+            key = {
+                meta.acl_pol_id : exact;
+            }
+            actions = {
+                acl_deny;
+                do_range_check_tcp;
+            }
+            const default_action = acl_deny;
+        }
+
+        action udp_acl_deny () {
+            pkt_cntr.count(60);
+            acl_deny();
+        }
+
+        table udp_dport_rc_table {
+            key = {
+                meta.acl_pol_id : exact;
+            }
+            actions = {
+                udp_acl_deny;
+                do_range_check_udp;
+            }
+            const default_action = udp_acl_deny;
+        }
+
+        table sctp_dport_rc_table {
+            key = {
+                meta.acl_pol_id : exact;
+            }
+            actions = {
+                acl_deny;
+                do_range_check_sctp;
+            }
+            const default_action = acl_deny;
+        }
+
+        table udpl_dport_rc_table {
+            key = {
+                meta.acl_pol_id : exact;
+            }
+            actions = {
+                acl_deny;
+                do_range_check_udplite;
+            }
+            const default_action = acl_deny;
+        }
+
+        table icmp_type_code_check_table {
+            key = {
+                meta.acl_pol_id : exact;
+            }
+            actions = {
+                acl_deny;
+                do_icmp_type_code_check;
+            }
+            const default_action = acl_deny;
+        }
+
+        action set_ipset_match_result (RuleMatchMask_t ipset_matched_mask) {
+            pkt_cntr.count(200);
+            byte_cntr.count(200, (bit<32>) ipset_matched_mask);
+            meta.ipset_check_result = ipset_matched_mask;
+        }
+
+        table acl_ipset_match_table_ingress {
+            key = {
+                meta.acl_pol_id : exact;
+                hdr.ipv4.src_addr : lpm;
+            }
+            actions = {
+                acl_deny;
+                set_ipset_match_result;    /* Remote IP address allowed */
+            }
+            const default_action = acl_deny;
+        }
+
+        table acl_ipset_match_table_egress {
+            key = {
+                meta.acl_pol_id : exact;
+                hdr.ipv4.dst_addr : lpm;
+            }
+            actions = {
+                acl_deny;
+                set_ipset_match_result;    /* Remote IP address allowed */
+            }
+            const default_action = acl_deny;
+        }
 
 	apply {
 		meta.mod_action = 0;
@@ -512,58 +826,248 @@ control k8s_dp_control(
 		meta.dst_port = 0;
 		do_clb_pinned_flows_add_on_miss = false;
 		create_reverse_ct = false;
+                meta.ipset_check_result = 0;
+                meta.range_check_result = 0;
+                meta.acl_status = ALLOW_ALL;
+                meta.range_check_ref = 0;
 
-		if (IS_IPV4_TCP) {
-			if (tcp_syn_flag_set(hdr.tcp.flags)) {
-				if (tx_balance_tcp.apply().hit) {
-					do_clb_pinned_flows_add_on_miss = true;
-					create_reverse_ct = true;
-					save_to_meta_tcp(hdr, meta);
-					pinned_flows.apply();
-				}
-			} else {
-				save_to_meta_tcp(hdr, meta);
-				if (pinned_flows_reverse.apply().miss) {
-					pinned_flows.apply();
-				}
-			}
-		} else {
-			if (IS_IPV4_UDP) {
-				if (tx_balance_udp.apply().hit) {
-					create_reverse_ct = true;
-					do_clb_pinned_flows_add_on_miss = true;
-					save_to_meta_udp(hdr, meta);
-					pinned_flows.apply();
-				} else {
-					save_to_meta_udp(hdr, meta);
-					pinned_flows_reverse.apply();
-				}
-			}
-		}	
+                pkt_cntr.count(10);
 
-		/* Perform the SNAT or DNAT if enabled by above TCP processing */
-		switch (meta.mod_action) {
-			WRITE_SRC_IP: {
-				write_source_ip_table.apply();
-			}
+                if (istd.pass == (PassNumber_t) 0)
+                {
+                    meta.direction = istd.direction;
+                    /* Drop all multicast packets */
+                    if ((hdr.ethernet.dst_mac & MULTICAST_MAC) == MULTICAST_MAC) {
+                        /* Except ARP broadcast packets */
+                        if (!hdr.arp.isValid()) {
+                            drop_packet();
+                        }
+                    }
+                }
 
-			WRITE_DEST_IP: {
-				write_dest_ip_table.apply();
-				if (create_reverse_ct) {
-					if (IS_IPV4_TCP) {
-						set_meta_tcp.apply();
-					} else {
-						if (IS_IPV4_UDP) {
-							set_meta_udp.apply();
-						}
-					}
-					pinned_flows_reverse.apply();		
-				}
-			}
+                /* Assumption: Intra-cluster traffic from one pod to another.
+                 * For initial HOST_TO_NET direction, apply egress network policy.
+                 * For service to client, this is before SNAT w.r.t. endpoint pod.
+                 * For client to service, this is before DNAT w.r.t. client pod
+                 * with service IP as remote IP.
+                 */
+                if ((hdr.ipv4.isValid()) &&
+                    (meta.direction == PNA_Direction_t.HOST_TO_NET))
+                {
+                    pkt_cntr.count(100);
+                    /**** Egress ACL ****/
+                    acl_pod_ip_proto_table_egress.apply();
+                    if ((meta.acl_status & MATCH_IPSET) == MATCH_IPSET)
+                    {
+                        pkt_cntr.count(110);
+                        acl_ipset_match_table_egress.apply();
+                    }
+                    if (meta.acl_status == MATCH_RULE)
+                    {
+                        pkt_cntr.count(120);
+                        switch (meta.range_check_ref) {
+                            CHECK_TCP_DST_PORT_RANGE: {
+                                if (hdr.tcp.isValid()) {
+                                    tcp_dport_rc_table.apply();
+                                }
+                            }
 
-		    default: {
-		    }
-		}
+                            CHECK_UDP_DST_PORT_RANGE: {
+                                if (hdr.udp.isValid()) {
+                                    udp_dport_rc_table.apply();
+                                }
+                            }
+
+                            CHECK_SCTP_DST_PORT_RANGE: {
+                                if (hdr.sctp.isValid()) {
+                                    sctp_dport_rc_table.apply();
+                                }
+                            }
+
+                            CHECK_UDPL_DST_PORT_RANGE: {
+                                if (hdr.udpl.isValid()) {
+                                    udpl_dport_rc_table.apply();
+                                }
+                            }
+
+                            CHECK_ICMP_TYPE_CODE: {
+                                if (hdr.icmp.isValid()) {
+                                    icmp_type_code_check_table.apply();
+                                }
+                            }
+
+                            default: {
+                            }
+                        }
+                        pkt_cntr.count(130);
+                        /* Drop, if none of the matching port ranges correspond to
+                        * any matching IPset */
+                        byte_cntr.count(115, (bit<32>) meta.ipset_check_result);
+                        byte_cntr.count(125, (bit<32>) meta.range_check_result);
+                        if ((meta.ipset_check_result & meta.range_check_result) == 0)
+                        {
+                            pkt_cntr.count(180);
+                            acl_deny();
+                        }
+                    }
+                    
+                    pkt_cntr.count(190);
+                }
+                pkt_cntr.count(199);
+
+                if (istd.pass == (PassNumber_t) 0)
+                {
+                    if (IS_IPV4_TCP) {
+                            if (tcp_syn_flag_set(hdr.tcp.flags)) {
+                                    if (tx_balance_tcp.apply().hit) {
+                                            do_clb_pinned_flows_add_on_miss = true;
+                                            create_reverse_ct = true;
+                                            //save_to_meta_tcp(hdr, meta);
+                                            meta.src_ip = hdr.ipv4.src_addr;
+                                            meta.dst_ip = hdr.ipv4.dst_addr;
+                                            meta.src_port = hdr.tcp.src_port;
+                                            meta.dst_port = hdr.tcp.dst_port;
+                                            pinned_flows.apply();
+                                    }
+                            } else {
+                                    //save_to_meta_tcp(hdr, meta);
+                                    meta.src_ip = hdr.ipv4.src_addr;
+                                    meta.dst_ip = hdr.ipv4.dst_addr;
+                                    meta.src_port = hdr.tcp.src_port;
+                                    meta.dst_port = hdr.tcp.dst_port;
+                                    if (pinned_flows_reverse.apply().miss) {
+                                            pinned_flows.apply();
+                                    }
+                            }
+                    } else {
+                            if (IS_IPV4_UDP) {
+                                    if (tx_balance_udp.apply().hit) {
+                                            create_reverse_ct = true;
+                                            do_clb_pinned_flows_add_on_miss = true;
+                                            //save_to_meta_udp(hdr, meta);
+                                            meta.src_ip = hdr.ipv4.src_addr;
+                                            meta.dst_ip = hdr.ipv4.dst_addr;
+                                            meta.src_port = hdr.udp.src_port;
+                                            meta.dst_port = hdr.udp.dst_port;
+                                            pinned_flows.apply();
+                                    } else {
+                                            //save_to_meta_udp(hdr, meta);
+                                            meta.src_ip = hdr.ipv4.src_addr;
+                                            meta.dst_ip = hdr.ipv4.dst_addr;
+                                            meta.src_port = hdr.udp.src_port;
+                                            meta.dst_port = hdr.udp.dst_port;
+                                            pinned_flows_reverse.apply();
+                                    }
+                            }
+                    }	
+
+                    /* Perform the SNAT or DNAT if enabled by above TCP processing */
+                    switch (meta.mod_action) {
+                            WRITE_SRC_IP: {
+                                    write_source_ip_table.apply();
+                            }
+
+                            WRITE_DEST_IP: {
+                                    write_dest_ip_table.apply();
+                                    if (create_reverse_ct) {
+                                            if (IS_IPV4_TCP) {
+                                                    set_meta_tcp.apply();
+                                            } else {
+                                                    if (IS_IPV4_UDP) {
+                                                            set_meta_udp.apply();
+                                                    }
+                                            }
+                                            pinned_flows_reverse.apply();		
+                                    }
+                            }
+
+                        default: {
+                        }
+                    }
+                }
+
+                /*
+                 * Take port loopback path and re-enter with NET_TO_HOST as the
+                 * new direction for ingress network policy.
+                 */
+                if ((istd.pass == (PassNumber_t) 0) && (hdr.ipv4.isValid()))
+                {
+                    meta.direction = PNA_Direction_t.NET_TO_HOST;
+                    recirculate();
+                    return;
+                }
+
+                /*
+                 * Assumption: Intra-cluster traffic from one pod to another.
+                 * After port loopback, in NET_TO_HOST direction, apply ingress
+                 * network policy w.r.t. dst pod.
+                 * For client to service, this is after DNAT w.r.t. endpoint pod.
+                 * For service to client, this is after SNAT w.r.t. client pod
+                 * with service IP as remote IP.
+                 */
+                if ((hdr.ipv4.isValid()) &&
+                    (meta.direction == PNA_Direction_t.NET_TO_HOST))
+                {
+                    pkt_cntr.count(200);
+                    /**** Ingress ACL ****/
+                    acl_pod_ip_proto_table_ingress.apply();
+                    if ((meta.acl_status & MATCH_IPSET) == MATCH_IPSET)
+                    {
+                        pkt_cntr.count(210);
+                        acl_ipset_match_table_ingress.apply();
+                    }
+                    if (meta.acl_status == MATCH_RULE)
+                    {
+                        pkt_cntr.count(220);
+                        switch (meta.range_check_ref) {
+                            CHECK_TCP_DST_PORT_RANGE: {
+                                if (hdr.tcp.isValid()) {
+                                    tcp_dport_rc_table.apply();
+                                }
+                            }
+
+                            CHECK_UDP_DST_PORT_RANGE: {
+                                if (hdr.udp.isValid()) {
+                                    udp_dport_rc_table.apply();
+                                }
+                            }
+
+                            CHECK_SCTP_DST_PORT_RANGE: {
+                                if (hdr.sctp.isValid()) {
+                                    sctp_dport_rc_table.apply();
+                                }
+                            }
+
+                            CHECK_UDPL_DST_PORT_RANGE: {
+                                if (hdr.udpl.isValid()) {
+                                    udpl_dport_rc_table.apply();
+                                }
+                            }
+
+                            CHECK_ICMP_TYPE_CODE: {
+                                if (hdr.icmp.isValid()) {
+                                    icmp_type_code_check_table.apply();
+                                }
+                            }
+
+                            default: {
+                            }
+                        }
+                        pkt_cntr.count(230);
+                        /* Drop, if none of the matching port ranges correspond to
+                        * any matching IPset */
+                        byte_cntr.count(215, (bit<32>) meta.ipset_check_result);
+                        byte_cntr.count(225, (bit<32>) meta.range_check_result);
+                        if ((meta.ipset_check_result & meta.range_check_result) == 0)
+                        {
+                            pkt_cntr.count(280);
+                            acl_deny();
+                        }
+                    }
+                    
+                    pkt_cntr.count(290);
+                }
+                pkt_cntr.count(299);
 
                 /* All ARP pkts are forwarded based upon target IP address and
                  * all IP packets are forwarded based upon DIP. All other
