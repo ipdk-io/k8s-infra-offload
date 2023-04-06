@@ -532,7 +532,7 @@ func InsertPolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype
 				}
 			}
 		}
-		log.Infof("Inserted policy entry into pipeline %s", policy)
+		fmt.Println("Inserted policy entry into pipeline", policy)
 
 	case policydel:
 		for ipsetidx, _ := range policy.IpSetIDx {
@@ -572,7 +572,7 @@ func InsertPolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype
 				}
 			}
 		}
-		log.Infof("deleted policy entry %s", policy)
+		fmt.Println("deleted policy entry", policy)
 
 	case policyupdate:
 		policyold := store.PolicySet.PolicyMap[policy.PolicyName]
@@ -631,7 +631,7 @@ func InsertPolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype
 				}
 			}
 			index = 0
-			log.Infof("rc is: %s", rc)
+			fmt.Println("rc is:", rc)
 			if len(rc) == 0 {
 				if policyold.IpSetIDx[ipsetidx].Protocol == "TCP" {
 					err = TcpDstPortRcTable(ctx, p4RtC, ipsetidx, nil, Delete)
@@ -705,7 +705,7 @@ func InsertPolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype
 				}
 			}
 			index = 0
-			log.Infof("rc: %s", rc)
+			fmt.Println("rc:", rc)
 			if len(rc) != 0 {
 				if len(policyold.IpSetIDx[ipsetidx].Rc) == 0 { //if new rule has port range and previously we have not added any port range for same ipsetidx, then insert port range for that ipsetidx
 					if policy.IpSetIDx[ipsetidx].Protocol == "TCP" {
@@ -745,7 +745,7 @@ func InsertPolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype
 			} else {
 			}
 		}
-		log.Infof("updated policy: %s", policy)
+		fmt.Println("updated policy:", policy)
 
 	case workloadadd:
 		for _, policyname := range workloadep.PolicyNameIngress {
