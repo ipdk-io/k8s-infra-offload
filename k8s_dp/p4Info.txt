@@ -289,6 +289,231 @@ tables {
   const_default_action_id: 21257015
   size: 1024
 }
+tables {
+  preamble {
+    id: 44694747
+    name: "k8s_dp_control.acl_pod_ip_proto_table_egress"
+    alias: "acl_pod_ip_proto_table_egress"
+  }
+  match_fields {
+    id: 1
+    name: "hdr.ipv4.src_addr"
+    bitwidth: 32
+    match_type: EXACT
+  }
+  match_fields {
+    id: 2
+    name: "hdr.ipv4.protocol"
+    bitwidth: 8
+    match_type: LPM
+  }
+  action_refs {
+    id: 26303839
+  }
+  action_refs {
+    id: 18301899
+  }
+  action_refs {
+    id: 19604309
+  }
+  action_refs {
+    id: 21257015
+  }
+  const_default_action_id: 21257015
+  size: 1024
+}
+tables {
+  preamble {
+    id: 37843179
+    name: "k8s_dp_control.acl_pod_ip_proto_table_ingress"
+    alias: "acl_pod_ip_proto_table_ingress"
+  }
+  match_fields {
+    id: 1
+    name: "hdr.ipv4.dst_addr"
+    bitwidth: 32
+    match_type: EXACT
+  }
+  match_fields {
+    id: 2
+    name: "hdr.ipv4.protocol"
+    bitwidth: 8
+    match_type: LPM
+  }
+  action_refs {
+    id: 26303839
+  }
+  action_refs {
+    id: 18301899
+  }
+  action_refs {
+    id: 19604309
+  }
+  action_refs {
+    id: 21257015
+  }
+  const_default_action_id: 21257015
+  size: 1024
+}
+tables {
+  preamble {
+    id: 42003631
+    name: "k8s_dp_control.tcp_dport_rc_table"
+    alias: "tcp_dport_rc_table"
+  }
+  match_fields {
+    id: 1
+    name: "meta.acl_pol_id"
+    bitwidth: 8
+    match_type: EXACT
+  }
+  action_refs {
+    id: 24936722
+  }
+  action_refs {
+    id: 26904660
+  }
+  const_default_action_id: 24936722
+  size: 1024
+}
+tables {
+  preamble {
+    id: 41148106
+    name: "k8s_dp_control.udp_dport_rc_table"
+    alias: "udp_dport_rc_table"
+  }
+  match_fields {
+    id: 1
+    name: "meta.acl_pol_id"
+    bitwidth: 8
+    match_type: EXACT
+  }
+  action_refs {
+    id: 26498694
+  }
+  action_refs {
+    id: 20531281
+  }
+  const_default_action_id: 26498694
+  size: 1024
+}
+tables {
+  preamble {
+    id: 41639592
+    name: "k8s_dp_control.sctp_dport_rc_table"
+    alias: "sctp_dport_rc_table"
+  }
+  match_fields {
+    id: 1
+    name: "meta.acl_pol_id"
+    bitwidth: 8
+    match_type: EXACT
+  }
+  action_refs {
+    id: 24936722
+  }
+  action_refs {
+    id: 18455830
+  }
+  const_default_action_id: 24936722
+  size: 1024
+}
+tables {
+  preamble {
+    id: 35955980
+    name: "k8s_dp_control.udpl_dport_rc_table"
+    alias: "udpl_dport_rc_table"
+  }
+  match_fields {
+    id: 1
+    name: "meta.acl_pol_id"
+    bitwidth: 8
+    match_type: EXACT
+  }
+  action_refs {
+    id: 24936722
+  }
+  action_refs {
+    id: 26297524
+  }
+  const_default_action_id: 24936722
+  size: 1024
+}
+tables {
+  preamble {
+    id: 46908156
+    name: "k8s_dp_control.icmp_type_code_check_table"
+    alias: "icmp_type_code_check_table"
+  }
+  match_fields {
+    id: 1
+    name: "meta.acl_pol_id"
+    bitwidth: 8
+    match_type: EXACT
+  }
+  action_refs {
+    id: 24936722
+  }
+  action_refs {
+    id: 17216355
+  }
+  const_default_action_id: 24936722
+  size: 1024
+}
+tables {
+  preamble {
+    id: 45991146
+    name: "k8s_dp_control.acl_ipset_match_table_ingress"
+    alias: "acl_ipset_match_table_ingress"
+  }
+  match_fields {
+    id: 1
+    name: "meta.acl_pol_id"
+    bitwidth: 8
+    match_type: EXACT
+  }
+  match_fields {
+    id: 2
+    name: "hdr.ipv4.src_addr"
+    bitwidth: 32
+    match_type: LPM
+  }
+  action_refs {
+    id: 24936722
+  }
+  action_refs {
+    id: 29169278
+  }
+  const_default_action_id: 24936722
+  size: 1024
+}
+tables {
+  preamble {
+    id: 45399436
+    name: "k8s_dp_control.acl_ipset_match_table_egress"
+    alias: "acl_ipset_match_table_egress"
+  }
+  match_fields {
+    id: 1
+    name: "meta.acl_pol_id"
+    bitwidth: 8
+    match_type: EXACT
+  }
+  match_fields {
+    id: 2
+    name: "hdr.ipv4.dst_addr"
+    bitwidth: 32
+    match_type: LPM
+  }
+  action_refs {
+    id: 24936722
+  }
+  action_refs {
+    id: 29169278
+  }
+  const_default_action_id: 24936722
+  size: 1024
+}
 actions {
   preamble {
     id: 21257015
@@ -428,6 +653,503 @@ actions {
     bitwidth: 24
   }
 }
+actions {
+  preamble {
+    id: 24936722
+    name: "k8s_dp_control.acl_deny"
+    alias: "acl_deny"
+  }
+}
+actions {
+  preamble {
+    id: 18301899
+    name: "k8s_dp_control.set_range_check_ref"
+    alias: "set_range_check_ref"
+  }
+  params {
+    id: 1
+    name: "pol_id"
+    bitwidth: 8
+  }
+  params {
+    id: 2
+    name: "range_check_ref"
+    bitwidth: 8
+  }
+}
+actions {
+  preamble {
+    id: 26303839
+    name: "k8s_dp_control.set_status_match_ipset_only"
+    alias: "set_status_match_ipset_only"
+  }
+  params {
+    id: 1
+    name: "pol_id"
+    bitwidth: 8
+  }
+}
+actions {
+  preamble {
+    id: 19604309
+    name: "k8s_dp_control.set_status_deny_all"
+    alias: "set_status_deny_all"
+  }
+}
+actions {
+  preamble {
+    id: 26904660
+    name: "k8s_dp_control.do_range_check_tcp"
+    alias: "do_range_check_tcp"
+  }
+  params {
+    id: 1
+    name: "min0"
+    bitwidth: 16
+  }
+  params {
+    id: 2
+    name: "max0"
+    bitwidth: 16
+  }
+  params {
+    id: 3
+    name: "min1"
+    bitwidth: 16
+  }
+  params {
+    id: 4
+    name: "max1"
+    bitwidth: 16
+  }
+  params {
+    id: 5
+    name: "min2"
+    bitwidth: 16
+  }
+  params {
+    id: 6
+    name: "max2"
+    bitwidth: 16
+  }
+  params {
+    id: 7
+    name: "min3"
+    bitwidth: 16
+  }
+  params {
+    id: 8
+    name: "max3"
+    bitwidth: 16
+  }
+  params {
+    id: 9
+    name: "min4"
+    bitwidth: 16
+  }
+  params {
+    id: 10
+    name: "max4"
+    bitwidth: 16
+  }
+  params {
+    id: 11
+    name: "min5"
+    bitwidth: 16
+  }
+  params {
+    id: 12
+    name: "max5"
+    bitwidth: 16
+  }
+  params {
+    id: 13
+    name: "min6"
+    bitwidth: 16
+  }
+  params {
+    id: 14
+    name: "max6"
+    bitwidth: 16
+  }
+  params {
+    id: 15
+    name: "min7"
+    bitwidth: 16
+  }
+  params {
+    id: 16
+    name: "max7"
+    bitwidth: 16
+  }
+}
+actions {
+  preamble {
+    id: 20531281
+    name: "k8s_dp_control.do_range_check_udp"
+    alias: "do_range_check_udp"
+  }
+  params {
+    id: 1
+    name: "min0"
+    bitwidth: 16
+  }
+  params {
+    id: 2
+    name: "max0"
+    bitwidth: 16
+  }
+  params {
+    id: 3
+    name: "min1"
+    bitwidth: 16
+  }
+  params {
+    id: 4
+    name: "max1"
+    bitwidth: 16
+  }
+  params {
+    id: 5
+    name: "min2"
+    bitwidth: 16
+  }
+  params {
+    id: 6
+    name: "max2"
+    bitwidth: 16
+  }
+  params {
+    id: 7
+    name: "min3"
+    bitwidth: 16
+  }
+  params {
+    id: 8
+    name: "max3"
+    bitwidth: 16
+  }
+  params {
+    id: 9
+    name: "min4"
+    bitwidth: 16
+  }
+  params {
+    id: 10
+    name: "max4"
+    bitwidth: 16
+  }
+  params {
+    id: 11
+    name: "min5"
+    bitwidth: 16
+  }
+  params {
+    id: 12
+    name: "max5"
+    bitwidth: 16
+  }
+  params {
+    id: 13
+    name: "min6"
+    bitwidth: 16
+  }
+  params {
+    id: 14
+    name: "max6"
+    bitwidth: 16
+  }
+  params {
+    id: 15
+    name: "min7"
+    bitwidth: 16
+  }
+  params {
+    id: 16
+    name: "max7"
+    bitwidth: 16
+  }
+}
+actions {
+  preamble {
+    id: 18455830
+    name: "k8s_dp_control.do_range_check_sctp"
+    alias: "do_range_check_sctp"
+  }
+  params {
+    id: 1
+    name: "min0"
+    bitwidth: 16
+  }
+  params {
+    id: 2
+    name: "max0"
+    bitwidth: 16
+  }
+  params {
+    id: 3
+    name: "min1"
+    bitwidth: 16
+  }
+  params {
+    id: 4
+    name: "max1"
+    bitwidth: 16
+  }
+  params {
+    id: 5
+    name: "min2"
+    bitwidth: 16
+  }
+  params {
+    id: 6
+    name: "max2"
+    bitwidth: 16
+  }
+  params {
+    id: 7
+    name: "min3"
+    bitwidth: 16
+  }
+  params {
+    id: 8
+    name: "max3"
+    bitwidth: 16
+  }
+  params {
+    id: 9
+    name: "min4"
+    bitwidth: 16
+  }
+  params {
+    id: 10
+    name: "max4"
+    bitwidth: 16
+  }
+  params {
+    id: 11
+    name: "min5"
+    bitwidth: 16
+  }
+  params {
+    id: 12
+    name: "max5"
+    bitwidth: 16
+  }
+  params {
+    id: 13
+    name: "min6"
+    bitwidth: 16
+  }
+  params {
+    id: 14
+    name: "max6"
+    bitwidth: 16
+  }
+  params {
+    id: 15
+    name: "min7"
+    bitwidth: 16
+  }
+  params {
+    id: 16
+    name: "max7"
+    bitwidth: 16
+  }
+}
+actions {
+  preamble {
+    id: 26297524
+    name: "k8s_dp_control.do_range_check_udplite"
+    alias: "do_range_check_udplite"
+  }
+  params {
+    id: 1
+    name: "min0"
+    bitwidth: 16
+  }
+  params {
+    id: 2
+    name: "max0"
+    bitwidth: 16
+  }
+  params {
+    id: 3
+    name: "min1"
+    bitwidth: 16
+  }
+  params {
+    id: 4
+    name: "max1"
+    bitwidth: 16
+  }
+  params {
+    id: 5
+    name: "min2"
+    bitwidth: 16
+  }
+  params {
+    id: 6
+    name: "max2"
+    bitwidth: 16
+  }
+  params {
+    id: 7
+    name: "min3"
+    bitwidth: 16
+  }
+  params {
+    id: 8
+    name: "max3"
+    bitwidth: 16
+  }
+  params {
+    id: 9
+    name: "min4"
+    bitwidth: 16
+  }
+  params {
+    id: 10
+    name: "max4"
+    bitwidth: 16
+  }
+  params {
+    id: 11
+    name: "min5"
+    bitwidth: 16
+  }
+  params {
+    id: 12
+    name: "max5"
+    bitwidth: 16
+  }
+  params {
+    id: 13
+    name: "min6"
+    bitwidth: 16
+  }
+  params {
+    id: 14
+    name: "max6"
+    bitwidth: 16
+  }
+  params {
+    id: 15
+    name: "min7"
+    bitwidth: 16
+  }
+  params {
+    id: 16
+    name: "max7"
+    bitwidth: 16
+  }
+}
+actions {
+  preamble {
+    id: 17216355
+    name: "k8s_dp_control.do_icmp_type_code_check"
+    alias: "do_icmp_type_code_check"
+  }
+  params {
+    id: 1
+    name: "min0"
+    bitwidth: 16
+  }
+  params {
+    id: 2
+    name: "max0"
+    bitwidth: 16
+  }
+  params {
+    id: 3
+    name: "min1"
+    bitwidth: 16
+  }
+  params {
+    id: 4
+    name: "max1"
+    bitwidth: 16
+  }
+  params {
+    id: 5
+    name: "min2"
+    bitwidth: 16
+  }
+  params {
+    id: 6
+    name: "max2"
+    bitwidth: 16
+  }
+  params {
+    id: 7
+    name: "min3"
+    bitwidth: 16
+  }
+  params {
+    id: 8
+    name: "max3"
+    bitwidth: 16
+  }
+  params {
+    id: 9
+    name: "min4"
+    bitwidth: 16
+  }
+  params {
+    id: 10
+    name: "max4"
+    bitwidth: 16
+  }
+  params {
+    id: 11
+    name: "min5"
+    bitwidth: 16
+  }
+  params {
+    id: 12
+    name: "max5"
+    bitwidth: 16
+  }
+  params {
+    id: 13
+    name: "min6"
+    bitwidth: 16
+  }
+  params {
+    id: 14
+    name: "max6"
+    bitwidth: 16
+  }
+  params {
+    id: 15
+    name: "min7"
+    bitwidth: 16
+  }
+  params {
+    id: 16
+    name: "max7"
+    bitwidth: 16
+  }
+}
+actions {
+  preamble {
+    id: 26498694
+    name: "k8s_dp_control.udp_acl_deny"
+    alias: "udp_acl_deny"
+  }
+}
+actions {
+  preamble {
+    id: 29169278
+    name: "k8s_dp_control.set_ipset_match_result"
+    alias: "set_ipset_match_result"
+  }
+  params {
+    id: 1
+    name: "ipset_matched_mask"
+    bitwidth: 8
+  }
+}
 action_profiles {
   preamble {
     id: 287578478
@@ -447,6 +1169,28 @@ action_profiles {
   table_ids: 49979870
   with_selector: true
   size: 128
+}
+counters {
+  preamble {
+    id: 317030940
+    name: "k8s_dp_control.pkt_cntr"
+    alias: "pkt_cntr"
+  }
+  spec {
+    unit: PACKETS
+  }
+  size: 1024
+}
+counters {
+  preamble {
+    id: 317608600
+    name: "k8s_dp_control.byte_cntr"
+    alias: "byte_cntr"
+  }
+  spec {
+    unit: BYTES
+  }
+  size: 1024
 }
 type_info {
   new_types {
