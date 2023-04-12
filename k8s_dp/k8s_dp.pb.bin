@@ -2669,10 +2669,10 @@
     }
   ],
   "learn_filters" : []
-}Ρ	
+}“	
 pipeα™{
   "program_name" : "k8s_dp",
-  "build_date" : "Wed Apr  5 22:09:15 2023",
+  "build_date" : "Wed Apr 12 18:42:58 2023",
   "compile_command" : "p4c-dpdk --arch pna -o ./pipe/k8s_dp.spec --p4runtime-files ./p4Info.txt --bf-rt-schema ./bfrt.json --context ./pipe/context.json ./k8s_dp.p4",
   "compiler_version" : "0.1 (SHA: e052f1fbe BUILD: RELEASE)",
   "schema_version" : "0.1",
@@ -5536,7 +5536,7 @@
       }
     }
   ]
-}άφ
+}§ω
 
 
 
@@ -5824,6 +5824,7 @@ struct main_metadata_t {
 	bit<16> local_metadata_mod_action
 	bit<24> local_metadata_mod_blob_ptr_dnat
 	bit<24> local_metadata_mod_blob_ptr_snat
+	bit<8> local_metadata_nat_done
 	bit<32> local_metadata_direction
 	bit<8> local_metadata_acl_status
 	bit<8> local_metadata_acl_pol_id
@@ -5861,122 +5862,123 @@ struct main_metadata_t {
 	bit<8> MainControlT_tmp_2
 	bit<8> MainControlT_tmp_3
 	bit<8> MainControlT_tmp_4
-	bit<8> MainControlT_tmp_6
+	bit<8> MainControlT_tmp_5
 	bit<8> MainControlT_tmp_7
-	bit<8> MainControlT_tmp_9
+	bit<8> MainControlT_tmp_8
 	bit<8> MainControlT_tmp_10
 	bit<8> MainControlT_tmp_11
-	bit<8> MainControlT_tmp_13
+	bit<8> MainControlT_tmp_12
 	bit<8> MainControlT_tmp_14
 	bit<8> MainControlT_tmp_15
-	bit<8> MainControlT_tmp_17
+	bit<8> MainControlT_tmp_16
 	bit<8> MainControlT_tmp_18
 	bit<8> MainControlT_tmp_19
-	bit<8> MainControlT_tmp_21
+	bit<8> MainControlT_tmp_20
 	bit<8> MainControlT_tmp_22
 	bit<8> MainControlT_tmp_23
-	bit<8> MainControlT_tmp_25
+	bit<8> MainControlT_tmp_24
 	bit<8> MainControlT_tmp_26
 	bit<8> MainControlT_tmp_27
-	bit<8> MainControlT_tmp_29
+	bit<8> MainControlT_tmp_28
 	bit<8> MainControlT_tmp_30
 	bit<8> MainControlT_tmp_31
-	bit<8> MainControlT_tmp_33
+	bit<8> MainControlT_tmp_32
 	bit<8> MainControlT_tmp_34
 	bit<8> MainControlT_tmp_35
-	bit<8> MainControlT_tmp_37
+	bit<8> MainControlT_tmp_36
 	bit<8> MainControlT_tmp_38
-	bit<8> MainControlT_tmp_40
+	bit<8> MainControlT_tmp_39
 	bit<8> MainControlT_tmp_41
 	bit<8> MainControlT_tmp_42
-	bit<8> MainControlT_tmp_44
+	bit<8> MainControlT_tmp_43
 	bit<8> MainControlT_tmp_45
 	bit<8> MainControlT_tmp_46
-	bit<8> MainControlT_tmp_48
+	bit<8> MainControlT_tmp_47
 	bit<8> MainControlT_tmp_49
 	bit<8> MainControlT_tmp_50
-	bit<8> MainControlT_tmp_52
+	bit<8> MainControlT_tmp_51
 	bit<8> MainControlT_tmp_53
 	bit<8> MainControlT_tmp_54
-	bit<8> MainControlT_tmp_56
+	bit<8> MainControlT_tmp_55
 	bit<8> MainControlT_tmp_57
 	bit<8> MainControlT_tmp_58
-	bit<8> MainControlT_tmp_60
+	bit<8> MainControlT_tmp_59
 	bit<8> MainControlT_tmp_61
 	bit<8> MainControlT_tmp_62
-	bit<8> MainControlT_tmp_64
+	bit<8> MainControlT_tmp_63
 	bit<8> MainControlT_tmp_65
 	bit<8> MainControlT_tmp_66
-	bit<8> MainControlT_tmp_68
+	bit<8> MainControlT_tmp_67
 	bit<8> MainControlT_tmp_69
-	bit<8> MainControlT_tmp_71
+	bit<8> MainControlT_tmp_70
 	bit<8> MainControlT_tmp_72
 	bit<8> MainControlT_tmp_73
-	bit<8> MainControlT_tmp_75
+	bit<8> MainControlT_tmp_74
 	bit<8> MainControlT_tmp_76
 	bit<8> MainControlT_tmp_77
-	bit<8> MainControlT_tmp_79
+	bit<8> MainControlT_tmp_78
 	bit<8> MainControlT_tmp_80
 	bit<8> MainControlT_tmp_81
-	bit<8> MainControlT_tmp_83
+	bit<8> MainControlT_tmp_82
 	bit<8> MainControlT_tmp_84
 	bit<8> MainControlT_tmp_85
-	bit<8> MainControlT_tmp_87
+	bit<8> MainControlT_tmp_86
 	bit<8> MainControlT_tmp_88
 	bit<8> MainControlT_tmp_89
-	bit<8> MainControlT_tmp_91
+	bit<8> MainControlT_tmp_90
 	bit<8> MainControlT_tmp_92
 	bit<8> MainControlT_tmp_93
-	bit<8> MainControlT_tmp_95
+	bit<8> MainControlT_tmp_94
 	bit<8> MainControlT_tmp_96
 	bit<8> MainControlT_tmp_97
-	bit<8> MainControlT_tmp_99
+	bit<8> MainControlT_tmp_98
 	bit<8> MainControlT_tmp_100
-	bit<8> MainControlT_tmp_102
+	bit<8> MainControlT_tmp_101
 	bit<8> MainControlT_tmp_103
 	bit<8> MainControlT_tmp_104
-	bit<8> MainControlT_tmp_106
+	bit<8> MainControlT_tmp_105
 	bit<8> MainControlT_tmp_107
 	bit<8> MainControlT_tmp_108
-	bit<8> MainControlT_tmp_110
+	bit<8> MainControlT_tmp_109
 	bit<8> MainControlT_tmp_111
 	bit<8> MainControlT_tmp_112
-	bit<8> MainControlT_tmp_114
+	bit<8> MainControlT_tmp_113
 	bit<8> MainControlT_tmp_115
 	bit<8> MainControlT_tmp_116
-	bit<8> MainControlT_tmp_118
+	bit<8> MainControlT_tmp_117
 	bit<8> MainControlT_tmp_119
 	bit<8> MainControlT_tmp_120
-	bit<8> MainControlT_tmp_122
+	bit<8> MainControlT_tmp_121
 	bit<8> MainControlT_tmp_123
 	bit<8> MainControlT_tmp_124
-	bit<8> MainControlT_tmp_126
+	bit<8> MainControlT_tmp_125
 	bit<8> MainControlT_tmp_127
 	bit<8> MainControlT_tmp_128
-	bit<8> MainControlT_tmp_130
+	bit<8> MainControlT_tmp_129
 	bit<8> MainControlT_tmp_131
-	bit<8> MainControlT_tmp_133
+	bit<8> MainControlT_tmp_132
 	bit<8> MainControlT_tmp_134
 	bit<8> MainControlT_tmp_135
-	bit<8> MainControlT_tmp_137
+	bit<8> MainControlT_tmp_136
 	bit<8> MainControlT_tmp_138
 	bit<8> MainControlT_tmp_139
-	bit<8> MainControlT_tmp_141
+	bit<8> MainControlT_tmp_140
 	bit<8> MainControlT_tmp_142
 	bit<8> MainControlT_tmp_143
-	bit<8> MainControlT_tmp_145
+	bit<8> MainControlT_tmp_144
 	bit<8> MainControlT_tmp_146
 	bit<8> MainControlT_tmp_147
-	bit<8> MainControlT_tmp_149
+	bit<8> MainControlT_tmp_148
 	bit<8> MainControlT_tmp_150
 	bit<8> MainControlT_tmp_151
-	bit<8> MainControlT_tmp_153
+	bit<8> MainControlT_tmp_152
 	bit<8> MainControlT_tmp_154
 	bit<8> MainControlT_tmp_155
-	bit<8> MainControlT_tmp_157
+	bit<8> MainControlT_tmp_156
 	bit<8> MainControlT_tmp_158
-	bit<24> MainControlT_tmp_159
+	bit<8> MainControlT_tmp_159
 	bit<24> MainControlT_tmp_160
+	bit<24> MainControlT_tmp_161
 	bit<8> MainControlT_do_clb_pinned_flows_add_on_miss
 	bit<8> MainControlT_create_reverse_ct
 	bit<8> MainControlT_hasReturned
@@ -5984,7 +5986,6 @@ struct main_metadata_t {
 	bit<32> MainControlT_as_sl3_tcp_member_id
 	bit<32> MainControlT_as_sl3_udp_group_id
 	bit<32> MainControlT_as_sl3_udp_member_id
-	bit<32> MainControlT_tmp_167
 	bit<32> MainControlT_tmp_168
 	bit<32> MainControlT_tmp_169
 	bit<32> MainControlT_tmp_170
@@ -6024,6 +6025,7 @@ struct main_metadata_t {
 	bit<32> MainControlT_tmp_204
 	bit<32> MainControlT_tmp_205
 	bit<32> MainControlT_tmp_206
+	bit<32> MainControlT_tmp_207
 	bit<8> timeout_id
 	bit<8> timeout_id_0
 }
@@ -6044,38 +6046,38 @@ action update_src_ip args instanceof update_src_ip_arg_t {
 	mov h.cksum_state.state_1 0x0
 	cksub h.cksum_state.state_0 h.ipv4.header_checksum
 	cksub h.cksum_state.state_0 h.ipv4.src_addr
-	jmpneq LABEL_FALSE_42 h.ipv4.protocol 0x6
+	jmpneq LABEL_FALSE_45 h.ipv4.protocol 0x6
 	cksub h.cksum_state.state_1 h.tcp.checksum
 	cksub h.cksum_state.state_1 h.ipv4.src_addr
 	cksub h.cksum_state.state_1 h.tcp.src_port
 	mov h.tcp.src_port t.new_port
-	jmp LABEL_END_42
-	LABEL_FALSE_42 :	jmpneq LABEL_END_42 h.ipv4.protocol 0x11
+	jmp LABEL_END_46
+	LABEL_FALSE_45 :	jmpneq LABEL_END_46 h.ipv4.protocol 0x11
 	cksub h.cksum_state.state_1 h.udp.checksum
 	cksub h.cksum_state.state_1 h.ipv4.src_addr
 	cksub h.cksum_state.state_1 h.udp.src_port
 	mov h.udp.src_port t.new_port
-	LABEL_END_42 :	mov h.ipv4.src_addr t.new_ip
+	LABEL_END_46 :	mov h.ipv4.src_addr t.new_ip
 	ckadd h.cksum_state.state_0 h.ipv4.src_addr
 	mov h.ipv4.header_checksum h.cksum_state.state_0
-	jmpneq LABEL_FALSE_44 h.ipv4.protocol 0x6
+	jmpneq LABEL_FALSE_47 h.ipv4.protocol 0x6
 	ckadd h.cksum_state.state_1 h.ipv4.src_addr
 	ckadd h.cksum_state.state_1 h.tcp.src_port
 	mov h.tcp.checksum h.cksum_state.state_1
-	jmp LABEL_END_44
-	LABEL_FALSE_44 :	jmpneq LABEL_END_44 h.ipv4.protocol 0x11
+	jmp LABEL_END_48
+	LABEL_FALSE_47 :	jmpneq LABEL_END_48 h.ipv4.protocol 0x11
 	ckadd h.cksum_state.state_1 h.ipv4.src_addr
 	ckadd h.cksum_state.state_1 h.udp.src_port
 	mov h.udp.checksum h.cksum_state.state_1
-	LABEL_END_44 :	return
+	LABEL_END_48 :	return
 }
 
 action set_dest_mac_vport args instanceof set_dest_mac_vport_arg_t {
-	jmpeq LABEL_END_46 t.new_dmac 0x0
-	jmpeq LABEL_END_46 t.new_dmac h.ethernet.dst_mac
+	jmpeq LABEL_END_50 t.new_dmac 0x0
+	jmpeq LABEL_END_50 t.new_dmac h.ethernet.dst_mac
 	mov h.ethernet.src_mac h.ethernet.dst_mac
 	mov h.ethernet.dst_mac t.new_dmac
-	LABEL_END_46 :	mov m.pna_main_output_metadata_output_port t.p
+	LABEL_END_50 :	mov m.pna_main_output_metadata_output_port t.p
 	return
 }
 
@@ -6089,30 +6091,30 @@ action update_dst_ip args instanceof update_dst_ip_arg_t {
 	mov h.cksum_state.state_1 0x0
 	cksub h.cksum_state.state_0 h.ipv4.header_checksum
 	cksub h.cksum_state.state_0 h.ipv4.dst_addr
-	jmpneq LABEL_FALSE_47 h.ipv4.protocol 0x6
+	jmpneq LABEL_FALSE_50 h.ipv4.protocol 0x6
 	cksub h.cksum_state.state_1 h.tcp.checksum
 	cksub h.cksum_state.state_1 h.ipv4.dst_addr
 	cksub h.cksum_state.state_1 h.tcp.dst_port
 	mov h.tcp.dst_port t.new_port
-	jmp LABEL_END_47
-	LABEL_FALSE_47 :	jmpneq LABEL_END_47 h.ipv4.protocol 0x11
+	jmp LABEL_END_51
+	LABEL_FALSE_50 :	jmpneq LABEL_END_51 h.ipv4.protocol 0x11
 	cksub h.cksum_state.state_1 h.udp.checksum
 	cksub h.cksum_state.state_1 h.ipv4.dst_addr
 	cksub h.cksum_state.state_1 h.udp.dst_port
 	mov h.udp.dst_port t.new_port
-	LABEL_END_47 :	mov h.ipv4.dst_addr t.new_ip
+	LABEL_END_51 :	mov h.ipv4.dst_addr t.new_ip
 	ckadd h.cksum_state.state_0 h.ipv4.dst_addr
 	mov h.ipv4.header_checksum h.cksum_state.state_0
-	jmpneq LABEL_FALSE_49 h.ipv4.protocol 0x6
+	jmpneq LABEL_FALSE_52 h.ipv4.protocol 0x6
 	ckadd h.cksum_state.state_1 h.ipv4.dst_addr
 	ckadd h.cksum_state.state_1 h.tcp.dst_port
 	mov h.tcp.checksum h.cksum_state.state_1
-	jmp LABEL_END_49
-	LABEL_FALSE_49 :	jmpneq LABEL_END_49 h.ipv4.protocol 0x11
+	jmp LABEL_END_53
+	LABEL_FALSE_52 :	jmpneq LABEL_END_53 h.ipv4.protocol 0x11
 	ckadd h.cksum_state.state_1 h.ipv4.dst_addr
 	ckadd h.cksum_state.state_1 h.udp.dst_port
 	mov h.udp.checksum h.cksum_state.state_1
-	LABEL_END_49 :	return
+	LABEL_END_53 :	return
 }
 
 action pinned_flows_hit args instanceof pinned_flows_hit_arg_t {
@@ -6122,12 +6124,12 @@ action pinned_flows_hit args instanceof pinned_flows_hit_arg_t {
 }
 
 action pinned_flows_miss args none {
-	jmpneq LABEL_END_51 m.MainControlT_do_clb_pinned_flows_add_on_miss 0x1
-	jmpeq LABEL_END_51 m.local_metadata_mod_blob_ptr_dnat 0x0
-	mov m.MainControlT_tmp_159 m.local_metadata_mod_blob_ptr_dnat
+	jmpneq LABEL_END_55 m.MainControlT_do_clb_pinned_flows_add_on_miss 0x1
+	jmpeq LABEL_END_55 m.local_metadata_mod_blob_ptr_dnat 0x0
+	mov m.MainControlT_tmp_160 m.local_metadata_mod_blob_ptr_dnat
 	mov m.timeout_id 0x2
-	learn pinned_flows_hit m.MainControlT_tmp_159 m.timeout_id
-	LABEL_END_51 :	return
+	learn pinned_flows_hit m.MainControlT_tmp_160 m.timeout_id
+	LABEL_END_55 :	return
 }
 
 action pinned_flows_reverse_hit args instanceof pinned_flows_reverse_hit_arg_t {
@@ -6137,12 +6139,12 @@ action pinned_flows_reverse_hit args instanceof pinned_flows_reverse_hit_arg_t {
 }
 
 action pinned_flows_reverse_miss args none {
-	jmpneq LABEL_END_52 m.MainControlT_create_reverse_ct 0x1
-	jmpeq LABEL_END_52 m.local_metadata_mod_blob_ptr_snat 0x0
-	mov m.MainControlT_tmp_160 m.local_metadata_mod_blob_ptr_snat
+	jmpneq LABEL_END_56 m.MainControlT_create_reverse_ct 0x1
+	jmpeq LABEL_END_56 m.local_metadata_mod_blob_ptr_snat 0x0
+	mov m.MainControlT_tmp_161 m.local_metadata_mod_blob_ptr_snat
 	mov m.timeout_id_0 0x2
-	learn pinned_flows_reverse_hit m.MainControlT_tmp_160 m.timeout_id_0
-	LABEL_END_52 :	return
+	learn pinned_flows_reverse_hit m.MainControlT_tmp_161 m.timeout_id_0
+	LABEL_END_56 :	return
 }
 
 action set_default_lb_dest args instanceof set_default_lb_dest_arg_t {
@@ -6180,28 +6182,28 @@ action tx_balance_udp_set_member_id args instanceof tx_balance_udp_set_member_id
 action set_key_for_reverse_ct args instanceof set_key_for_reverse_ct_arg_t {
 	mov m.local_metadata_src_ip h.ipv4.dst_addr
 	mov m.local_metadata_dst_ip h.ipv4.src_addr
-	jmpneq LABEL_FALSE_53 h.ipv4.protocol 0x6
+	jmpneq LABEL_FALSE_56 h.ipv4.protocol 0x6
 	mov m.local_metadata_src_port h.tcp.dst_port
 	mov m.local_metadata_dst_port h.tcp.src_port
-	jmp LABEL_END_53
-	LABEL_FALSE_53 :	jmpneq LABEL_END_53 h.ipv4.protocol 0x11
+	jmp LABEL_END_57
+	LABEL_FALSE_56 :	jmpneq LABEL_END_57 h.ipv4.protocol 0x11
 	mov m.local_metadata_src_port h.udp.dst_port
 	mov m.local_metadata_dst_port h.udp.src_port
-	LABEL_END_53 :	mov m.local_metadata_mod_blob_ptr_snat t.ptr
+	LABEL_END_57 :	mov m.local_metadata_mod_blob_ptr_snat t.ptr
 	return
 }
 
 action set_key_for_reverse_ct_1 args instanceof set_key_for_reverse_ct_1_arg_t {
 	mov m.local_metadata_src_ip h.ipv4.dst_addr
 	mov m.local_metadata_dst_ip h.ipv4.src_addr
-	jmpneq LABEL_FALSE_55 h.ipv4.protocol 0x6
+	jmpneq LABEL_FALSE_58 h.ipv4.protocol 0x6
 	mov m.local_metadata_src_port h.tcp.dst_port
 	mov m.local_metadata_dst_port h.tcp.src_port
-	jmp LABEL_END_55
-	LABEL_FALSE_55 :	jmpneq LABEL_END_55 h.ipv4.protocol 0x11
+	jmp LABEL_END_59
+	LABEL_FALSE_58 :	jmpneq LABEL_END_59 h.ipv4.protocol 0x11
 	mov m.local_metadata_src_port h.udp.dst_port
 	mov m.local_metadata_dst_port h.udp.src_port
-	LABEL_END_55 :	mov m.local_metadata_mod_blob_ptr_snat t.ptr
+	LABEL_END_59 :	mov m.local_metadata_mod_blob_ptr_snat t.ptr
 	return
 }
 
@@ -6286,532 +6288,532 @@ action set_status_deny_all_1 args none {
 }
 
 action do_range_check_tcp args instanceof do_range_check_tcp_arg_t {
-	jmpgt LABEL_FALSE_57 t.min0 h.tcp.dst_port
-	jmpgt LABEL_FALSE_57 h.tcp.dst_port t.max0
-	mov m.MainControlT_tmp_167 0x1
-	jmp LABEL_END_57
-	LABEL_FALSE_57 :	mov m.MainControlT_tmp_167 0x0
-	LABEL_END_57 :	mov m.MainControlT_tmp_4 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_4 0xFE
-	mov m.MainControlT_tmp_6 m.MainControlT_tmp_167
-	and m.MainControlT_tmp_6 0x1
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_4
-	or m.local_metadata_range_check_result m.MainControlT_tmp_6
-	jmpgt LABEL_FALSE_58 t.min1 h.tcp.dst_port
-	jmpgt LABEL_FALSE_58 h.tcp.dst_port t.max1
+	jmpgt LABEL_FALSE_60 t.min0 h.tcp.dst_port
+	jmpgt LABEL_FALSE_60 h.tcp.dst_port t.max0
 	mov m.MainControlT_tmp_168 0x1
-	jmp LABEL_END_58
-	LABEL_FALSE_58 :	mov m.MainControlT_tmp_168 0x0
-	LABEL_END_58 :	mov m.MainControlT_tmp_7 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_7 0xFD
-	mov m.MainControlT_tmp_9 m.MainControlT_tmp_168
-	shl m.MainControlT_tmp_9 0x1
-	mov m.MainControlT_tmp_10 m.MainControlT_tmp_9
-	and m.MainControlT_tmp_10 0x2
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_7
-	or m.local_metadata_range_check_result m.MainControlT_tmp_10
-	jmpgt LABEL_FALSE_59 t.min2 h.tcp.dst_port
-	jmpgt LABEL_FALSE_59 h.tcp.dst_port t.max2
-	mov m.MainControlT_tmp_169 0x1
-	jmp LABEL_END_59
-	LABEL_FALSE_59 :	mov m.MainControlT_tmp_169 0x0
-	LABEL_END_59 :	mov m.MainControlT_tmp_11 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_11 0xFB
-	mov m.MainControlT_tmp_13 m.MainControlT_tmp_169
-	shl m.MainControlT_tmp_13 0x2
-	mov m.MainControlT_tmp_14 m.MainControlT_tmp_13
-	and m.MainControlT_tmp_14 0x4
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_11
-	or m.local_metadata_range_check_result m.MainControlT_tmp_14
-	jmpgt LABEL_FALSE_60 t.min3 h.tcp.dst_port
-	jmpgt LABEL_FALSE_60 h.tcp.dst_port t.max3
-	mov m.MainControlT_tmp_170 0x1
-	jmp LABEL_END_60
-	LABEL_FALSE_60 :	mov m.MainControlT_tmp_170 0x0
-	LABEL_END_60 :	mov m.MainControlT_tmp_15 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_15 0xF7
-	mov m.MainControlT_tmp_17 m.MainControlT_tmp_170
-	shl m.MainControlT_tmp_17 0x3
-	mov m.MainControlT_tmp_18 m.MainControlT_tmp_17
-	and m.MainControlT_tmp_18 0x8
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_15
-	or m.local_metadata_range_check_result m.MainControlT_tmp_18
-	jmpgt LABEL_FALSE_61 t.min4 h.tcp.dst_port
-	jmpgt LABEL_FALSE_61 h.tcp.dst_port t.max4
-	mov m.MainControlT_tmp_171 0x1
 	jmp LABEL_END_61
-	LABEL_FALSE_61 :	mov m.MainControlT_tmp_171 0x0
-	LABEL_END_61 :	mov m.MainControlT_tmp_19 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_19 0xEF
-	mov m.MainControlT_tmp_21 m.MainControlT_tmp_171
-	shl m.MainControlT_tmp_21 0x4
-	mov m.MainControlT_tmp_22 m.MainControlT_tmp_21
-	and m.MainControlT_tmp_22 0x10
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_19
-	or m.local_metadata_range_check_result m.MainControlT_tmp_22
-	jmpgt LABEL_FALSE_62 t.min5 h.tcp.dst_port
-	jmpgt LABEL_FALSE_62 h.tcp.dst_port t.max5
-	mov m.MainControlT_tmp_172 0x1
+	LABEL_FALSE_60 :	mov m.MainControlT_tmp_168 0x0
+	LABEL_END_61 :	mov m.MainControlT_tmp_5 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_5 0xFE
+	mov m.MainControlT_tmp_7 m.MainControlT_tmp_168
+	and m.MainControlT_tmp_7 0x1
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_5
+	or m.local_metadata_range_check_result m.MainControlT_tmp_7
+	jmpgt LABEL_FALSE_61 t.min1 h.tcp.dst_port
+	jmpgt LABEL_FALSE_61 h.tcp.dst_port t.max1
+	mov m.MainControlT_tmp_169 0x1
 	jmp LABEL_END_62
-	LABEL_FALSE_62 :	mov m.MainControlT_tmp_172 0x0
-	LABEL_END_62 :	mov m.MainControlT_tmp_23 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_23 0xDF
-	mov m.MainControlT_tmp_25 m.MainControlT_tmp_172
-	shl m.MainControlT_tmp_25 0x5
-	mov m.MainControlT_tmp_26 m.MainControlT_tmp_25
-	and m.MainControlT_tmp_26 0x20
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_23
-	or m.local_metadata_range_check_result m.MainControlT_tmp_26
-	jmpgt LABEL_FALSE_63 t.min6 h.tcp.dst_port
-	jmpgt LABEL_FALSE_63 h.tcp.dst_port t.max6
-	mov m.MainControlT_tmp_173 0x1
+	LABEL_FALSE_61 :	mov m.MainControlT_tmp_169 0x0
+	LABEL_END_62 :	mov m.MainControlT_tmp_8 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_8 0xFD
+	mov m.MainControlT_tmp_10 m.MainControlT_tmp_169
+	shl m.MainControlT_tmp_10 0x1
+	mov m.MainControlT_tmp_11 m.MainControlT_tmp_10
+	and m.MainControlT_tmp_11 0x2
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_8
+	or m.local_metadata_range_check_result m.MainControlT_tmp_11
+	jmpgt LABEL_FALSE_62 t.min2 h.tcp.dst_port
+	jmpgt LABEL_FALSE_62 h.tcp.dst_port t.max2
+	mov m.MainControlT_tmp_170 0x1
 	jmp LABEL_END_63
-	LABEL_FALSE_63 :	mov m.MainControlT_tmp_173 0x0
-	LABEL_END_63 :	mov m.MainControlT_tmp_27 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_27 0xBF
-	mov m.MainControlT_tmp_29 m.MainControlT_tmp_173
-	shl m.MainControlT_tmp_29 0x6
-	mov m.MainControlT_tmp_30 m.MainControlT_tmp_29
-	and m.MainControlT_tmp_30 0x40
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_27
-	or m.local_metadata_range_check_result m.MainControlT_tmp_30
-	jmpgt LABEL_FALSE_64 t.min7 h.tcp.dst_port
-	jmpgt LABEL_FALSE_64 h.tcp.dst_port t.max7
-	mov m.MainControlT_tmp_174 0x1
+	LABEL_FALSE_62 :	mov m.MainControlT_tmp_170 0x0
+	LABEL_END_63 :	mov m.MainControlT_tmp_12 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_12 0xFB
+	mov m.MainControlT_tmp_14 m.MainControlT_tmp_170
+	shl m.MainControlT_tmp_14 0x2
+	mov m.MainControlT_tmp_15 m.MainControlT_tmp_14
+	and m.MainControlT_tmp_15 0x4
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_12
+	or m.local_metadata_range_check_result m.MainControlT_tmp_15
+	jmpgt LABEL_FALSE_63 t.min3 h.tcp.dst_port
+	jmpgt LABEL_FALSE_63 h.tcp.dst_port t.max3
+	mov m.MainControlT_tmp_171 0x1
 	jmp LABEL_END_64
-	LABEL_FALSE_64 :	mov m.MainControlT_tmp_174 0x0
-	LABEL_END_64 :	mov m.MainControlT_tmp_31 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_31 0x7F
-	mov m.MainControlT_tmp_33 m.MainControlT_tmp_174
-	shl m.MainControlT_tmp_33 0x7
-	mov m.MainControlT_tmp_34 m.MainControlT_tmp_33
-	and m.MainControlT_tmp_34 0x80
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_31
-	or m.local_metadata_range_check_result m.MainControlT_tmp_34
+	LABEL_FALSE_63 :	mov m.MainControlT_tmp_171 0x0
+	LABEL_END_64 :	mov m.MainControlT_tmp_16 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_16 0xF7
+	mov m.MainControlT_tmp_18 m.MainControlT_tmp_171
+	shl m.MainControlT_tmp_18 0x3
+	mov m.MainControlT_tmp_19 m.MainControlT_tmp_18
+	and m.MainControlT_tmp_19 0x8
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_16
+	or m.local_metadata_range_check_result m.MainControlT_tmp_19
+	jmpgt LABEL_FALSE_64 t.min4 h.tcp.dst_port
+	jmpgt LABEL_FALSE_64 h.tcp.dst_port t.max4
+	mov m.MainControlT_tmp_172 0x1
+	jmp LABEL_END_65
+	LABEL_FALSE_64 :	mov m.MainControlT_tmp_172 0x0
+	LABEL_END_65 :	mov m.MainControlT_tmp_20 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_20 0xEF
+	mov m.MainControlT_tmp_22 m.MainControlT_tmp_172
+	shl m.MainControlT_tmp_22 0x4
+	mov m.MainControlT_tmp_23 m.MainControlT_tmp_22
+	and m.MainControlT_tmp_23 0x10
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_20
+	or m.local_metadata_range_check_result m.MainControlT_tmp_23
+	jmpgt LABEL_FALSE_65 t.min5 h.tcp.dst_port
+	jmpgt LABEL_FALSE_65 h.tcp.dst_port t.max5
+	mov m.MainControlT_tmp_173 0x1
+	jmp LABEL_END_66
+	LABEL_FALSE_65 :	mov m.MainControlT_tmp_173 0x0
+	LABEL_END_66 :	mov m.MainControlT_tmp_24 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_24 0xDF
+	mov m.MainControlT_tmp_26 m.MainControlT_tmp_173
+	shl m.MainControlT_tmp_26 0x5
+	mov m.MainControlT_tmp_27 m.MainControlT_tmp_26
+	and m.MainControlT_tmp_27 0x20
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_24
+	or m.local_metadata_range_check_result m.MainControlT_tmp_27
+	jmpgt LABEL_FALSE_66 t.min6 h.tcp.dst_port
+	jmpgt LABEL_FALSE_66 h.tcp.dst_port t.max6
+	mov m.MainControlT_tmp_174 0x1
+	jmp LABEL_END_67
+	LABEL_FALSE_66 :	mov m.MainControlT_tmp_174 0x0
+	LABEL_END_67 :	mov m.MainControlT_tmp_28 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_28 0xBF
+	mov m.MainControlT_tmp_30 m.MainControlT_tmp_174
+	shl m.MainControlT_tmp_30 0x6
+	mov m.MainControlT_tmp_31 m.MainControlT_tmp_30
+	and m.MainControlT_tmp_31 0x40
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_28
+	or m.local_metadata_range_check_result m.MainControlT_tmp_31
+	jmpgt LABEL_FALSE_67 t.min7 h.tcp.dst_port
+	jmpgt LABEL_FALSE_67 h.tcp.dst_port t.max7
+	mov m.MainControlT_tmp_175 0x1
+	jmp LABEL_END_68
+	LABEL_FALSE_67 :	mov m.MainControlT_tmp_175 0x0
+	LABEL_END_68 :	mov m.MainControlT_tmp_32 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_32 0x7F
+	mov m.MainControlT_tmp_34 m.MainControlT_tmp_175
+	shl m.MainControlT_tmp_34 0x7
+	mov m.MainControlT_tmp_35 m.MainControlT_tmp_34
+	and m.MainControlT_tmp_35 0x80
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_32
+	or m.local_metadata_range_check_result m.MainControlT_tmp_35
 	return
 }
 
 action do_range_check_udp args instanceof do_range_check_udp_arg_t {
-	jmpgt LABEL_FALSE_65 t.min0 h.udp.dst_port
-	jmpgt LABEL_FALSE_65 h.udp.dst_port t.max0
-	mov m.MainControlT_tmp_175 0x1
-	jmp LABEL_END_65
-	LABEL_FALSE_65 :	mov m.MainControlT_tmp_175 0x0
-	LABEL_END_65 :	mov m.MainControlT_tmp_35 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_35 0xFE
-	mov m.MainControlT_tmp_37 m.MainControlT_tmp_175
-	and m.MainControlT_tmp_37 0x1
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_35
-	or m.local_metadata_range_check_result m.MainControlT_tmp_37
-	jmpgt LABEL_FALSE_66 t.min1 h.udp.dst_port
-	jmpgt LABEL_FALSE_66 h.udp.dst_port t.max1
+	jmpgt LABEL_FALSE_68 t.min0 h.udp.dst_port
+	jmpgt LABEL_FALSE_68 h.udp.dst_port t.max0
 	mov m.MainControlT_tmp_176 0x1
-	jmp LABEL_END_66
-	LABEL_FALSE_66 :	mov m.MainControlT_tmp_176 0x0
-	LABEL_END_66 :	mov m.MainControlT_tmp_38 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_38 0xFD
-	mov m.MainControlT_tmp_40 m.MainControlT_tmp_176
-	shl m.MainControlT_tmp_40 0x1
-	mov m.MainControlT_tmp_41 m.MainControlT_tmp_40
-	and m.MainControlT_tmp_41 0x2
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_38
-	or m.local_metadata_range_check_result m.MainControlT_tmp_41
-	jmpgt LABEL_FALSE_67 t.min2 h.udp.dst_port
-	jmpgt LABEL_FALSE_67 h.udp.dst_port t.max2
-	mov m.MainControlT_tmp_177 0x1
-	jmp LABEL_END_67
-	LABEL_FALSE_67 :	mov m.MainControlT_tmp_177 0x0
-	LABEL_END_67 :	mov m.MainControlT_tmp_42 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_42 0xFB
-	mov m.MainControlT_tmp_44 m.MainControlT_tmp_177
-	shl m.MainControlT_tmp_44 0x2
-	mov m.MainControlT_tmp_45 m.MainControlT_tmp_44
-	and m.MainControlT_tmp_45 0x4
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_42
-	or m.local_metadata_range_check_result m.MainControlT_tmp_45
-	jmpgt LABEL_FALSE_68 t.min3 h.udp.dst_port
-	jmpgt LABEL_FALSE_68 h.udp.dst_port t.max3
-	mov m.MainControlT_tmp_178 0x1
-	jmp LABEL_END_68
-	LABEL_FALSE_68 :	mov m.MainControlT_tmp_178 0x0
-	LABEL_END_68 :	mov m.MainControlT_tmp_46 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_46 0xF7
-	mov m.MainControlT_tmp_48 m.MainControlT_tmp_178
-	shl m.MainControlT_tmp_48 0x3
-	mov m.MainControlT_tmp_49 m.MainControlT_tmp_48
-	and m.MainControlT_tmp_49 0x8
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_46
-	or m.local_metadata_range_check_result m.MainControlT_tmp_49
-	jmpgt LABEL_FALSE_69 t.min4 h.udp.dst_port
-	jmpgt LABEL_FALSE_69 h.udp.dst_port t.max4
-	mov m.MainControlT_tmp_179 0x1
 	jmp LABEL_END_69
-	LABEL_FALSE_69 :	mov m.MainControlT_tmp_179 0x0
-	LABEL_END_69 :	mov m.MainControlT_tmp_50 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_50 0xEF
-	mov m.MainControlT_tmp_52 m.MainControlT_tmp_179
-	shl m.MainControlT_tmp_52 0x4
-	mov m.MainControlT_tmp_53 m.MainControlT_tmp_52
-	and m.MainControlT_tmp_53 0x10
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_50
-	or m.local_metadata_range_check_result m.MainControlT_tmp_53
-	jmpgt LABEL_FALSE_70 t.min5 h.udp.dst_port
-	jmpgt LABEL_FALSE_70 h.udp.dst_port t.max5
-	mov m.MainControlT_tmp_180 0x1
+	LABEL_FALSE_68 :	mov m.MainControlT_tmp_176 0x0
+	LABEL_END_69 :	mov m.MainControlT_tmp_36 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_36 0xFE
+	mov m.MainControlT_tmp_38 m.MainControlT_tmp_176
+	and m.MainControlT_tmp_38 0x1
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_36
+	or m.local_metadata_range_check_result m.MainControlT_tmp_38
+	jmpgt LABEL_FALSE_69 t.min1 h.udp.dst_port
+	jmpgt LABEL_FALSE_69 h.udp.dst_port t.max1
+	mov m.MainControlT_tmp_177 0x1
 	jmp LABEL_END_70
-	LABEL_FALSE_70 :	mov m.MainControlT_tmp_180 0x0
-	LABEL_END_70 :	mov m.MainControlT_tmp_54 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_54 0xDF
-	mov m.MainControlT_tmp_56 m.MainControlT_tmp_180
-	shl m.MainControlT_tmp_56 0x5
-	mov m.MainControlT_tmp_57 m.MainControlT_tmp_56
-	and m.MainControlT_tmp_57 0x20
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_54
-	or m.local_metadata_range_check_result m.MainControlT_tmp_57
-	jmpgt LABEL_FALSE_71 t.min6 h.udp.dst_port
-	jmpgt LABEL_FALSE_71 h.udp.dst_port t.max6
-	mov m.MainControlT_tmp_181 0x1
+	LABEL_FALSE_69 :	mov m.MainControlT_tmp_177 0x0
+	LABEL_END_70 :	mov m.MainControlT_tmp_39 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_39 0xFD
+	mov m.MainControlT_tmp_41 m.MainControlT_tmp_177
+	shl m.MainControlT_tmp_41 0x1
+	mov m.MainControlT_tmp_42 m.MainControlT_tmp_41
+	and m.MainControlT_tmp_42 0x2
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_39
+	or m.local_metadata_range_check_result m.MainControlT_tmp_42
+	jmpgt LABEL_FALSE_70 t.min2 h.udp.dst_port
+	jmpgt LABEL_FALSE_70 h.udp.dst_port t.max2
+	mov m.MainControlT_tmp_178 0x1
 	jmp LABEL_END_71
-	LABEL_FALSE_71 :	mov m.MainControlT_tmp_181 0x0
-	LABEL_END_71 :	mov m.MainControlT_tmp_58 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_58 0xBF
-	mov m.MainControlT_tmp_60 m.MainControlT_tmp_181
-	shl m.MainControlT_tmp_60 0x6
-	mov m.MainControlT_tmp_61 m.MainControlT_tmp_60
-	and m.MainControlT_tmp_61 0x40
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_58
-	or m.local_metadata_range_check_result m.MainControlT_tmp_61
-	jmpgt LABEL_FALSE_72 t.min7 h.udp.dst_port
-	jmpgt LABEL_FALSE_72 h.udp.dst_port t.max7
-	mov m.MainControlT_tmp_182 0x1
+	LABEL_FALSE_70 :	mov m.MainControlT_tmp_178 0x0
+	LABEL_END_71 :	mov m.MainControlT_tmp_43 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_43 0xFB
+	mov m.MainControlT_tmp_45 m.MainControlT_tmp_178
+	shl m.MainControlT_tmp_45 0x2
+	mov m.MainControlT_tmp_46 m.MainControlT_tmp_45
+	and m.MainControlT_tmp_46 0x4
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_43
+	or m.local_metadata_range_check_result m.MainControlT_tmp_46
+	jmpgt LABEL_FALSE_71 t.min3 h.udp.dst_port
+	jmpgt LABEL_FALSE_71 h.udp.dst_port t.max3
+	mov m.MainControlT_tmp_179 0x1
 	jmp LABEL_END_72
-	LABEL_FALSE_72 :	mov m.MainControlT_tmp_182 0x0
-	LABEL_END_72 :	mov m.MainControlT_tmp_62 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_62 0x7F
-	mov m.MainControlT_tmp_64 m.MainControlT_tmp_182
-	shl m.MainControlT_tmp_64 0x7
-	mov m.MainControlT_tmp_65 m.MainControlT_tmp_64
-	and m.MainControlT_tmp_65 0x80
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_62
-	or m.local_metadata_range_check_result m.MainControlT_tmp_65
+	LABEL_FALSE_71 :	mov m.MainControlT_tmp_179 0x0
+	LABEL_END_72 :	mov m.MainControlT_tmp_47 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_47 0xF7
+	mov m.MainControlT_tmp_49 m.MainControlT_tmp_179
+	shl m.MainControlT_tmp_49 0x3
+	mov m.MainControlT_tmp_50 m.MainControlT_tmp_49
+	and m.MainControlT_tmp_50 0x8
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_47
+	or m.local_metadata_range_check_result m.MainControlT_tmp_50
+	jmpgt LABEL_FALSE_72 t.min4 h.udp.dst_port
+	jmpgt LABEL_FALSE_72 h.udp.dst_port t.max4
+	mov m.MainControlT_tmp_180 0x1
+	jmp LABEL_END_73
+	LABEL_FALSE_72 :	mov m.MainControlT_tmp_180 0x0
+	LABEL_END_73 :	mov m.MainControlT_tmp_51 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_51 0xEF
+	mov m.MainControlT_tmp_53 m.MainControlT_tmp_180
+	shl m.MainControlT_tmp_53 0x4
+	mov m.MainControlT_tmp_54 m.MainControlT_tmp_53
+	and m.MainControlT_tmp_54 0x10
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_51
+	or m.local_metadata_range_check_result m.MainControlT_tmp_54
+	jmpgt LABEL_FALSE_73 t.min5 h.udp.dst_port
+	jmpgt LABEL_FALSE_73 h.udp.dst_port t.max5
+	mov m.MainControlT_tmp_181 0x1
+	jmp LABEL_END_74
+	LABEL_FALSE_73 :	mov m.MainControlT_tmp_181 0x0
+	LABEL_END_74 :	mov m.MainControlT_tmp_55 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_55 0xDF
+	mov m.MainControlT_tmp_57 m.MainControlT_tmp_181
+	shl m.MainControlT_tmp_57 0x5
+	mov m.MainControlT_tmp_58 m.MainControlT_tmp_57
+	and m.MainControlT_tmp_58 0x20
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_55
+	or m.local_metadata_range_check_result m.MainControlT_tmp_58
+	jmpgt LABEL_FALSE_74 t.min6 h.udp.dst_port
+	jmpgt LABEL_FALSE_74 h.udp.dst_port t.max6
+	mov m.MainControlT_tmp_182 0x1
+	jmp LABEL_END_75
+	LABEL_FALSE_74 :	mov m.MainControlT_tmp_182 0x0
+	LABEL_END_75 :	mov m.MainControlT_tmp_59 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_59 0xBF
+	mov m.MainControlT_tmp_61 m.MainControlT_tmp_182
+	shl m.MainControlT_tmp_61 0x6
+	mov m.MainControlT_tmp_62 m.MainControlT_tmp_61
+	and m.MainControlT_tmp_62 0x40
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_59
+	or m.local_metadata_range_check_result m.MainControlT_tmp_62
+	jmpgt LABEL_FALSE_75 t.min7 h.udp.dst_port
+	jmpgt LABEL_FALSE_75 h.udp.dst_port t.max7
+	mov m.MainControlT_tmp_183 0x1
+	jmp LABEL_END_76
+	LABEL_FALSE_75 :	mov m.MainControlT_tmp_183 0x0
+	LABEL_END_76 :	mov m.MainControlT_tmp_63 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_63 0x7F
+	mov m.MainControlT_tmp_65 m.MainControlT_tmp_183
+	shl m.MainControlT_tmp_65 0x7
+	mov m.MainControlT_tmp_66 m.MainControlT_tmp_65
+	and m.MainControlT_tmp_66 0x80
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_63
+	or m.local_metadata_range_check_result m.MainControlT_tmp_66
 	return
 }
 
 action do_range_check_sctp args instanceof do_range_check_sctp_arg_t {
-	jmpgt LABEL_FALSE_73 t.min0 h.sctp.dst_port
-	jmpgt LABEL_FALSE_73 h.sctp.dst_port t.max0
-	mov m.MainControlT_tmp_183 0x1
-	jmp LABEL_END_73
-	LABEL_FALSE_73 :	mov m.MainControlT_tmp_183 0x0
-	LABEL_END_73 :	mov m.MainControlT_tmp_66 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_66 0xFE
-	mov m.MainControlT_tmp_68 m.MainControlT_tmp_183
-	and m.MainControlT_tmp_68 0x1
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_66
-	or m.local_metadata_range_check_result m.MainControlT_tmp_68
-	jmpgt LABEL_FALSE_74 t.min1 h.sctp.dst_port
-	jmpgt LABEL_FALSE_74 h.sctp.dst_port t.max1
+	jmpgt LABEL_FALSE_76 t.min0 h.sctp.dst_port
+	jmpgt LABEL_FALSE_76 h.sctp.dst_port t.max0
 	mov m.MainControlT_tmp_184 0x1
-	jmp LABEL_END_74
-	LABEL_FALSE_74 :	mov m.MainControlT_tmp_184 0x0
-	LABEL_END_74 :	mov m.MainControlT_tmp_69 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_69 0xFD
-	mov m.MainControlT_tmp_71 m.MainControlT_tmp_184
-	shl m.MainControlT_tmp_71 0x1
-	mov m.MainControlT_tmp_72 m.MainControlT_tmp_71
-	and m.MainControlT_tmp_72 0x2
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_69
-	or m.local_metadata_range_check_result m.MainControlT_tmp_72
-	jmpgt LABEL_FALSE_75 t.min2 h.sctp.dst_port
-	jmpgt LABEL_FALSE_75 h.sctp.dst_port t.max2
-	mov m.MainControlT_tmp_185 0x1
-	jmp LABEL_END_75
-	LABEL_FALSE_75 :	mov m.MainControlT_tmp_185 0x0
-	LABEL_END_75 :	mov m.MainControlT_tmp_73 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_73 0xFB
-	mov m.MainControlT_tmp_75 m.MainControlT_tmp_185
-	shl m.MainControlT_tmp_75 0x2
-	mov m.MainControlT_tmp_76 m.MainControlT_tmp_75
-	and m.MainControlT_tmp_76 0x4
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_73
-	or m.local_metadata_range_check_result m.MainControlT_tmp_76
-	jmpgt LABEL_FALSE_76 t.min3 h.sctp.dst_port
-	jmpgt LABEL_FALSE_76 h.sctp.dst_port t.max3
-	mov m.MainControlT_tmp_186 0x1
-	jmp LABEL_END_76
-	LABEL_FALSE_76 :	mov m.MainControlT_tmp_186 0x0
-	LABEL_END_76 :	mov m.MainControlT_tmp_77 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_77 0xF7
-	mov m.MainControlT_tmp_79 m.MainControlT_tmp_186
-	shl m.MainControlT_tmp_79 0x3
-	mov m.MainControlT_tmp_80 m.MainControlT_tmp_79
-	and m.MainControlT_tmp_80 0x8
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_77
-	or m.local_metadata_range_check_result m.MainControlT_tmp_80
-	jmpgt LABEL_FALSE_77 t.min4 h.sctp.dst_port
-	jmpgt LABEL_FALSE_77 h.sctp.dst_port t.max4
-	mov m.MainControlT_tmp_187 0x1
 	jmp LABEL_END_77
-	LABEL_FALSE_77 :	mov m.MainControlT_tmp_187 0x0
-	LABEL_END_77 :	mov m.MainControlT_tmp_81 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_81 0xEF
-	mov m.MainControlT_tmp_83 m.MainControlT_tmp_187
-	shl m.MainControlT_tmp_83 0x4
-	mov m.MainControlT_tmp_84 m.MainControlT_tmp_83
-	and m.MainControlT_tmp_84 0x10
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_81
-	or m.local_metadata_range_check_result m.MainControlT_tmp_84
-	jmpgt LABEL_FALSE_78 t.min5 h.sctp.dst_port
-	jmpgt LABEL_FALSE_78 h.sctp.dst_port t.max5
-	mov m.MainControlT_tmp_188 0x1
+	LABEL_FALSE_76 :	mov m.MainControlT_tmp_184 0x0
+	LABEL_END_77 :	mov m.MainControlT_tmp_67 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_67 0xFE
+	mov m.MainControlT_tmp_69 m.MainControlT_tmp_184
+	and m.MainControlT_tmp_69 0x1
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_67
+	or m.local_metadata_range_check_result m.MainControlT_tmp_69
+	jmpgt LABEL_FALSE_77 t.min1 h.sctp.dst_port
+	jmpgt LABEL_FALSE_77 h.sctp.dst_port t.max1
+	mov m.MainControlT_tmp_185 0x1
 	jmp LABEL_END_78
-	LABEL_FALSE_78 :	mov m.MainControlT_tmp_188 0x0
-	LABEL_END_78 :	mov m.MainControlT_tmp_85 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_85 0xDF
-	mov m.MainControlT_tmp_87 m.MainControlT_tmp_188
-	shl m.MainControlT_tmp_87 0x5
-	mov m.MainControlT_tmp_88 m.MainControlT_tmp_87
-	and m.MainControlT_tmp_88 0x20
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_85
-	or m.local_metadata_range_check_result m.MainControlT_tmp_88
-	jmpgt LABEL_FALSE_79 t.min6 h.sctp.dst_port
-	jmpgt LABEL_FALSE_79 h.sctp.dst_port t.max6
-	mov m.MainControlT_tmp_189 0x1
+	LABEL_FALSE_77 :	mov m.MainControlT_tmp_185 0x0
+	LABEL_END_78 :	mov m.MainControlT_tmp_70 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_70 0xFD
+	mov m.MainControlT_tmp_72 m.MainControlT_tmp_185
+	shl m.MainControlT_tmp_72 0x1
+	mov m.MainControlT_tmp_73 m.MainControlT_tmp_72
+	and m.MainControlT_tmp_73 0x2
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_70
+	or m.local_metadata_range_check_result m.MainControlT_tmp_73
+	jmpgt LABEL_FALSE_78 t.min2 h.sctp.dst_port
+	jmpgt LABEL_FALSE_78 h.sctp.dst_port t.max2
+	mov m.MainControlT_tmp_186 0x1
 	jmp LABEL_END_79
-	LABEL_FALSE_79 :	mov m.MainControlT_tmp_189 0x0
-	LABEL_END_79 :	mov m.MainControlT_tmp_89 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_89 0xBF
-	mov m.MainControlT_tmp_91 m.MainControlT_tmp_189
-	shl m.MainControlT_tmp_91 0x6
-	mov m.MainControlT_tmp_92 m.MainControlT_tmp_91
-	and m.MainControlT_tmp_92 0x40
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_89
-	or m.local_metadata_range_check_result m.MainControlT_tmp_92
-	jmpgt LABEL_FALSE_80 t.min7 h.sctp.dst_port
-	jmpgt LABEL_FALSE_80 h.sctp.dst_port t.max7
-	mov m.MainControlT_tmp_190 0x1
+	LABEL_FALSE_78 :	mov m.MainControlT_tmp_186 0x0
+	LABEL_END_79 :	mov m.MainControlT_tmp_74 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_74 0xFB
+	mov m.MainControlT_tmp_76 m.MainControlT_tmp_186
+	shl m.MainControlT_tmp_76 0x2
+	mov m.MainControlT_tmp_77 m.MainControlT_tmp_76
+	and m.MainControlT_tmp_77 0x4
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_74
+	or m.local_metadata_range_check_result m.MainControlT_tmp_77
+	jmpgt LABEL_FALSE_79 t.min3 h.sctp.dst_port
+	jmpgt LABEL_FALSE_79 h.sctp.dst_port t.max3
+	mov m.MainControlT_tmp_187 0x1
 	jmp LABEL_END_80
-	LABEL_FALSE_80 :	mov m.MainControlT_tmp_190 0x0
-	LABEL_END_80 :	mov m.MainControlT_tmp_93 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_93 0x7F
-	mov m.MainControlT_tmp_95 m.MainControlT_tmp_190
-	shl m.MainControlT_tmp_95 0x7
-	mov m.MainControlT_tmp_96 m.MainControlT_tmp_95
-	and m.MainControlT_tmp_96 0x80
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_93
-	or m.local_metadata_range_check_result m.MainControlT_tmp_96
+	LABEL_FALSE_79 :	mov m.MainControlT_tmp_187 0x0
+	LABEL_END_80 :	mov m.MainControlT_tmp_78 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_78 0xF7
+	mov m.MainControlT_tmp_80 m.MainControlT_tmp_187
+	shl m.MainControlT_tmp_80 0x3
+	mov m.MainControlT_tmp_81 m.MainControlT_tmp_80
+	and m.MainControlT_tmp_81 0x8
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_78
+	or m.local_metadata_range_check_result m.MainControlT_tmp_81
+	jmpgt LABEL_FALSE_80 t.min4 h.sctp.dst_port
+	jmpgt LABEL_FALSE_80 h.sctp.dst_port t.max4
+	mov m.MainControlT_tmp_188 0x1
+	jmp LABEL_END_81
+	LABEL_FALSE_80 :	mov m.MainControlT_tmp_188 0x0
+	LABEL_END_81 :	mov m.MainControlT_tmp_82 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_82 0xEF
+	mov m.MainControlT_tmp_84 m.MainControlT_tmp_188
+	shl m.MainControlT_tmp_84 0x4
+	mov m.MainControlT_tmp_85 m.MainControlT_tmp_84
+	and m.MainControlT_tmp_85 0x10
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_82
+	or m.local_metadata_range_check_result m.MainControlT_tmp_85
+	jmpgt LABEL_FALSE_81 t.min5 h.sctp.dst_port
+	jmpgt LABEL_FALSE_81 h.sctp.dst_port t.max5
+	mov m.MainControlT_tmp_189 0x1
+	jmp LABEL_END_82
+	LABEL_FALSE_81 :	mov m.MainControlT_tmp_189 0x0
+	LABEL_END_82 :	mov m.MainControlT_tmp_86 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_86 0xDF
+	mov m.MainControlT_tmp_88 m.MainControlT_tmp_189
+	shl m.MainControlT_tmp_88 0x5
+	mov m.MainControlT_tmp_89 m.MainControlT_tmp_88
+	and m.MainControlT_tmp_89 0x20
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_86
+	or m.local_metadata_range_check_result m.MainControlT_tmp_89
+	jmpgt LABEL_FALSE_82 t.min6 h.sctp.dst_port
+	jmpgt LABEL_FALSE_82 h.sctp.dst_port t.max6
+	mov m.MainControlT_tmp_190 0x1
+	jmp LABEL_END_83
+	LABEL_FALSE_82 :	mov m.MainControlT_tmp_190 0x0
+	LABEL_END_83 :	mov m.MainControlT_tmp_90 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_90 0xBF
+	mov m.MainControlT_tmp_92 m.MainControlT_tmp_190
+	shl m.MainControlT_tmp_92 0x6
+	mov m.MainControlT_tmp_93 m.MainControlT_tmp_92
+	and m.MainControlT_tmp_93 0x40
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_90
+	or m.local_metadata_range_check_result m.MainControlT_tmp_93
+	jmpgt LABEL_FALSE_83 t.min7 h.sctp.dst_port
+	jmpgt LABEL_FALSE_83 h.sctp.dst_port t.max7
+	mov m.MainControlT_tmp_191 0x1
+	jmp LABEL_END_84
+	LABEL_FALSE_83 :	mov m.MainControlT_tmp_191 0x0
+	LABEL_END_84 :	mov m.MainControlT_tmp_94 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_94 0x7F
+	mov m.MainControlT_tmp_96 m.MainControlT_tmp_191
+	shl m.MainControlT_tmp_96 0x7
+	mov m.MainControlT_tmp_97 m.MainControlT_tmp_96
+	and m.MainControlT_tmp_97 0x80
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_94
+	or m.local_metadata_range_check_result m.MainControlT_tmp_97
 	return
 }
 
 action do_range_check_udplite args instanceof do_range_check_udplite_arg_t {
-	jmpgt LABEL_FALSE_81 t.min0 h.udpl.dst_port
-	jmpgt LABEL_FALSE_81 h.udpl.dst_port t.max0
-	mov m.MainControlT_tmp_191 0x1
-	jmp LABEL_END_81
-	LABEL_FALSE_81 :	mov m.MainControlT_tmp_191 0x0
-	LABEL_END_81 :	mov m.MainControlT_tmp_97 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_97 0xFE
-	mov m.MainControlT_tmp_99 m.MainControlT_tmp_191
-	and m.MainControlT_tmp_99 0x1
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_97
-	or m.local_metadata_range_check_result m.MainControlT_tmp_99
-	jmpgt LABEL_FALSE_82 t.min1 h.udpl.dst_port
-	jmpgt LABEL_FALSE_82 h.udpl.dst_port t.max1
+	jmpgt LABEL_FALSE_84 t.min0 h.udpl.dst_port
+	jmpgt LABEL_FALSE_84 h.udpl.dst_port t.max0
 	mov m.MainControlT_tmp_192 0x1
-	jmp LABEL_END_82
-	LABEL_FALSE_82 :	mov m.MainControlT_tmp_192 0x0
-	LABEL_END_82 :	mov m.MainControlT_tmp_100 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_100 0xFD
-	mov m.MainControlT_tmp_102 m.MainControlT_tmp_192
-	shl m.MainControlT_tmp_102 0x1
-	mov m.MainControlT_tmp_103 m.MainControlT_tmp_102
-	and m.MainControlT_tmp_103 0x2
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_100
-	or m.local_metadata_range_check_result m.MainControlT_tmp_103
-	jmpgt LABEL_FALSE_83 t.min2 h.udpl.dst_port
-	jmpgt LABEL_FALSE_83 h.udpl.dst_port t.max2
-	mov m.MainControlT_tmp_193 0x1
-	jmp LABEL_END_83
-	LABEL_FALSE_83 :	mov m.MainControlT_tmp_193 0x0
-	LABEL_END_83 :	mov m.MainControlT_tmp_104 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_104 0xFB
-	mov m.MainControlT_tmp_106 m.MainControlT_tmp_193
-	shl m.MainControlT_tmp_106 0x2
-	mov m.MainControlT_tmp_107 m.MainControlT_tmp_106
-	and m.MainControlT_tmp_107 0x4
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_104
-	or m.local_metadata_range_check_result m.MainControlT_tmp_107
-	jmpgt LABEL_FALSE_84 t.min3 h.udpl.dst_port
-	jmpgt LABEL_FALSE_84 h.udpl.dst_port t.max3
-	mov m.MainControlT_tmp_194 0x1
-	jmp LABEL_END_84
-	LABEL_FALSE_84 :	mov m.MainControlT_tmp_194 0x0
-	LABEL_END_84 :	mov m.MainControlT_tmp_108 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_108 0xF7
-	mov m.MainControlT_tmp_110 m.MainControlT_tmp_194
-	shl m.MainControlT_tmp_110 0x3
-	mov m.MainControlT_tmp_111 m.MainControlT_tmp_110
-	and m.MainControlT_tmp_111 0x8
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_108
-	or m.local_metadata_range_check_result m.MainControlT_tmp_111
-	jmpgt LABEL_FALSE_85 t.min4 h.udpl.dst_port
-	jmpgt LABEL_FALSE_85 h.udpl.dst_port t.max4
-	mov m.MainControlT_tmp_195 0x1
 	jmp LABEL_END_85
-	LABEL_FALSE_85 :	mov m.MainControlT_tmp_195 0x0
-	LABEL_END_85 :	mov m.MainControlT_tmp_112 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_112 0xEF
-	mov m.MainControlT_tmp_114 m.MainControlT_tmp_195
-	shl m.MainControlT_tmp_114 0x4
-	mov m.MainControlT_tmp_115 m.MainControlT_tmp_114
-	and m.MainControlT_tmp_115 0x10
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_112
-	or m.local_metadata_range_check_result m.MainControlT_tmp_115
-	jmpgt LABEL_FALSE_86 t.min5 h.udpl.dst_port
-	jmpgt LABEL_FALSE_86 h.udpl.dst_port t.max5
-	mov m.MainControlT_tmp_196 0x1
+	LABEL_FALSE_84 :	mov m.MainControlT_tmp_192 0x0
+	LABEL_END_85 :	mov m.MainControlT_tmp_98 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_98 0xFE
+	mov m.MainControlT_tmp_100 m.MainControlT_tmp_192
+	and m.MainControlT_tmp_100 0x1
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_98
+	or m.local_metadata_range_check_result m.MainControlT_tmp_100
+	jmpgt LABEL_FALSE_85 t.min1 h.udpl.dst_port
+	jmpgt LABEL_FALSE_85 h.udpl.dst_port t.max1
+	mov m.MainControlT_tmp_193 0x1
 	jmp LABEL_END_86
-	LABEL_FALSE_86 :	mov m.MainControlT_tmp_196 0x0
-	LABEL_END_86 :	mov m.MainControlT_tmp_116 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_116 0xDF
-	mov m.MainControlT_tmp_118 m.MainControlT_tmp_196
-	shl m.MainControlT_tmp_118 0x5
-	mov m.MainControlT_tmp_119 m.MainControlT_tmp_118
-	and m.MainControlT_tmp_119 0x20
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_116
-	or m.local_metadata_range_check_result m.MainControlT_tmp_119
-	jmpgt LABEL_FALSE_87 t.min6 h.udpl.dst_port
-	jmpgt LABEL_FALSE_87 h.udpl.dst_port t.max6
-	mov m.MainControlT_tmp_197 0x1
+	LABEL_FALSE_85 :	mov m.MainControlT_tmp_193 0x0
+	LABEL_END_86 :	mov m.MainControlT_tmp_101 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_101 0xFD
+	mov m.MainControlT_tmp_103 m.MainControlT_tmp_193
+	shl m.MainControlT_tmp_103 0x1
+	mov m.MainControlT_tmp_104 m.MainControlT_tmp_103
+	and m.MainControlT_tmp_104 0x2
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_101
+	or m.local_metadata_range_check_result m.MainControlT_tmp_104
+	jmpgt LABEL_FALSE_86 t.min2 h.udpl.dst_port
+	jmpgt LABEL_FALSE_86 h.udpl.dst_port t.max2
+	mov m.MainControlT_tmp_194 0x1
 	jmp LABEL_END_87
-	LABEL_FALSE_87 :	mov m.MainControlT_tmp_197 0x0
-	LABEL_END_87 :	mov m.MainControlT_tmp_120 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_120 0xBF
-	mov m.MainControlT_tmp_122 m.MainControlT_tmp_197
-	shl m.MainControlT_tmp_122 0x6
-	mov m.MainControlT_tmp_123 m.MainControlT_tmp_122
-	and m.MainControlT_tmp_123 0x40
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_120
-	or m.local_metadata_range_check_result m.MainControlT_tmp_123
-	jmpgt LABEL_FALSE_88 t.min7 h.udpl.dst_port
-	jmpgt LABEL_FALSE_88 h.udpl.dst_port t.max7
-	mov m.MainControlT_tmp_198 0x1
+	LABEL_FALSE_86 :	mov m.MainControlT_tmp_194 0x0
+	LABEL_END_87 :	mov m.MainControlT_tmp_105 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_105 0xFB
+	mov m.MainControlT_tmp_107 m.MainControlT_tmp_194
+	shl m.MainControlT_tmp_107 0x2
+	mov m.MainControlT_tmp_108 m.MainControlT_tmp_107
+	and m.MainControlT_tmp_108 0x4
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_105
+	or m.local_metadata_range_check_result m.MainControlT_tmp_108
+	jmpgt LABEL_FALSE_87 t.min3 h.udpl.dst_port
+	jmpgt LABEL_FALSE_87 h.udpl.dst_port t.max3
+	mov m.MainControlT_tmp_195 0x1
 	jmp LABEL_END_88
-	LABEL_FALSE_88 :	mov m.MainControlT_tmp_198 0x0
-	LABEL_END_88 :	mov m.MainControlT_tmp_124 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_124 0x7F
-	mov m.MainControlT_tmp_126 m.MainControlT_tmp_198
-	shl m.MainControlT_tmp_126 0x7
-	mov m.MainControlT_tmp_127 m.MainControlT_tmp_126
-	and m.MainControlT_tmp_127 0x80
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_124
-	or m.local_metadata_range_check_result m.MainControlT_tmp_127
+	LABEL_FALSE_87 :	mov m.MainControlT_tmp_195 0x0
+	LABEL_END_88 :	mov m.MainControlT_tmp_109 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_109 0xF7
+	mov m.MainControlT_tmp_111 m.MainControlT_tmp_195
+	shl m.MainControlT_tmp_111 0x3
+	mov m.MainControlT_tmp_112 m.MainControlT_tmp_111
+	and m.MainControlT_tmp_112 0x8
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_109
+	or m.local_metadata_range_check_result m.MainControlT_tmp_112
+	jmpgt LABEL_FALSE_88 t.min4 h.udpl.dst_port
+	jmpgt LABEL_FALSE_88 h.udpl.dst_port t.max4
+	mov m.MainControlT_tmp_196 0x1
+	jmp LABEL_END_89
+	LABEL_FALSE_88 :	mov m.MainControlT_tmp_196 0x0
+	LABEL_END_89 :	mov m.MainControlT_tmp_113 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_113 0xEF
+	mov m.MainControlT_tmp_115 m.MainControlT_tmp_196
+	shl m.MainControlT_tmp_115 0x4
+	mov m.MainControlT_tmp_116 m.MainControlT_tmp_115
+	and m.MainControlT_tmp_116 0x10
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_113
+	or m.local_metadata_range_check_result m.MainControlT_tmp_116
+	jmpgt LABEL_FALSE_89 t.min5 h.udpl.dst_port
+	jmpgt LABEL_FALSE_89 h.udpl.dst_port t.max5
+	mov m.MainControlT_tmp_197 0x1
+	jmp LABEL_END_90
+	LABEL_FALSE_89 :	mov m.MainControlT_tmp_197 0x0
+	LABEL_END_90 :	mov m.MainControlT_tmp_117 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_117 0xDF
+	mov m.MainControlT_tmp_119 m.MainControlT_tmp_197
+	shl m.MainControlT_tmp_119 0x5
+	mov m.MainControlT_tmp_120 m.MainControlT_tmp_119
+	and m.MainControlT_tmp_120 0x20
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_117
+	or m.local_metadata_range_check_result m.MainControlT_tmp_120
+	jmpgt LABEL_FALSE_90 t.min6 h.udpl.dst_port
+	jmpgt LABEL_FALSE_90 h.udpl.dst_port t.max6
+	mov m.MainControlT_tmp_198 0x1
+	jmp LABEL_END_91
+	LABEL_FALSE_90 :	mov m.MainControlT_tmp_198 0x0
+	LABEL_END_91 :	mov m.MainControlT_tmp_121 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_121 0xBF
+	mov m.MainControlT_tmp_123 m.MainControlT_tmp_198
+	shl m.MainControlT_tmp_123 0x6
+	mov m.MainControlT_tmp_124 m.MainControlT_tmp_123
+	and m.MainControlT_tmp_124 0x40
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_121
+	or m.local_metadata_range_check_result m.MainControlT_tmp_124
+	jmpgt LABEL_FALSE_91 t.min7 h.udpl.dst_port
+	jmpgt LABEL_FALSE_91 h.udpl.dst_port t.max7
+	mov m.MainControlT_tmp_199 0x1
+	jmp LABEL_END_92
+	LABEL_FALSE_91 :	mov m.MainControlT_tmp_199 0x0
+	LABEL_END_92 :	mov m.MainControlT_tmp_125 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_125 0x7F
+	mov m.MainControlT_tmp_127 m.MainControlT_tmp_199
+	shl m.MainControlT_tmp_127 0x7
+	mov m.MainControlT_tmp_128 m.MainControlT_tmp_127
+	and m.MainControlT_tmp_128 0x80
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_125
+	or m.local_metadata_range_check_result m.MainControlT_tmp_128
 	return
 }
 
 action do_icmp_type_code_check args instanceof do_icmp_type_code_check_arg_t {
-	jmpgt LABEL_FALSE_89 t.min0 h.icmp.type_code
-	jmpgt LABEL_FALSE_89 h.icmp.type_code t.max0
-	mov m.MainControlT_tmp_199 0x1
-	jmp LABEL_END_89
-	LABEL_FALSE_89 :	mov m.MainControlT_tmp_199 0x0
-	LABEL_END_89 :	mov m.MainControlT_tmp_128 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_128 0xFE
-	mov m.MainControlT_tmp_130 m.MainControlT_tmp_199
-	and m.MainControlT_tmp_130 0x1
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_128
-	or m.local_metadata_range_check_result m.MainControlT_tmp_130
-	jmpgt LABEL_FALSE_90 t.min1 h.icmp.type_code
-	jmpgt LABEL_FALSE_90 h.icmp.type_code t.max1
+	jmpgt LABEL_FALSE_92 t.min0 h.icmp.type_code
+	jmpgt LABEL_FALSE_92 h.icmp.type_code t.max0
 	mov m.MainControlT_tmp_200 0x1
-	jmp LABEL_END_90
-	LABEL_FALSE_90 :	mov m.MainControlT_tmp_200 0x0
-	LABEL_END_90 :	mov m.MainControlT_tmp_131 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_131 0xFD
-	mov m.MainControlT_tmp_133 m.MainControlT_tmp_200
-	shl m.MainControlT_tmp_133 0x1
-	mov m.MainControlT_tmp_134 m.MainControlT_tmp_133
-	and m.MainControlT_tmp_134 0x2
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_131
-	or m.local_metadata_range_check_result m.MainControlT_tmp_134
-	jmpgt LABEL_FALSE_91 t.min2 h.icmp.type_code
-	jmpgt LABEL_FALSE_91 h.icmp.type_code t.max2
-	mov m.MainControlT_tmp_201 0x1
-	jmp LABEL_END_91
-	LABEL_FALSE_91 :	mov m.MainControlT_tmp_201 0x0
-	LABEL_END_91 :	mov m.MainControlT_tmp_135 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_135 0xFB
-	mov m.MainControlT_tmp_137 m.MainControlT_tmp_201
-	shl m.MainControlT_tmp_137 0x2
-	mov m.MainControlT_tmp_138 m.MainControlT_tmp_137
-	and m.MainControlT_tmp_138 0x4
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_135
-	or m.local_metadata_range_check_result m.MainControlT_tmp_138
-	jmpgt LABEL_FALSE_92 t.min3 h.icmp.type_code
-	jmpgt LABEL_FALSE_92 h.icmp.type_code t.max3
-	mov m.MainControlT_tmp_202 0x1
-	jmp LABEL_END_92
-	LABEL_FALSE_92 :	mov m.MainControlT_tmp_202 0x0
-	LABEL_END_92 :	mov m.MainControlT_tmp_139 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_139 0xF7
-	mov m.MainControlT_tmp_141 m.MainControlT_tmp_202
-	shl m.MainControlT_tmp_141 0x3
-	mov m.MainControlT_tmp_142 m.MainControlT_tmp_141
-	and m.MainControlT_tmp_142 0x8
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_139
-	or m.local_metadata_range_check_result m.MainControlT_tmp_142
-	jmpgt LABEL_FALSE_93 t.min4 h.icmp.type_code
-	jmpgt LABEL_FALSE_93 h.icmp.type_code t.max4
-	mov m.MainControlT_tmp_203 0x1
 	jmp LABEL_END_93
-	LABEL_FALSE_93 :	mov m.MainControlT_tmp_203 0x0
-	LABEL_END_93 :	mov m.MainControlT_tmp_143 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_143 0xEF
-	mov m.MainControlT_tmp_145 m.MainControlT_tmp_203
-	shl m.MainControlT_tmp_145 0x4
-	mov m.MainControlT_tmp_146 m.MainControlT_tmp_145
-	and m.MainControlT_tmp_146 0x10
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_143
-	or m.local_metadata_range_check_result m.MainControlT_tmp_146
-	jmpgt LABEL_FALSE_94 t.min5 h.icmp.type_code
-	jmpgt LABEL_FALSE_94 h.icmp.type_code t.max5
-	mov m.MainControlT_tmp_204 0x1
+	LABEL_FALSE_92 :	mov m.MainControlT_tmp_200 0x0
+	LABEL_END_93 :	mov m.MainControlT_tmp_129 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_129 0xFE
+	mov m.MainControlT_tmp_131 m.MainControlT_tmp_200
+	and m.MainControlT_tmp_131 0x1
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_129
+	or m.local_metadata_range_check_result m.MainControlT_tmp_131
+	jmpgt LABEL_FALSE_93 t.min1 h.icmp.type_code
+	jmpgt LABEL_FALSE_93 h.icmp.type_code t.max1
+	mov m.MainControlT_tmp_201 0x1
 	jmp LABEL_END_94
-	LABEL_FALSE_94 :	mov m.MainControlT_tmp_204 0x0
-	LABEL_END_94 :	mov m.MainControlT_tmp_147 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_147 0xDF
-	mov m.MainControlT_tmp_149 m.MainControlT_tmp_204
-	shl m.MainControlT_tmp_149 0x5
-	mov m.MainControlT_tmp_150 m.MainControlT_tmp_149
-	and m.MainControlT_tmp_150 0x20
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_147
-	or m.local_metadata_range_check_result m.MainControlT_tmp_150
-	jmpgt LABEL_FALSE_95 t.min6 h.icmp.type_code
-	jmpgt LABEL_FALSE_95 h.icmp.type_code t.max6
-	mov m.MainControlT_tmp_205 0x1
+	LABEL_FALSE_93 :	mov m.MainControlT_tmp_201 0x0
+	LABEL_END_94 :	mov m.MainControlT_tmp_132 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_132 0xFD
+	mov m.MainControlT_tmp_134 m.MainControlT_tmp_201
+	shl m.MainControlT_tmp_134 0x1
+	mov m.MainControlT_tmp_135 m.MainControlT_tmp_134
+	and m.MainControlT_tmp_135 0x2
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_132
+	or m.local_metadata_range_check_result m.MainControlT_tmp_135
+	jmpgt LABEL_FALSE_94 t.min2 h.icmp.type_code
+	jmpgt LABEL_FALSE_94 h.icmp.type_code t.max2
+	mov m.MainControlT_tmp_202 0x1
 	jmp LABEL_END_95
-	LABEL_FALSE_95 :	mov m.MainControlT_tmp_205 0x0
-	LABEL_END_95 :	mov m.MainControlT_tmp_151 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_151 0xBF
-	mov m.MainControlT_tmp_153 m.MainControlT_tmp_205
-	shl m.MainControlT_tmp_153 0x6
-	mov m.MainControlT_tmp_154 m.MainControlT_tmp_153
-	and m.MainControlT_tmp_154 0x40
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_151
-	or m.local_metadata_range_check_result m.MainControlT_tmp_154
-	jmpgt LABEL_FALSE_96 t.min7 h.icmp.type_code
-	jmpgt LABEL_FALSE_96 h.icmp.type_code t.max7
-	mov m.MainControlT_tmp_206 0x1
+	LABEL_FALSE_94 :	mov m.MainControlT_tmp_202 0x0
+	LABEL_END_95 :	mov m.MainControlT_tmp_136 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_136 0xFB
+	mov m.MainControlT_tmp_138 m.MainControlT_tmp_202
+	shl m.MainControlT_tmp_138 0x2
+	mov m.MainControlT_tmp_139 m.MainControlT_tmp_138
+	and m.MainControlT_tmp_139 0x4
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_136
+	or m.local_metadata_range_check_result m.MainControlT_tmp_139
+	jmpgt LABEL_FALSE_95 t.min3 h.icmp.type_code
+	jmpgt LABEL_FALSE_95 h.icmp.type_code t.max3
+	mov m.MainControlT_tmp_203 0x1
 	jmp LABEL_END_96
-	LABEL_FALSE_96 :	mov m.MainControlT_tmp_206 0x0
-	LABEL_END_96 :	mov m.MainControlT_tmp_155 m.local_metadata_range_check_result
-	and m.MainControlT_tmp_155 0x7F
-	mov m.MainControlT_tmp_157 m.MainControlT_tmp_206
-	shl m.MainControlT_tmp_157 0x7
-	mov m.MainControlT_tmp_158 m.MainControlT_tmp_157
-	and m.MainControlT_tmp_158 0x80
-	mov m.local_metadata_range_check_result m.MainControlT_tmp_155
-	or m.local_metadata_range_check_result m.MainControlT_tmp_158
+	LABEL_FALSE_95 :	mov m.MainControlT_tmp_203 0x0
+	LABEL_END_96 :	mov m.MainControlT_tmp_140 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_140 0xF7
+	mov m.MainControlT_tmp_142 m.MainControlT_tmp_203
+	shl m.MainControlT_tmp_142 0x3
+	mov m.MainControlT_tmp_143 m.MainControlT_tmp_142
+	and m.MainControlT_tmp_143 0x8
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_140
+	or m.local_metadata_range_check_result m.MainControlT_tmp_143
+	jmpgt LABEL_FALSE_96 t.min4 h.icmp.type_code
+	jmpgt LABEL_FALSE_96 h.icmp.type_code t.max4
+	mov m.MainControlT_tmp_204 0x1
+	jmp LABEL_END_97
+	LABEL_FALSE_96 :	mov m.MainControlT_tmp_204 0x0
+	LABEL_END_97 :	mov m.MainControlT_tmp_144 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_144 0xEF
+	mov m.MainControlT_tmp_146 m.MainControlT_tmp_204
+	shl m.MainControlT_tmp_146 0x4
+	mov m.MainControlT_tmp_147 m.MainControlT_tmp_146
+	and m.MainControlT_tmp_147 0x10
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_144
+	or m.local_metadata_range_check_result m.MainControlT_tmp_147
+	jmpgt LABEL_FALSE_97 t.min5 h.icmp.type_code
+	jmpgt LABEL_FALSE_97 h.icmp.type_code t.max5
+	mov m.MainControlT_tmp_205 0x1
+	jmp LABEL_END_98
+	LABEL_FALSE_97 :	mov m.MainControlT_tmp_205 0x0
+	LABEL_END_98 :	mov m.MainControlT_tmp_148 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_148 0xDF
+	mov m.MainControlT_tmp_150 m.MainControlT_tmp_205
+	shl m.MainControlT_tmp_150 0x5
+	mov m.MainControlT_tmp_151 m.MainControlT_tmp_150
+	and m.MainControlT_tmp_151 0x20
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_148
+	or m.local_metadata_range_check_result m.MainControlT_tmp_151
+	jmpgt LABEL_FALSE_98 t.min6 h.icmp.type_code
+	jmpgt LABEL_FALSE_98 h.icmp.type_code t.max6
+	mov m.MainControlT_tmp_206 0x1
+	jmp LABEL_END_99
+	LABEL_FALSE_98 :	mov m.MainControlT_tmp_206 0x0
+	LABEL_END_99 :	mov m.MainControlT_tmp_152 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_152 0xBF
+	mov m.MainControlT_tmp_154 m.MainControlT_tmp_206
+	shl m.MainControlT_tmp_154 0x6
+	mov m.MainControlT_tmp_155 m.MainControlT_tmp_154
+	and m.MainControlT_tmp_155 0x40
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_152
+	or m.local_metadata_range_check_result m.MainControlT_tmp_155
+	jmpgt LABEL_FALSE_99 t.min7 h.icmp.type_code
+	jmpgt LABEL_FALSE_99 h.icmp.type_code t.max7
+	mov m.MainControlT_tmp_207 0x1
+	jmp LABEL_END_100
+	LABEL_FALSE_99 :	mov m.MainControlT_tmp_207 0x0
+	LABEL_END_100 :	mov m.MainControlT_tmp_156 m.local_metadata_range_check_result
+	and m.MainControlT_tmp_156 0x7F
+	mov m.MainControlT_tmp_158 m.MainControlT_tmp_207
+	shl m.MainControlT_tmp_158 0x7
+	mov m.MainControlT_tmp_159 m.MainControlT_tmp_158
+	and m.MainControlT_tmp_159 0x80
+	mov m.local_metadata_range_check_result m.MainControlT_tmp_156
+	or m.local_metadata_range_check_result m.MainControlT_tmp_159
 	return
 }
 
@@ -7211,6 +7213,7 @@ apply {
 	mov m.local_metadata_dst_port 0x0
 	mov m.MainControlT_do_clb_pinned_flows_add_on_miss 0
 	mov m.MainControlT_create_reverse_ct 0
+	mov m.local_metadata_nat_done 0
 	mov m.local_metadata_ipset_check_result 0x0
 	mov m.local_metadata_range_check_result 0x0
 	mov m.local_metadata_acl_status 0x0
@@ -7225,17 +7228,187 @@ apply {
 	jmpnv LABEL_FALSE_1 h.arp
 	jmp LABEL_END
 	LABEL_FALSE_1 :	drop
-	LABEL_END :	jmpnv LABEL_END_2 h.ipv4
-	jmpneq LABEL_END_2 m.local_metadata_direction 0x1
+	LABEL_END :	recircid m.pna_main_input_metadata_pass
+	jmpneq LABEL_END_2 m.pna_main_input_metadata_pass 0x0
+	jmpneq LABEL_FALSE_3 h.ipv4.protocol 0x6
+	jmpneq LABEL_FALSE_4 h.tcp.flags 0x2
+	mov m.MainControlT_as_sl3_tcp_member_id 0x0
+	mov m.MainControlT_as_sl3_tcp_group_id 0xFFFFFFFF
+	mov m.k8s_dp_control_tx_balance_tcp_ipv4_dst_addr h.ipv4.dst_addr
+	mov m.k8s_dp_control_tx_balance_tcp_tcp_dst_port h.tcp.dst_port
+	table tx_balance_tcp
+	jmpnh LABEL_END_3
+	jmpeq LABEL_FALSE_6 m.MainControlT_as_sl3_tcp_group_id 0xFFFFFFFF
+	mov m.k8s_dp_control_as_sl3_tcp_sel_ipv4_src_addr h.ipv4.src_addr
+	mov m.k8s_dp_control_as_sl3_tcp_sel_tcp_src_port h.tcp.src_port
+	table as_sl3_tcp_sel
+	jmpnh LABEL_END_3
+	table as_sl3_tcp
+	jmpnh LABEL_END_3
+	mov m.MainControlT_do_clb_pinned_flows_add_on_miss 1
+	mov m.MainControlT_create_reverse_ct 1
+	mov m.local_metadata_src_ip h.ipv4.src_addr
+	mov m.local_metadata_dst_ip h.ipv4.dst_addr
+	mov m.local_metadata_src_port h.tcp.src_port
+	mov m.local_metadata_dst_port h.tcp.dst_port
+	mov m.k8s_dp_control_pinned_flows_ipv4_src_addr h.ipv4.src_addr
+	mov m.k8s_dp_control_pinned_flows_ipv4_dst_addr h.ipv4.dst_addr
+	mov m.k8s_dp_control_pinned_flows_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_port m.local_metadata_dst_port
+	table pinned_flows
+	jmp LABEL_END_3
+	jmp LABEL_END_3
+	LABEL_FALSE_6 :	table as_sl3_tcp
+	jmpnh LABEL_END_3
+	mov m.MainControlT_do_clb_pinned_flows_add_on_miss 1
+	mov m.MainControlT_create_reverse_ct 1
+	mov m.local_metadata_src_ip h.ipv4.src_addr
+	mov m.local_metadata_dst_ip h.ipv4.dst_addr
+	mov m.local_metadata_src_port h.tcp.src_port
+	mov m.local_metadata_dst_port h.tcp.dst_port
+	mov m.k8s_dp_control_pinned_flows_ipv4_src_addr h.ipv4.src_addr
+	mov m.k8s_dp_control_pinned_flows_ipv4_dst_addr h.ipv4.dst_addr
+	mov m.k8s_dp_control_pinned_flows_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_port m.local_metadata_dst_port
+	table pinned_flows
+	jmp LABEL_END_3
+	jmp LABEL_END_3
+	LABEL_FALSE_4 :	mov m.local_metadata_src_ip h.ipv4.src_addr
+	mov m.local_metadata_dst_ip h.ipv4.dst_addr
+	mov m.local_metadata_src_port h.tcp.src_port
+	mov m.local_metadata_dst_port h.tcp.dst_port
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip m.local_metadata_src_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip m.local_metadata_dst_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port m.local_metadata_dst_port
+	table pinned_flows_reverse
+	jmpnh LABEL_FALSE_10
+	jmp LABEL_END_3
+	LABEL_FALSE_10 :	mov m.k8s_dp_control_pinned_flows_ipv4_src_addr h.ipv4.src_addr
+	mov m.k8s_dp_control_pinned_flows_ipv4_dst_addr h.ipv4.dst_addr
+	mov m.k8s_dp_control_pinned_flows_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_port m.local_metadata_dst_port
+	table pinned_flows
+	jmp LABEL_END_3
+	LABEL_FALSE_3 :	jmpneq LABEL_END_3 h.ipv4.protocol 0x11
+	mov m.MainControlT_as_sl3_udp_member_id 0x0
+	mov m.MainControlT_as_sl3_udp_group_id 0xFFFFFFFF
+	mov m.k8s_dp_control_tx_balance_udp_ipv4_dst_addr h.ipv4.dst_addr
+	mov m.k8s_dp_control_tx_balance_udp_udp_dst_port h.udp.dst_port
+	table tx_balance_udp
+	jmpnh LABEL_FALSE_12
+	jmpeq LABEL_FALSE_13 m.MainControlT_as_sl3_udp_group_id 0xFFFFFFFF
+	mov m.k8s_dp_control_as_sl3_udp_sel_ipv4_src_addr h.ipv4.src_addr
+	mov m.k8s_dp_control_as_sl3_udp_sel_udp_src_port h.udp.src_port
+	table as_sl3_udp_sel
+	jmpnh LABEL_FALSE_14
+	table as_sl3_udp
+	jmpnh LABEL_FALSE_15
+	mov m.MainControlT_create_reverse_ct 1
+	mov m.MainControlT_do_clb_pinned_flows_add_on_miss 1
+	mov m.local_metadata_src_ip h.ipv4.src_addr
+	mov m.local_metadata_dst_ip h.ipv4.dst_addr
+	mov m.local_metadata_src_port h.udp.src_port
+	mov m.local_metadata_dst_port h.udp.dst_port
+	mov m.k8s_dp_control_pinned_flows_ipv4_src_addr h.ipv4.src_addr
+	mov m.k8s_dp_control_pinned_flows_ipv4_dst_addr h.ipv4.dst_addr
+	mov m.k8s_dp_control_pinned_flows_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_port m.local_metadata_dst_port
+	table pinned_flows
+	jmp LABEL_END_3
+	LABEL_FALSE_15 :	mov m.local_metadata_src_ip h.ipv4.src_addr
+	mov m.local_metadata_dst_ip h.ipv4.dst_addr
+	mov m.local_metadata_src_port h.udp.src_port
+	mov m.local_metadata_dst_port h.udp.dst_port
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip m.local_metadata_src_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip m.local_metadata_dst_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port m.local_metadata_dst_port
+	table pinned_flows_reverse
+	jmp LABEL_END_3
+	LABEL_FALSE_14 :	mov m.local_metadata_src_ip h.ipv4.src_addr
+	mov m.local_metadata_dst_ip h.ipv4.dst_addr
+	mov m.local_metadata_src_port h.udp.src_port
+	mov m.local_metadata_dst_port h.udp.dst_port
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip m.local_metadata_src_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip m.local_metadata_dst_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port m.local_metadata_dst_port
+	table pinned_flows_reverse
+	jmp LABEL_END_3
+	LABEL_FALSE_13 :	table as_sl3_udp
+	jmpnh LABEL_FALSE_16
+	mov m.MainControlT_create_reverse_ct 1
+	mov m.MainControlT_do_clb_pinned_flows_add_on_miss 1
+	mov m.local_metadata_src_ip h.ipv4.src_addr
+	mov m.local_metadata_dst_ip h.ipv4.dst_addr
+	mov m.local_metadata_src_port h.udp.src_port
+	mov m.local_metadata_dst_port h.udp.dst_port
+	mov m.k8s_dp_control_pinned_flows_ipv4_src_addr h.ipv4.src_addr
+	mov m.k8s_dp_control_pinned_flows_ipv4_dst_addr h.ipv4.dst_addr
+	mov m.k8s_dp_control_pinned_flows_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_port m.local_metadata_dst_port
+	table pinned_flows
+	jmp LABEL_END_3
+	LABEL_FALSE_16 :	mov m.local_metadata_src_ip h.ipv4.src_addr
+	mov m.local_metadata_dst_ip h.ipv4.dst_addr
+	mov m.local_metadata_src_port h.udp.src_port
+	mov m.local_metadata_dst_port h.udp.dst_port
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip m.local_metadata_src_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip m.local_metadata_dst_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port m.local_metadata_dst_port
+	table pinned_flows_reverse
+	jmp LABEL_END_3
+	LABEL_FALSE_12 :	mov m.local_metadata_src_ip h.ipv4.src_addr
+	mov m.local_metadata_dst_ip h.ipv4.dst_addr
+	mov m.local_metadata_src_port h.udp.src_port
+	mov m.local_metadata_dst_port h.udp.dst_port
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip m.local_metadata_src_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip m.local_metadata_dst_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port m.local_metadata_dst_port
+	table pinned_flows_reverse
+	LABEL_END_3 :	jmpneq LABEL_END_2 m.local_metadata_mod_action 0x2
+	table write_dest_ip_table
+	jmpneq LABEL_END_18 m.MainControlT_create_reverse_ct 0x1
+	jmpneq LABEL_FALSE_19 h.ipv4.protocol 0x6
+	mov m.k8s_dp_control_set_meta_tcp_ipv4_dst_addr h.ipv4.dst_addr
+	mov m.k8s_dp_control_set_meta_tcp_tcp_dst_port h.tcp.dst_port
+	table set_meta_tcp
+	jmp LABEL_END_19
+	LABEL_FALSE_19 :	jmpneq LABEL_END_19 h.ipv4.protocol 0x11
+	mov m.k8s_dp_control_set_meta_udp_ipv4_dst_addr h.ipv4.dst_addr
+	mov m.k8s_dp_control_set_meta_udp_udp_dst_port h.udp.dst_port
+	table set_meta_udp
+	LABEL_END_19 :	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip m.local_metadata_src_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip m.local_metadata_dst_ip
+	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port m.local_metadata_src_port
+	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port m.local_metadata_dst_port
+	table pinned_flows_reverse
+	LABEL_END_18 :	mov m.local_metadata_nat_done 1
+	LABEL_END_2 :	jmpnv LABEL_END_21 h.ipv4
+	jmpneq LABEL_END_21 m.local_metadata_direction 0x1
 	regadd pkt_cntr_0 0x64 1
 	table acl_pod_ip_proto_table_egress
 	mov m.MainControlT_tmp_0 m.local_metadata_acl_status
 	and m.MainControlT_tmp_0 0x1
-	jmpneq LABEL_END_3 m.MainControlT_tmp_0 0x1
+	jmpneq LABEL_END_22 m.MainControlT_tmp_0 0x1
 	regadd pkt_cntr_0 0x6E 1
 	mov m.k8s_dp_control_acl_ipset_match_table_egress_ipv4_dst_addr h.ipv4.dst_addr
 	table acl_ipset_match_table_egress
-	LABEL_END_3 :	jmpneq LABEL_END_4 m.local_metadata_acl_status 0x3
+	LABEL_END_22 :	jmpneq LABEL_END_23 m.local_metadata_acl_status 0x3
 	regadd pkt_cntr_0 0x78 1
 	jmpeq LABEL_SWITCH m.local_metadata_range_check_ref 0x1
 	jmpeq LABEL_SWITCH_0 m.local_metadata_range_check_ref 0x2
@@ -7266,248 +7439,83 @@ apply {
 	regadd byte_cntr_0 0x7D m.local_metadata_range_check_result
 	mov m.MainControlT_tmp_1 m.local_metadata_ipset_check_result
 	and m.MainControlT_tmp_1 m.local_metadata_range_check_result
-	jmpneq LABEL_END_4 m.MainControlT_tmp_1 0x0
+	jmpneq LABEL_END_23 m.MainControlT_tmp_1 0x0
 	regadd pkt_cntr_0 0xB4 1
 	regadd pkt_cntr_0 0x50 1
 	drop
-	LABEL_END_4 :	regadd pkt_cntr_0 0xBE 1
-	LABEL_END_2 :	regadd pkt_cntr_0 0xC7 1
-	recircid m.pna_main_input_metadata_pass
-	jmpneq LABEL_END_11 m.pna_main_input_metadata_pass 0x0
-	jmpneq LABEL_FALSE_12 h.ipv4.protocol 0x6
-	jmpneq LABEL_FALSE_13 h.tcp.flags 0x2
-	mov m.MainControlT_as_sl3_tcp_member_id 0x0
-	mov m.MainControlT_as_sl3_tcp_group_id 0xFFFFFFFF
-	mov m.k8s_dp_control_tx_balance_tcp_ipv4_dst_addr h.ipv4.dst_addr
-	mov m.k8s_dp_control_tx_balance_tcp_tcp_dst_port h.tcp.dst_port
-	table tx_balance_tcp
-	jmpnh LABEL_END_12
-	jmpeq LABEL_FALSE_15 m.MainControlT_as_sl3_tcp_group_id 0xFFFFFFFF
-	mov m.k8s_dp_control_as_sl3_tcp_sel_ipv4_src_addr h.ipv4.src_addr
-	mov m.k8s_dp_control_as_sl3_tcp_sel_tcp_src_port h.tcp.src_port
-	table as_sl3_tcp_sel
-	jmpnh LABEL_END_12
-	table as_sl3_tcp
-	jmpnh LABEL_END_12
-	mov m.MainControlT_do_clb_pinned_flows_add_on_miss 1
-	mov m.MainControlT_create_reverse_ct 1
-	mov m.local_metadata_src_ip h.ipv4.src_addr
-	mov m.local_metadata_dst_ip h.ipv4.dst_addr
-	mov m.local_metadata_src_port h.tcp.src_port
-	mov m.local_metadata_dst_port h.tcp.dst_port
-	mov m.k8s_dp_control_pinned_flows_ipv4_src_addr h.ipv4.src_addr
-	mov m.k8s_dp_control_pinned_flows_ipv4_dst_addr h.ipv4.dst_addr
-	mov m.k8s_dp_control_pinned_flows_ipv4_protocol h.ipv4.protocol
-	mov m.k8s_dp_control_pinned_flows_local_metadata_src_port m.local_metadata_src_port
-	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_port m.local_metadata_dst_port
-	table pinned_flows
-	jmp LABEL_END_12
-	jmp LABEL_END_12
-	LABEL_FALSE_15 :	table as_sl3_tcp
-	jmpnh LABEL_END_12
-	mov m.MainControlT_do_clb_pinned_flows_add_on_miss 1
-	mov m.MainControlT_create_reverse_ct 1
-	mov m.local_metadata_src_ip h.ipv4.src_addr
-	mov m.local_metadata_dst_ip h.ipv4.dst_addr
-	mov m.local_metadata_src_port h.tcp.src_port
-	mov m.local_metadata_dst_port h.tcp.dst_port
-	mov m.k8s_dp_control_pinned_flows_ipv4_src_addr h.ipv4.src_addr
-	mov m.k8s_dp_control_pinned_flows_ipv4_dst_addr h.ipv4.dst_addr
-	mov m.k8s_dp_control_pinned_flows_ipv4_protocol h.ipv4.protocol
-	mov m.k8s_dp_control_pinned_flows_local_metadata_src_port m.local_metadata_src_port
-	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_port m.local_metadata_dst_port
-	table pinned_flows
-	jmp LABEL_END_12
-	jmp LABEL_END_12
-	LABEL_FALSE_13 :	mov m.local_metadata_src_ip h.ipv4.src_addr
-	mov m.local_metadata_dst_ip h.ipv4.dst_addr
-	mov m.local_metadata_src_port h.tcp.src_port
-	mov m.local_metadata_dst_port h.tcp.dst_port
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip m.local_metadata_src_ip
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip m.local_metadata_dst_ip
-	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port m.local_metadata_src_port
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port m.local_metadata_dst_port
-	table pinned_flows_reverse
-	jmpnh LABEL_FALSE_19
-	jmp LABEL_END_12
-	LABEL_FALSE_19 :	mov m.k8s_dp_control_pinned_flows_ipv4_src_addr h.ipv4.src_addr
-	mov m.k8s_dp_control_pinned_flows_ipv4_dst_addr h.ipv4.dst_addr
-	mov m.k8s_dp_control_pinned_flows_ipv4_protocol h.ipv4.protocol
-	mov m.k8s_dp_control_pinned_flows_local_metadata_src_port m.local_metadata_src_port
-	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_port m.local_metadata_dst_port
-	table pinned_flows
-	jmp LABEL_END_12
-	LABEL_FALSE_12 :	jmpneq LABEL_END_12 h.ipv4.protocol 0x11
-	mov m.MainControlT_as_sl3_udp_member_id 0x0
-	mov m.MainControlT_as_sl3_udp_group_id 0xFFFFFFFF
-	mov m.k8s_dp_control_tx_balance_udp_ipv4_dst_addr h.ipv4.dst_addr
-	mov m.k8s_dp_control_tx_balance_udp_udp_dst_port h.udp.dst_port
-	table tx_balance_udp
-	jmpnh LABEL_FALSE_21
-	jmpeq LABEL_FALSE_22 m.MainControlT_as_sl3_udp_group_id 0xFFFFFFFF
-	mov m.k8s_dp_control_as_sl3_udp_sel_ipv4_src_addr h.ipv4.src_addr
-	mov m.k8s_dp_control_as_sl3_udp_sel_udp_src_port h.udp.src_port
-	table as_sl3_udp_sel
-	jmpnh LABEL_FALSE_23
-	table as_sl3_udp
-	jmpnh LABEL_FALSE_24
-	mov m.MainControlT_create_reverse_ct 1
-	mov m.MainControlT_do_clb_pinned_flows_add_on_miss 1
-	mov m.local_metadata_src_ip h.ipv4.src_addr
-	mov m.local_metadata_dst_ip h.ipv4.dst_addr
-	mov m.local_metadata_src_port h.udp.src_port
-	mov m.local_metadata_dst_port h.udp.dst_port
-	mov m.k8s_dp_control_pinned_flows_ipv4_src_addr h.ipv4.src_addr
-	mov m.k8s_dp_control_pinned_flows_ipv4_dst_addr h.ipv4.dst_addr
-	mov m.k8s_dp_control_pinned_flows_ipv4_protocol h.ipv4.protocol
-	mov m.k8s_dp_control_pinned_flows_local_metadata_src_port m.local_metadata_src_port
-	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_port m.local_metadata_dst_port
-	table pinned_flows
-	jmp LABEL_END_12
-	LABEL_FALSE_24 :	mov m.local_metadata_src_ip h.ipv4.src_addr
-	mov m.local_metadata_dst_ip h.ipv4.dst_addr
-	mov m.local_metadata_src_port h.udp.src_port
-	mov m.local_metadata_dst_port h.udp.dst_port
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip m.local_metadata_src_ip
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip m.local_metadata_dst_ip
-	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port m.local_metadata_src_port
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port m.local_metadata_dst_port
-	table pinned_flows_reverse
-	jmp LABEL_END_12
-	LABEL_FALSE_23 :	mov m.local_metadata_src_ip h.ipv4.src_addr
-	mov m.local_metadata_dst_ip h.ipv4.dst_addr
-	mov m.local_metadata_src_port h.udp.src_port
-	mov m.local_metadata_dst_port h.udp.dst_port
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip m.local_metadata_src_ip
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip m.local_metadata_dst_ip
-	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port m.local_metadata_src_port
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port m.local_metadata_dst_port
-	table pinned_flows_reverse
-	jmp LABEL_END_12
-	LABEL_FALSE_22 :	table as_sl3_udp
-	jmpnh LABEL_FALSE_25
-	mov m.MainControlT_create_reverse_ct 1
-	mov m.MainControlT_do_clb_pinned_flows_add_on_miss 1
-	mov m.local_metadata_src_ip h.ipv4.src_addr
-	mov m.local_metadata_dst_ip h.ipv4.dst_addr
-	mov m.local_metadata_src_port h.udp.src_port
-	mov m.local_metadata_dst_port h.udp.dst_port
-	mov m.k8s_dp_control_pinned_flows_ipv4_src_addr h.ipv4.src_addr
-	mov m.k8s_dp_control_pinned_flows_ipv4_dst_addr h.ipv4.dst_addr
-	mov m.k8s_dp_control_pinned_flows_ipv4_protocol h.ipv4.protocol
-	mov m.k8s_dp_control_pinned_flows_local_metadata_src_port m.local_metadata_src_port
-	mov m.k8s_dp_control_pinned_flows_local_metadata_dst_port m.local_metadata_dst_port
-	table pinned_flows
-	jmp LABEL_END_12
-	LABEL_FALSE_25 :	mov m.local_metadata_src_ip h.ipv4.src_addr
-	mov m.local_metadata_dst_ip h.ipv4.dst_addr
-	mov m.local_metadata_src_port h.udp.src_port
-	mov m.local_metadata_dst_port h.udp.dst_port
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip m.local_metadata_src_ip
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip m.local_metadata_dst_ip
-	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port m.local_metadata_src_port
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port m.local_metadata_dst_port
-	table pinned_flows_reverse
-	jmp LABEL_END_12
-	LABEL_FALSE_21 :	mov m.local_metadata_src_ip h.ipv4.src_addr
-	mov m.local_metadata_dst_ip h.ipv4.dst_addr
-	mov m.local_metadata_src_port h.udp.src_port
-	mov m.local_metadata_dst_port h.udp.dst_port
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip m.local_metadata_src_ip
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip m.local_metadata_dst_ip
-	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port m.local_metadata_src_port
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port m.local_metadata_dst_port
-	table pinned_flows_reverse
-	LABEL_END_12 :	jmpeq LABEL_SWITCH_4 m.local_metadata_mod_action 0x1
-	jmpeq LABEL_SWITCH_5 m.local_metadata_mod_action 0x2
-	jmp LABEL_END_11
-	LABEL_SWITCH_4 :	table write_source_ip_table
-	jmp LABEL_END_11
-	LABEL_SWITCH_5 :	table write_dest_ip_table
-	jmpneq LABEL_END_11 m.MainControlT_create_reverse_ct 0x1
-	jmpneq LABEL_FALSE_27 h.ipv4.protocol 0x6
-	mov m.k8s_dp_control_set_meta_tcp_ipv4_dst_addr h.ipv4.dst_addr
-	mov m.k8s_dp_control_set_meta_tcp_tcp_dst_port h.tcp.dst_port
-	table set_meta_tcp
-	jmp LABEL_END_27
-	LABEL_FALSE_27 :	jmpneq LABEL_END_27 h.ipv4.protocol 0x11
-	mov m.k8s_dp_control_set_meta_udp_ipv4_dst_addr h.ipv4.dst_addr
-	mov m.k8s_dp_control_set_meta_udp_udp_dst_port h.udp.dst_port
-	table set_meta_udp
-	LABEL_END_27 :	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_ip m.local_metadata_src_ip
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_ip m.local_metadata_dst_ip
-	mov m.k8s_dp_control_pinned_flows_reverse_ipv4_protocol h.ipv4.protocol
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_src_port m.local_metadata_src_port
-	mov m.k8s_dp_control_pinned_flows_reverse_local_metadata_dst_port m.local_metadata_dst_port
-	table pinned_flows_reverse
-	LABEL_END_11 :	recircid m.pna_main_input_metadata_pass
-	jmpneq LABEL_END_29 m.pna_main_input_metadata_pass 0x0
-	jmpnv LABEL_END_29 h.ipv4
+	LABEL_END_23 :	regadd pkt_cntr_0 0xBE 1
+	LABEL_END_21 :	regadd pkt_cntr_0 0xC7 1
+	jmpneq LABEL_END_30 m.local_metadata_direction 0x1
+	jmpeq LABEL_TRUE_31 m.local_metadata_nat_done 0x0
+	mov m.MainControlT_tmp_2 0x0
+	jmp LABEL_END_31
+	LABEL_TRUE_31 :	mov m.MainControlT_tmp_2 0x1
+	LABEL_END_31 :	jmpneq LABEL_END_30 m.local_metadata_mod_action 0x1
+	jmpneq LABEL_END_30 m.MainControlT_tmp_2 0x1
+	table write_source_ip_table
+	LABEL_END_30 :	recircid m.pna_main_input_metadata_pass
+	jmpneq LABEL_END_33 m.pna_main_input_metadata_pass 0x0
+	jmpnv LABEL_END_33 h.ipv4
 	mov m.local_metadata_direction 0x0
 	recirculate
 	mov m.MainControlT_hasReturned 1
-	LABEL_END_29 :	jmpneq LABEL_FALSE_30 m.MainControlT_hasReturned 0x1
-	jmp LABEL_END_30
-	LABEL_FALSE_30 :	jmpnv LABEL_END_31 h.ipv4
-	jmpneq LABEL_END_31 m.local_metadata_direction 0x0
+	LABEL_END_33 :	jmpneq LABEL_FALSE_33 m.MainControlT_hasReturned 0x1
+	jmp LABEL_END_34
+	LABEL_FALSE_33 :	jmpnv LABEL_END_35 h.ipv4
+	jmpneq LABEL_END_35 m.local_metadata_direction 0x0
 	regadd pkt_cntr_0 0xC8 1
 	table acl_pod_ip_proto_table_ingress
-	mov m.MainControlT_tmp_2 m.local_metadata_acl_status
-	and m.MainControlT_tmp_2 0x1
-	jmpneq LABEL_END_32 m.MainControlT_tmp_2 0x1
+	mov m.MainControlT_tmp_3 m.local_metadata_acl_status
+	and m.MainControlT_tmp_3 0x1
+	jmpneq LABEL_END_36 m.MainControlT_tmp_3 0x1
 	regadd pkt_cntr_0 0xD2 1
 	mov m.k8s_dp_control_acl_ipset_match_table_ingress_ipv4_src_addr h.ipv4.src_addr
 	table acl_ipset_match_table_ingress
-	LABEL_END_32 :	jmpneq LABEL_END_33 m.local_metadata_acl_status 0x3
+	LABEL_END_36 :	jmpneq LABEL_END_37 m.local_metadata_acl_status 0x3
 	regadd pkt_cntr_0 0xDC 1
-	jmpeq LABEL_SWITCH_6 m.local_metadata_range_check_ref 0x1
-	jmpeq LABEL_SWITCH_7 m.local_metadata_range_check_ref 0x2
-	jmpeq LABEL_SWITCH_8 m.local_metadata_range_check_ref 0x3
-	jmpeq LABEL_SWITCH_9 m.local_metadata_range_check_ref 0x4
-	jmpeq LABEL_SWITCH_10 m.local_metadata_range_check_ref 0x5
-	jmp LABEL_ENDSWITCH_1
-	LABEL_SWITCH_6 :	jmpnv LABEL_ENDSWITCH_1 h.tcp
+	jmpeq LABEL_SWITCH_4 m.local_metadata_range_check_ref 0x1
+	jmpeq LABEL_SWITCH_5 m.local_metadata_range_check_ref 0x2
+	jmpeq LABEL_SWITCH_6 m.local_metadata_range_check_ref 0x3
+	jmpeq LABEL_SWITCH_7 m.local_metadata_range_check_ref 0x4
+	jmpeq LABEL_SWITCH_8 m.local_metadata_range_check_ref 0x5
+	jmp LABEL_ENDSWITCH_0
+	LABEL_SWITCH_4 :	jmpnv LABEL_ENDSWITCH_0 h.tcp
 	table tcp_dport_rc_table
-	jmp LABEL_ENDSWITCH_1
-	jmp LABEL_ENDSWITCH_1
-	LABEL_SWITCH_7 :	jmpnv LABEL_ENDSWITCH_1 h.udp
+	jmp LABEL_ENDSWITCH_0
+	jmp LABEL_ENDSWITCH_0
+	LABEL_SWITCH_5 :	jmpnv LABEL_ENDSWITCH_0 h.udp
 	table udp_dport_rc_table
-	jmp LABEL_ENDSWITCH_1
-	jmp LABEL_ENDSWITCH_1
-	LABEL_SWITCH_8 :	jmpnv LABEL_ENDSWITCH_1 h.sctp
+	jmp LABEL_ENDSWITCH_0
+	jmp LABEL_ENDSWITCH_0
+	LABEL_SWITCH_6 :	jmpnv LABEL_ENDSWITCH_0 h.sctp
 	table sctp_dport_rc_table
-	jmp LABEL_ENDSWITCH_1
-	jmp LABEL_ENDSWITCH_1
-	LABEL_SWITCH_9 :	jmpnv LABEL_ENDSWITCH_1 h.udpl
+	jmp LABEL_ENDSWITCH_0
+	jmp LABEL_ENDSWITCH_0
+	LABEL_SWITCH_7 :	jmpnv LABEL_ENDSWITCH_0 h.udpl
 	table udpl_dport_rc_table
-	jmp LABEL_ENDSWITCH_1
-	jmp LABEL_ENDSWITCH_1
-	LABEL_SWITCH_10 :	jmpnv LABEL_ENDSWITCH_1 h.icmp
+	jmp LABEL_ENDSWITCH_0
+	jmp LABEL_ENDSWITCH_0
+	LABEL_SWITCH_8 :	jmpnv LABEL_ENDSWITCH_0 h.icmp
 	table icmp_type_code_check_table
-	LABEL_ENDSWITCH_1 :	regadd pkt_cntr_0 0xE6 1
+	LABEL_ENDSWITCH_0 :	regadd pkt_cntr_0 0xE6 1
 	regadd byte_cntr_0 0xD7 m.local_metadata_ipset_check_result
 	regadd byte_cntr_0 0xE1 m.local_metadata_range_check_result
-	mov m.MainControlT_tmp_3 m.local_metadata_ipset_check_result
-	and m.MainControlT_tmp_3 m.local_metadata_range_check_result
-	jmpneq LABEL_END_33 m.MainControlT_tmp_3 0x0
+	mov m.MainControlT_tmp_4 m.local_metadata_ipset_check_result
+	and m.MainControlT_tmp_4 m.local_metadata_range_check_result
+	jmpneq LABEL_END_37 m.MainControlT_tmp_4 0x0
 	regadd pkt_cntr_0 0x118 1
 	regadd pkt_cntr_0 0x50 1
 	drop
-	LABEL_END_33 :	regadd pkt_cntr_0 0x122 1
-	LABEL_END_31 :	regadd pkt_cntr_0 0x12B 1
-	jmpnv LABEL_FALSE_40 h.arp
+	LABEL_END_37 :	regadd pkt_cntr_0 0x122 1
+	LABEL_END_35 :	regadd pkt_cntr_0 0x12B 1
+	jmpnv LABEL_FALSE_43 h.arp
 	table arpt_to_port_table
-	jmp LABEL_END_30
-	LABEL_FALSE_40 :	jmpnv LABEL_FALSE_41 h.ipv4
+	jmp LABEL_END_34
+	LABEL_FALSE_43 :	jmpnv LABEL_FALSE_44 h.ipv4
 	table ipv4_to_port_table
-	jmp LABEL_END_30
-	LABEL_FALSE_41 :	mov m.pna_main_output_metadata_output_port 0x1
-	LABEL_END_30 :	emit h.ethernet
+	jmp LABEL_END_34
+	LABEL_FALSE_44 :	mov m.pna_main_output_metadata_output_port 0x1
+	LABEL_END_34 :	emit h.ethernet
 	emit h.vlan_tag
 	emit h.ipv4
 	emit h.tcp
