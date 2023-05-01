@@ -1,5 +1,6 @@
 # Kubernetes Infra Offload Usage Guide
 - [Kubernetes Infra Offload Usage Guide](#kubernetes-infra-offload-usage-guide)
+  - [Motivation for Offload](#motivation-for-offload)
   - [General requirements](#general-requirements)
   - [Kubernetes installation](#kubernetes-installation)
     - [Pre-requisites](#pre-requisites)
@@ -13,6 +14,43 @@
   - [Simple Pod-to-Pod Ping Test](#simple-pod-to-pod-ping-test)
   - [Service deployment Test](#service-deployment-test)
   - [Cleanup All](#cleanup-all)
+
+## Motivation for Offload
+The Kubernetes architecture requires Kubernetes networking for connectivity
+of the pods within and outside the cluster be delegated to the CNI. For this,
+on each worker node, Kubelet works with the co-located CNI to configure and
+assign interfaces to the pods created on that worker node. In addition, the
+Kube-proxy on each worker node interacts with Kubernetes control plane to
+provide support for Services. Without any offloads, both CNI and kube-proxy
+typically depend upon Linux kernel to provide these networking and service
+support. These include routing of traffic to/from the pods, applying network
+policies (filtering) on the traffic being sent/received by the pods, load
+balancing and NAT operations on traffic flows belonging to Services, etc.
+
+![Kubernetes Architecture](docs/images/Kube-Arch.png)
+
+Management of these configurations and all the required packet procesing,
+requires significant CPU core utilization on the worker node. That takes away
+significant amount of CPU cycles which could have been used for running the
+actual application workload.
+
+Additionally, this typical deployment model may not provide desired isolation
+between the service provider components and the tenent's application workload.
+
+The K8s-infra-offload software resolves both above deficiencies. That is, it
+provides means to offload the packet processing to P4 pipeline as well as, it
+allows the CNI and Kube-proxy configurations to be applied from outside the
+worker node CPU cores.
+
+For the P4 pipeline based packet processing, it defines and provides target
+specific P4 pipeline as part of the K8s-Infra-Offload package. This includes
+P4-DPDK target specific P4 pipeline.
+
+For configuration aspects, it interacts with CNI plugin and Kubernetes API
+server over secure gRPC channels. This allows the CNI configuration to be
+managed from a different CPU complex.
+
+![Infra Offload Architecture](docs/images/K8s-Infra-Offload-Arch.png)
 
 ## General requirements
 - For Infra Agent and Infra Manager to work, Kernel 5.4 or greater is required.
