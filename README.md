@@ -17,9 +17,9 @@ connectivity, network policies for isolating pod traffic, and KubeProxy for
 service load balancing.
 
 The Kubernetes Infrastructure Offload project uses CNI P4 data-plane plugin
-components that help offload the networking rules from Calico* CNI to Intel®
-Infrastructure Processing Unit (Intel® IPU) devices. Intel IPU customers can
-then use this k8s-infra-offload software to deploy their orchestration software.
+components that help offload the networking rules from Calico* CNI to P4
+target devices. End users can then use this k8s-infra-offload software to
+deploy their orchestration software.
 
 This readme describes the components of Kubernetes Infrastructure Offload
 software and how to install and set up these components.
