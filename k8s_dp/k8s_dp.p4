@@ -163,6 +163,7 @@ struct main_metadata_t {
 	ActionRef_t mod_action;
 	ModDataPtr_t mod_blob_ptr_dnat;
 	ModDataPtr_t mod_blob_ptr_snat;
+        bool nat_done;
         PNA_Direction_t direction;
         bit<8> acl_status;
         AclPolicyId_t acl_pol_id;
@@ -826,6 +827,7 @@ control k8s_dp_control(
 		meta.dst_port = 0;
 		do_clb_pinned_flows_add_on_miss = false;
 		create_reverse_ct = false;
+                meta.nat_done = false;
                 meta.ipset_check_result = 0;
                 meta.range_check_result = 0;
                 meta.acl_status = ALLOW_ALL;
@@ -842,6 +844,69 @@ control k8s_dp_control(
                         if (!hdr.arp.isValid()) {
                             drop_packet();
                         }
+                    }
+                }
+
+                if (istd.pass == (PassNumber_t) 0)
+                {
+                    if (IS_IPV4_TCP) {
+                            if (tcp_syn_flag_set(hdr.tcp.flags)) {
+                                    if (tx_balance_tcp.apply().hit) {
+                                            do_clb_pinned_flows_add_on_miss = true;
+                                            create_reverse_ct = true;
+                                            //save_to_meta_tcp(hdr, meta);
+                                            meta.src_ip = hdr.ipv4.src_addr;
+                                            meta.dst_ip = hdr.ipv4.dst_addr;
+                                            meta.src_port = hdr.tcp.src_port;
+                                            meta.dst_port = hdr.tcp.dst_port;
+                                            pinned_flows.apply();
+                                    }
+                            } else {
+                                    //save_to_meta_tcp(hdr, meta);
+                                    meta.src_ip = hdr.ipv4.src_addr;
+                                    meta.dst_ip = hdr.ipv4.dst_addr;
+                                    meta.src_port = hdr.tcp.src_port;
+                                    meta.dst_port = hdr.tcp.dst_port;
+                                    if (pinned_flows_reverse.apply().miss) {
+                                            pinned_flows.apply();
+                                    }
+                            }
+                    } else {
+                            if (IS_IPV4_UDP) {
+                                    if (tx_balance_udp.apply().hit) {
+                                            create_reverse_ct = true;
+                                            do_clb_pinned_flows_add_on_miss = true;
+                                            //save_to_meta_udp(hdr, meta);
+                                            meta.src_ip = hdr.ipv4.src_addr;
+                                            meta.dst_ip = hdr.ipv4.dst_addr;
+                                            meta.src_port = hdr.udp.src_port;
+                                            meta.dst_port = hdr.udp.dst_port;
+                                            pinned_flows.apply();
+                                    } else {
+                                            //save_to_meta_udp(hdr, meta);
+                                            meta.src_ip = hdr.ipv4.src_addr;
+                                            meta.dst_ip = hdr.ipv4.dst_addr;
+                                            meta.src_port = hdr.udp.src_port;
+                                            meta.dst_port = hdr.udp.dst_port;
+                                            pinned_flows_reverse.apply();
+                                    }
+                            }
+                    }	
+
+                    /* Perform the SNAT or DNAT if enabled by above TCP processing */
+                    if (meta.mod_action == WRITE_DEST_IP) {
+                        write_dest_ip_table.apply();
+                        if (create_reverse_ct) {
+                            if (IS_IPV4_TCP) {
+                                set_meta_tcp.apply();
+                            } else {
+                                if (IS_IPV4_UDP) {
+                                    set_meta_udp.apply();
+                                }
+                            }
+                            pinned_flows_reverse.apply();		
+                        }
+                        meta.nat_done = true;
                     }
                 }
 
@@ -915,74 +980,10 @@ control k8s_dp_control(
                 }
                 pkt_cntr.count(199);
 
-                if (istd.pass == (PassNumber_t) 0)
+                if (meta.direction == PNA_Direction_t.HOST_TO_NET)
                 {
-                    if (IS_IPV4_TCP) {
-                            if (tcp_syn_flag_set(hdr.tcp.flags)) {
-                                    if (tx_balance_tcp.apply().hit) {
-                                            do_clb_pinned_flows_add_on_miss = true;
-                                            create_reverse_ct = true;
-                                            //save_to_meta_tcp(hdr, meta);
-                                            meta.src_ip = hdr.ipv4.src_addr;
-                                            meta.dst_ip = hdr.ipv4.dst_addr;
-                                            meta.src_port = hdr.tcp.src_port;
-                                            meta.dst_port = hdr.tcp.dst_port;
-                                            pinned_flows.apply();
-                                    }
-                            } else {
-                                    //save_to_meta_tcp(hdr, meta);
-                                    meta.src_ip = hdr.ipv4.src_addr;
-                                    meta.dst_ip = hdr.ipv4.dst_addr;
-                                    meta.src_port = hdr.tcp.src_port;
-                                    meta.dst_port = hdr.tcp.dst_port;
-                                    if (pinned_flows_reverse.apply().miss) {
-                                            pinned_flows.apply();
-                                    }
-                            }
-                    } else {
-                            if (IS_IPV4_UDP) {
-                                    if (tx_balance_udp.apply().hit) {
-                                            create_reverse_ct = true;
-                                            do_clb_pinned_flows_add_on_miss = true;
-                                            //save_to_meta_udp(hdr, meta);
-                                            meta.src_ip = hdr.ipv4.src_addr;
-                                            meta.dst_ip = hdr.ipv4.dst_addr;
-                                            meta.src_port = hdr.udp.src_port;
-                                            meta.dst_port = hdr.udp.dst_port;
-                                            pinned_flows.apply();
-                                    } else {
-                                            //save_to_meta_udp(hdr, meta);
-                                            meta.src_ip = hdr.ipv4.src_addr;
-                                            meta.dst_ip = hdr.ipv4.dst_addr;
-                                            meta.src_port = hdr.udp.src_port;
-                                            meta.dst_port = hdr.udp.dst_port;
-                                            pinned_flows_reverse.apply();
-                                    }
-                            }
-                    }	
-
-                    /* Perform the SNAT or DNAT if enabled by above TCP processing */
-                    switch (meta.mod_action) {
-                            WRITE_SRC_IP: {
-                                    write_source_ip_table.apply();
-                            }
-
-                            WRITE_DEST_IP: {
-                                    write_dest_ip_table.apply();
-                                    if (create_reverse_ct) {
-                                            if (IS_IPV4_TCP) {
-                                                    set_meta_tcp.apply();
-                                            } else {
-                                                    if (IS_IPV4_UDP) {
-                                                            set_meta_udp.apply();
-                                                    }
-                                            }
-                                            pinned_flows_reverse.apply();		
-                                    }
-                            }
-
-                        default: {
-                        }
+                    if ((meta.mod_action == WRITE_SRC_IP) && (meta.nat_done == false)) {
+                        write_source_ip_table.apply();
                     }
                 }
 
