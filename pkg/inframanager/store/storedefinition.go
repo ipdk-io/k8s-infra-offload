@@ -71,10 +71,11 @@ type Policy struct {
 }
 
 type IpSetIDX struct {
-	IpSetIDx  uint16
-	Direction string
-	Protocol  string
-	RuleID    map[string]Rule
+	IpSetIDx   uint16
+	Direction  string
+	Protocol   uint8
+	RuleID     map[string]Rule
+	DportRange []uint16
 }
 
 type Rule struct {
