@@ -22,6 +22,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
@@ -45,6 +46,12 @@ var hostInterfaceMac string
 
 func PutConf(c *conf.Configuration) {
 	config = c
+}
+
+type ProtoIpSetIDX struct {
+	ruleMaskId int
+	exists     bool
+	IpSetIDX   store.IpSetIDX
 }
 
 type ApiServer struct {
@@ -624,15 +631,255 @@ func (s *ApiServer) NatTranslationDelete(ctx context.Context, in *proto.NatTrans
 }
 
 func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePolicyUpdate) (*proto.Reply, error) {
+	var inTcpSet, inUdpSet, outTcpSet, outUdpSet ProtoIpSetIDX
+	var tbltype p4.OperationType
+
+	out := &proto.Reply{
+		Successful: true,
+	}
+
 	logger := log.WithField("func", "updatePolicy")
+
+	if in == nil || unsafe.Sizeof(*in) <= 0 {
+		err := errors.New("Empty policy add/update request")
+		logger.Errorf("Empty policy add/update request.")
+		out.Successful = false
+		return out, err
+	}
+
 	logger.Infof("Incoming updatePolicy Request %+v", in)
-	return &proto.Reply{Successful: true}, nil
+
+	server := NewApiServer()
+
+	inTcpSet.IpSetIDX.Direction = "RX"
+	inUdpSet.IpSetIDX.Direction = "RX"
+	outTcpSet.IpSetIDX.Direction = "TX"
+	outUdpSet.IpSetIDX.Direction = "TX"
+
+	inTcpSet.IpSetIDX.Protocol = p4.PROTO_TCP
+	inUdpSet.IpSetIDX.Protocol = p4.PROTO_UDP
+	outTcpSet.IpSetIDX.Protocol = p4.PROTO_TCP
+	outUdpSet.IpSetIDX.Protocol = p4.PROTO_UDP
+
+	policy := store.Policy{
+		PolicyName: in.Id.Name,
+	}
+
+	/*
+		Check if the policy exists.
+	*/
+	entry := policy.GetFromStore()
+	if entry != nil {
+		storePolicy := entry.(store.Policy)
+		logger.Infof("Network policy %s exists. Updating the policy",
+			storePolicy.PolicyName)
+		tbltype = p4.PolicyUpdate
+
+		/*
+			Check the existing policy's ipset indexes.
+			If exists, use the same ipset index.
+		*/
+		for _, ipSetIDX := range storePolicy.IpSetIDXs {
+			switch ipSetIDX.Direction {
+			case "RX":
+				switch ipSetIDX.Protocol {
+				case p4.PROTO_UDP:
+					inUdpSet.IpSetIDX.Index = ipSetIDX.Index
+					inUdpSet.exists = true
+				default:
+					inTcpSet.IpSetIDX.Index = ipSetIDX.Index
+					inTcpSet.exists = true
+				}
+			case "TX":
+				switch ipSetIDX.Protocol {
+				case p4.PROTO_UDP:
+					outUdpSet.IpSetIDX.Index = ipSetIDX.Index
+					outUdpSet.exists = true
+				default:
+					outTcpSet.IpSetIDX.Index = ipSetIDX.Index
+					outTcpSet.exists = true
+				}
+			}
+		}
+
+	} else {
+		tbltype = p4.PolicyAdd
+		logger.Infof("Adding a new network policy %s.", policy.PolicyName)
+	}
+
+	for _, rule := range in.Policy.InboundRules {
+		// Currently supporting only cidrs
+		if len(rule.SrcNet) == 0 || len(rule.SrcNet[0]) == 0 {
+			continue
+		}
+		r := store.Rule{
+			RuleID: rule.RuleId,
+			PortRange: []uint16{
+				uint16(rule.DstPorts[0].First),
+				uint16(rule.DstPorts[0].Last),
+			},
+			Cidr: rule.SrcNet[0],
+		}
+
+		switch rule.Protocol.GetName() {
+		case "udp":
+			if !inUdpSet.exists {
+				inUdpSet.IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
+				inUdpSet.exists = true
+			}
+			r.RuleMask = p4.GenerateMask(inUdpSet.ruleMaskId)
+			inUdpSet.ruleMaskId++
+			inUdpSet.IpSetIDX.Rules[rule.RuleId] = r
+			inUdpSet.exists = true
+
+			inUdpSet.IpSetIDX.DportRange = append(inUdpSet.IpSetIDX.DportRange,
+				uint16(rule.DstPorts[0].First))
+			inUdpSet.IpSetIDX.DportRange = append(inUdpSet.IpSetIDX.DportRange,
+				uint16(rule.DstPorts[0].Last))
+		default:
+			if !inTcpSet.exists {
+				inTcpSet.IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
+				inTcpSet.exists = true
+			}
+			r.RuleMask = p4.GenerateMask(inTcpSet.ruleMaskId)
+			inTcpSet.ruleMaskId++
+			inTcpSet.IpSetIDX.Rules[rule.RuleId] = r
+			inTcpSet.exists = true
+
+			inTcpSet.IpSetIDX.DportRange = append(inTcpSet.IpSetIDX.DportRange,
+				uint16(rule.DstPorts[0].First))
+			inTcpSet.IpSetIDX.DportRange = append(inTcpSet.IpSetIDX.DportRange,
+				uint16(rule.DstPorts[0].Last))
+
+		}
+	}
+
+	for _, rule := range in.Policy.OutboundRules {
+		// Currently supporting only cidrs
+		if len(rule.DstNet) == 0 || len(rule.DstNet[0]) == 0 {
+			continue
+		}
+		r := store.Rule{
+			RuleID: rule.RuleId,
+			PortRange: []uint16{
+				uint16(rule.DstPorts[0].First),
+				uint16(rule.DstPorts[0].Last),
+			},
+			Cidr: rule.DstNet[0],
+		}
+
+		switch rule.Protocol.GetName() {
+		case "udp":
+			if !outUdpSet.exists {
+				outUdpSet.IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
+				outUdpSet.exists = true
+			}
+			r.RuleMask = p4.GenerateMask(outUdpSet.ruleMaskId)
+			outUdpSet.ruleMaskId++
+			outUdpSet.IpSetIDX.Rules[rule.RuleId] = r
+
+			outUdpSet.IpSetIDX.DportRange = append(outUdpSet.IpSetIDX.DportRange,
+				uint16(rule.DstPorts[0].First))
+			outUdpSet.IpSetIDX.DportRange = append(outUdpSet.IpSetIDX.DportRange,
+				uint16(rule.DstPorts[0].Last))
+		default:
+			if !outTcpSet.exists {
+				outTcpSet.IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
+				outTcpSet.exists = true
+			}
+			r.RuleMask = p4.GenerateMask(outTcpSet.ruleMaskId)
+			outTcpSet.ruleMaskId++
+			outTcpSet.IpSetIDX.Rules[rule.RuleId] = r
+
+			outTcpSet.IpSetIDX.DportRange = append(outTcpSet.IpSetIDX.DportRange,
+				uint16(rule.DstPorts[0].First))
+			outTcpSet.IpSetIDX.DportRange = append(outTcpSet.IpSetIDX.DportRange,
+				uint16(rule.DstPorts[0].Last))
+		}
+
+		if inTcpSet.exists {
+			policy.IpSetIDXs[inTcpSet.IpSetIDX.Index] = inTcpSet.IpSetIDX
+		}
+		if outTcpSet.exists {
+			policy.IpSetIDXs[outTcpSet.IpSetIDX.Index] = outTcpSet.IpSetIDX
+		}
+		if inUdpSet.exists {
+			policy.IpSetIDXs[inUdpSet.IpSetIDX.Index] = inUdpSet.IpSetIDX
+		}
+		if outUdpSet.exists {
+			policy.IpSetIDXs[outUdpSet.IpSetIDX.Index] = outUdpSet.IpSetIDX
+		}
+	}
+
+	err := p4.PolicyTableEntries(ctx, server.p4RtC, tbltype, policy)
+	if err != nil {
+		logger.Errorf("Failed to add/update policy to the pipeline")
+		err := fmt.Errorf("Failed to add/update policy to the pipeline")
+		out.Successful = false
+		return out, err
+	}
+
+	if ok := policy.WriteToStore(); !ok {
+		logger.Errorf("Failed to add/update policy to the store")
+		err := fmt.Errorf("Failed to add/update policy to the store")
+		out.Successful = false
+		return out, err
+	}
+
+	return out, nil
 }
 
 func (s *ApiServer) ActivePolicyRemove(ctx context.Context, in *proto.ActivePolicyRemove) (*proto.Reply, error) {
 	logger := log.WithField("func", "DeletePolicy")
-	logger.Infof("Incoming DeletePolicy Request %+v", in)
-	return &proto.Reply{Successful: true}, nil
+
+	out := &proto.Reply{
+		Successful: true,
+	}
+
+	if in == nil || unsafe.Sizeof(*in) <= 0 {
+		err := errors.New("Empty policy delete request")
+		logger.Errorf("Empty policy delete request.")
+		out.Successful = false
+		return out, err
+	}
+
+	logger.Infof("Incoming deletePolicy Request %+v", in)
+
+	server := NewApiServer()
+
+	policy := store.Policy{
+		PolicyName: in.Id.Name,
+	}
+
+	/*
+		Check if the policy exists.
+	*/
+	entry := policy.GetFromStore()
+	if entry == nil {
+		logger.Errorf("Policy %s does not exist", in.Id.Name)
+		err := fmt.Errorf("Policy %s does not exist", in.Id.Name)
+		out.Successful = false
+		return out, err
+	}
+
+	policy = entry.(store.Policy)
+
+	err := p4.PolicyTableEntries(ctx, server.p4RtC, p4.PolicyDel, policy)
+	if err != nil {
+		logger.Errorf("Failed to add/update policy to the pipeline")
+		err := fmt.Errorf("Failed to add/update policy to the pipeline")
+		out.Successful = false
+		return out, err
+	}
+
+	if ok := policy.DeleteFromStore(); !ok {
+		logger.Errorf("Failed to delete policy to the store")
+		err := fmt.Errorf("Failed to delete policy to the store")
+		out.Successful = false
+		return out, err
+	}
+
+	return out, nil
 }
 
 func (s *ApiServer) UpdateIPSet(ctx context.Context, in *proto.IPSetUpdate) (*proto.Reply, error) {
@@ -678,15 +925,110 @@ func (s *ApiServer) RemoveHostEndpoint(ctx context.Context, in *proto.HostEndpoi
 }
 
 func (s *ApiServer) UpdateLocalEndpoint(ctx context.Context, in *proto.WorkloadEndpointUpdate) (*proto.Reply, error) {
+	var tbltype p4.OperationType
+
 	logger := log.WithField("func", "UpdateLocalEndpoint")
+
+	out := &proto.Reply{
+		Successful: true,
+	}
+
+	if in == nil || unsafe.Sizeof(*in) <= 0 {
+		err := errors.New("Empty update local endpoint request")
+		logger.Errorf("Empty update local endpoint request.")
+		out.Successful = false
+		return out, err
+	}
+
 	logger.Infof("Incoming UpdateLocalEndpoint Request %+v", in)
-	return &proto.Reply{Successful: true}, nil
+
+	server := NewApiServer()
+
+	workerEp := store.PolicyWorkerEndPoint{
+		WorkerEp:          in.Id.WorkloadId,
+		PolicyNameIngress: in.Endpoint.Tiers[0].IngressPolicies,
+		PolicyNameEgress:  in.Endpoint.Tiers[0].EgressPolicies,
+	}
+
+	entry := workerEp.GetFromStore()
+	if entry == nil {
+		tbltype = p4.WorkloadAdd
+	} else {
+		tbltype = p4.WorkloadUpdate
+	}
+
+	err := p4.PolicyTableEntries(ctx, server.p4RtC, tbltype, workerEp)
+	if err != nil {
+		logger.Errorf("Failed to update policies for endpoint %d in the pipeline",
+			in.Id.WorkloadId)
+		err := fmt.Errorf("Failed to update policies for endpoint %d in the pipeline",
+			in.Id.WorkloadId)
+		out.Successful = false
+		return out, err
+	}
+
+	if ok := workerEp.WriteToStore(); !ok {
+		logger.Errorf("Failed to update policies for endpoint %d in the store",
+			in.Id.WorkloadId)
+		err := fmt.Errorf("Failed to update policies for endpoint %d in the store",
+			in.Id.WorkloadId)
+		out.Successful = false
+		return out, err
+	}
+
+	return out, nil
 }
 
 func (s *ApiServer) RemoveLocalEndpoint(ctx context.Context, in *proto.WorkloadEndpointRemove) (*proto.Reply, error) {
 	logger := log.WithField("func", "RemoveLocalEndpoint")
+
+	out := &proto.Reply{
+		Successful: true,
+	}
+
+	if in == nil || unsafe.Sizeof(*in) <= 0 {
+		err := errors.New("Empty remove local endpoint request")
+		logger.Errorf("Empty remove local endpoint request.")
+		out.Successful = false
+		return out, err
+	}
+
 	logger.Infof("Incoming RemoveLocalEndpoint Request %+v", in)
-	return &proto.Reply{Successful: true}, nil
+
+	server := NewApiServer()
+
+	workerEp := store.PolicyWorkerEndPoint{
+		WorkerEp: in.Id.WorkloadId,
+	}
+	entry := workerEp.GetFromStore()
+	if entry == nil {
+		logger.Errorf("Worker endpoint %s does not exist in the store", in.Id.WorkloadId)
+		err := fmt.Errorf("Worker endpoint %s does not exist in the store", in.Id.WorkloadId)
+		out.Successful = false
+		return out, err
+	}
+	workerEp = entry.(store.PolicyWorkerEndPoint)
+	err := p4.PolicyTableEntries(ctx, server.p4RtC, p4.WorkloadDel, workerEp)
+	if err != nil {
+		logger.Errorf("Failed to delete policies for endpoint %d from the pipeline",
+			in.Id.WorkloadId)
+		err := fmt.Errorf("Failed delete policies for endpoint %d from the pipeline",
+			in.Id.WorkloadId)
+		out.Successful = false
+		return out, err
+	}
+
+	if ok := workerEp.WriteToStore(); !ok {
+		logger.Errorf("Failed to delete policies for endpoint %d from the store",
+			in.Id.WorkloadId)
+		err := fmt.Errorf("Failed to delete policies for endpoint %d from the store",
+			in.Id.WorkloadId)
+		out.Successful = false
+		return out, err
+	}
+
+	return out, nil
+
 }
 
 func (s *ApiServer) UpdateHostMetaData(ctx context.Context, in *proto.HostMetadataUpdate) (*proto.Reply, error) {

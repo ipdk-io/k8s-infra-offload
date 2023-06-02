@@ -90,6 +90,9 @@ var manager *Manager
 
 func NewManager() {
 	logInit()
+	utils.CreateCipherMap()
+	api.NewApiServer()
+
 	manager = &Manager{
 		log: log.WithField("pkg", "inframanager"),
 	}

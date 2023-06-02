@@ -27,6 +27,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	cniTypes "github.com/containernetworking/cni/pkg/types"
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
@@ -67,6 +68,53 @@ var (
 		"CNI_CONTAINERID": types.InfraHostDummyContainerId,
 	}
 )
+
+var oncest sync.Once
+
+type IpsetidxStack struct {
+	data []int
+	top  int
+}
+
+func NewIpsetidxStack() *IpsetidxStack {
+	var IpsetidxSt *IpsetidxStack
+	oncest.Do(func() {
+		IpsetidxSt = &IpsetidxStack{
+			data: make([]int, 256),
+			top:  -1,
+		}
+	})
+	return IpsetidxSt
+}
+
+func (st *IpsetidxStack) Push(value int) {
+	st.top++
+	st.data[st.top] = value
+}
+
+func (st *IpsetidxStack) Pop() int {
+	if st.IsStackEmpty() {
+		return 0
+	}
+	value := st.data[st.top]
+	st.data[st.top] = 0
+	st.top--
+	return value
+}
+
+func (st *IpsetidxStack) IsStackEmpty() bool {
+	if st.top == -1 {
+		return true
+	} else {
+		return false
+	}
+}
+
+func (st *IpsetidxStack) InitIpsetidxStack() {
+	for i := 0; i < 256; i++ {
+		st.Push(i + 1)
+	}
+}
 
 func SaveInterfaceConf(dataDir, refid, podIface string, conf *types.InterfaceInfo) error {
 	confBytes, err := json.Marshal(conf)

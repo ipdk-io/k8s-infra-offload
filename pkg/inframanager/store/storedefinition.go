@@ -16,9 +16,12 @@ package store
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"os"
 	"sync"
+
+	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 )
 
 const (
@@ -67,25 +70,28 @@ type ServiceCollection struct {
 
 type Policy struct {
 	PolicyName string
-	IpSetIDx   map[uint16]IpSetIDX
+	IpSetIDXs  map[uint16]IpSetIDX
 }
 
 type IpSetIDX struct {
-	IpSetIDx   uint16
+	Index      uint16
 	Direction  string
 	Protocol   uint8
-	RuleID     map[string]Rule
+	Rules      map[string]Rule
 	DportRange []uint16
 }
 
 type Rule struct {
 	RuleID    string
 	PortRange []uint16
-	RuleMask  uint8 //hex
-	Cidr      string
-	IpSetID   string
+	// Represents the mask with bit set for the rule
+	RuleMask uint8 //hex
+	Cidr     string
+	//TODO
+	IpSetID string
 }
 
+// TODO
 type IpSet struct {
 	IpsetID    string
 	IpSetIDx   uint16
@@ -101,10 +107,11 @@ type PolicyWorkerEndPoint struct {
 }
 
 type PolicyCollection struct {
-	PolicyMap   map[string]Policy
-	IpSetMap    map[string]IpSet
-	WorkerEpMap map[string]PolicyWorkerEndPoint
-	PolicyLock  *sync.Mutex
+	PolicyMap     map[string]Policy
+	IpSetMap      map[string]IpSet
+	WorkerEpMap   map[string]PolicyWorkerEndPoint
+	PolicyLock    *sync.Mutex
+	IpsetidxStack *utils.IpsetidxStack
 }
 
 var ServiceSet *ServiceCollection
@@ -114,6 +121,7 @@ var PolicySet *PolicyCollection
 var once sync.Once
 var onceService sync.Once
 var oncePolicy sync.Once
+var onceInit sync.Once
 
 var (
 	JsonMarshalIndent = json.MarshalIndent
@@ -140,8 +148,30 @@ func NewService() {
 func NewPolicy() {
 	oncePolicy.Do(func() {
 		PolicySet = &PolicyCollection{PolicyMap: make(map[string]Policy),
-			IpSetMap:    make(map[string]IpSet),
-			WorkerEpMap: make(map[string]PolicyWorkerEndPoint),
-			PolicyLock:  &sync.Mutex{}}
+			IpSetMap:      make(map[string]IpSet),
+			WorkerEpMap:   make(map[string]PolicyWorkerEndPoint),
+			PolicyLock:    &sync.Mutex{},
+			IpsetidxStack: utils.NewIpsetidxStack()}
 	})
+}
+
+func Init(setFwdPipe bool) error {
+	var initErr error
+
+	onceInit.Do(func() {
+		if err := InitEndPointStore(setFwdPipe); !err {
+			initErr = errors.New("Failed to open endpoint store")
+			return
+		}
+		if err := InitServiceStore(setFwdPipe); !err {
+			initErr = errors.New("Failed to open service store")
+			return
+		}
+		if err := InitPolicyStore(setFwdPipe); !err {
+			initErr = errors.New("Failed to open policy store")
+			return
+		}
+	})
+
+	return initErr
 }
