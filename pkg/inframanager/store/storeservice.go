@@ -51,7 +51,7 @@ func InitServiceStore(setFwdPipe bool) bool {
 	}
 
 	if _, err := os.Stat(storePath); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(storePath, 0640)
+		err := os.MkdirAll(storePath, 0640)
 		if err != nil {
 			log.Error("Failed to create directory ", storePath)
 			return false
