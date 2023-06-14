@@ -620,7 +620,7 @@ func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype Opera
 			}
 		}
 
-		log.Infof("Updated policy:", policy)
+		log.Infof("Updated policy: %v", policy)
 		return nil
 
 	case WorkloadAdd:

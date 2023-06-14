@@ -959,18 +959,18 @@ func (s *ApiServer) UpdateLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 
 	err := p4.PolicyTableEntries(ctx, server.p4RtC, tbltype, workerEp)
 	if err != nil {
-		logger.Errorf("Failed to update policies for endpoint %d in the pipeline",
+		logger.Errorf("Failed to update policies for endpoint %s in the pipeline",
 			in.Id.WorkloadId)
-		err := fmt.Errorf("Failed to update policies for endpoint %d in the pipeline",
+		err := fmt.Errorf("Failed to update policies for endpoint %s in the pipeline",
 			in.Id.WorkloadId)
 		out.Successful = false
 		return out, err
 	}
 
 	if ok := workerEp.WriteToStore(); !ok {
-		logger.Errorf("Failed to update policies for endpoint %d in the store",
+		logger.Errorf("Failed to update policies for endpoint %s in the store",
 			in.Id.WorkloadId)
-		err := fmt.Errorf("Failed to update policies for endpoint %d in the store",
+		err := fmt.Errorf("Failed to update policies for endpoint %s in the store",
 			in.Id.WorkloadId)
 		out.Successful = false
 		return out, err
@@ -1010,18 +1010,18 @@ func (s *ApiServer) RemoveLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 	workerEp = entry.(store.PolicyWorkerEndPoint)
 	err := p4.PolicyTableEntries(ctx, server.p4RtC, p4.WorkloadDel, workerEp)
 	if err != nil {
-		logger.Errorf("Failed to delete policies for endpoint %d from the pipeline",
+		logger.Errorf("Failed to delete policies for endpoint %s from the pipeline",
 			in.Id.WorkloadId)
-		err := fmt.Errorf("Failed delete policies for endpoint %d from the pipeline",
+		err := fmt.Errorf("Failed delete policies for endpoint %s from the pipeline",
 			in.Id.WorkloadId)
 		out.Successful = false
 		return out, err
 	}
 
 	if ok := workerEp.WriteToStore(); !ok {
-		logger.Errorf("Failed to delete policies for endpoint %d from the store",
+		logger.Errorf("Failed to delete policies for endpoint %s from the store",
 			in.Id.WorkloadId)
-		err := fmt.Errorf("Failed to delete policies for endpoint %d from the store",
+		err := fmt.Errorf("Failed to delete policies for endpoint %s from the store",
 			in.Id.WorkloadId)
 		out.Successful = false
 		return out, err
