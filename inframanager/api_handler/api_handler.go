@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -352,12 +353,18 @@ func (s *ApiServer) CreateNetwork(ctx context.Context, in *proto.CreateNetworkRe
 	var err error
 
 	logger := s.log.WithField("func", "CreateNetwork")
-	logger.Infof("Incoming Add request %s", in.String())
 
 	out := &proto.AddReply{
-		HostInterfaceName: in.AddRequest.DesiredHostInterfaceName,
-		Successful:        true,
+		Successful: true,
 	}
+
+	if in == nil || reflect.DeepEqual(*in, proto.CreateNetworkRequest{}) {
+		out.Successful = false
+		logger.Errorf("Empty CNI Add request")
+		return out, errors.New("Empty CNI Add request")
+	}
+
+	logger.Infof("Incoming Add request %s", in.String())
 
 	server := NewApiServer()
 
@@ -377,6 +384,10 @@ func (s *ApiServer) CreateNetwork(ctx context.Context, in *proto.CreateNetworkRe
 	status, err := insertRule(s.log, ctx, server.p4RtC, macAddr,
 		ipAddr, int(portID), p4.ENDPOINT)
 	out.Successful = status
+	if status {
+		out.HostInterfaceName = in.AddRequest.DesiredHostInterfaceName
+	}
+
 	return out, err
 }
 
@@ -384,12 +395,17 @@ func (s *ApiServer) DeleteNetwork(ctx context.Context, in *proto.DeleteNetworkRe
 	var err error
 
 	logger := s.log.WithField("func", "DeleteNetwork")
-	logger.Infof("Incoming Del request %s", in.String())
 
 	out := &proto.DelReply{
 		Successful: true,
 	}
+	if in == nil || reflect.DeepEqual(*in, proto.DeleteNetworkRequest{}) {
+		out.Successful = false
+		logger.Errorf("Empty CNI Del request")
+		return out, errors.New("Empty CNI Del request")
+	}
 
+	logger.Infof("Incoming Del request %s", in.String())
 	server := NewApiServer()
 
 	ipAddr := strings.Split(in.Ipv4Addr, "/")[0]
@@ -442,11 +458,13 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 
 	logger := log.WithField("func", "NatTranslationAdd")
 
-	if in == nil || in.Endpoint == nil {
-		logger.Errorf("Invalid NatTranslationAdd request")
-		err := fmt.Errorf("Invalid NatTranslationAdd request")
-		return out, err
+	if in == nil || reflect.DeepEqual(*in, proto.NatTranslation{}) {
+		out.Successful = false
+		logger.Errorf("Empty NatTranslationAdd request")
+		return out, errors.New("Empty NatTranslationAdd request")
 	}
+
+	logger.Infof("Incoming NatTranslationAdd request %s", in.String())
 
 	/*
 		If there are no backend endpoints for the service,
@@ -590,11 +608,19 @@ func (s *ApiServer) AddDelSnatPrefix(ctx context.Context, in *proto.AddDelSnatPr
 
 func (s *ApiServer) NatTranslationDelete(ctx context.Context, in *proto.NatTranslation) (*proto.Reply, error) {
 	logger := log.WithField("func", "NatTranslationDelete")
-	logger.Infof("Incoming NatTranslationDelete %+v", in)
 
 	out := &proto.Reply{
 		Successful: true,
 	}
+
+	if in == nil || reflect.DeepEqual(*in, proto.NatTranslation{}) {
+		out.Successful = false
+		logger.Errorf("Empty NatTranslationDelete request")
+		return out, errors.New("Empty NatTranslationDelete request")
+	}
+
+	logger.Infof("Incoming NatTranslationDelete %+v", in)
+
 	service := store.Service{
 		ClusterIp: in.Endpoint.Ipv4Addr,
 		Port:      in.Endpoint.Port,
@@ -783,12 +809,18 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 	var err error
 
 	logger := s.log.WithField("func", "SetupHostInterface")
-	logger.Infof("Incoming SetupHostInterface request %s", in.String())
 
 	out := &proto.Reply{
 		Successful: true,
 	}
 
+	if in == nil || reflect.DeepEqual(*in, proto.SetupHostInterfaceRequest{}) {
+		out.Successful = false
+		logger.Errorf("Empty SetupHostInterface request")
+		return out, errors.New("Empty SetupHostInterface request")
+	}
+
+	logger.Infof("Incoming SetupHostInterface request %s", in.String())
 	server := NewApiServer()
 
 	ipAddr := strings.Split(in.Ipv4Addr, "/")[0]
