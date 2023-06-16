@@ -19,10 +19,10 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
-	"unsafe"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
@@ -640,7 +640,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 
 	logger := log.WithField("func", "updatePolicy")
 
-	if in == nil || unsafe.Sizeof(*in) <= 0 {
+	if in == nil || reflect.DeepEqual(*in, proto.ActivePolicyUpdate{}) {
 		err := errors.New("Empty policy add/update request")
 		logger.Errorf("Empty policy add/update request.")
 		out.Successful = false
@@ -660,6 +660,11 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 	inUdpSet.IpSetIDX.Protocol = p4.PROTO_UDP
 	outTcpSet.IpSetIDX.Protocol = p4.PROTO_TCP
 	outUdpSet.IpSetIDX.Protocol = p4.PROTO_UDP
+
+	inTcpSet.IpSetIDX.Rules = map[string]store.Rule{}
+	outTcpSet.IpSetIDX.Rules = map[string]store.Rule{}
+	inUdpSet.IpSetIDX.Rules = map[string]store.Rule{}
+	outUdpSet.IpSetIDX.Rules = map[string]store.Rule{}
 
 	policy := store.Policy{
 		PolicyName: in.Id.Name,
@@ -704,6 +709,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 
 	} else {
 		tbltype = p4.PolicyAdd
+		policy.IpSetIDXs = map[uint16]store.IpSetIDX{}
 		logger.Infof("Adding a new network policy %s.", policy.PolicyName)
 	}
 
@@ -818,6 +824,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 		out.Successful = false
 		return out, err
 	}
+	logger.Infof("Successfully added/updated policy %v to the pipeline", policy)
 
 	if ok := policy.WriteToStore(); !ok {
 		logger.Errorf("Failed to add/update policy to the store")
@@ -825,6 +832,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 		out.Successful = false
 		return out, err
 	}
+	logger.Infof("Successfully added/updated policy %v to the store", policy)
 
 	return out, nil
 }
@@ -836,7 +844,7 @@ func (s *ApiServer) ActivePolicyRemove(ctx context.Context, in *proto.ActivePoli
 		Successful: true,
 	}
 
-	if in == nil || unsafe.Sizeof(*in) <= 0 {
+	if in == nil || reflect.DeepEqual(*in, proto.ActivePolicyRemove{}) {
 		err := errors.New("Empty policy delete request")
 		logger.Errorf("Empty policy delete request.")
 		out.Successful = false
@@ -933,7 +941,7 @@ func (s *ApiServer) UpdateLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 		Successful: true,
 	}
 
-	if in == nil || unsafe.Sizeof(*in) <= 0 {
+	if in == nil || reflect.DeepEqual(*in, proto.WorkloadEndpointUpdate{}) {
 		err := errors.New("Empty update local endpoint request")
 		logger.Errorf("Empty update local endpoint request.")
 		out.Successful = false
@@ -942,12 +950,27 @@ func (s *ApiServer) UpdateLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 
 	logger.Infof("Incoming UpdateLocalEndpoint Request %+v", in)
 
+	if len(in.Endpoint.Tiers) == 0 {
+		out.Successful = true
+		return out, nil
+	}
+
 	server := NewApiServer()
 
 	workerEp := store.PolicyWorkerEndPoint{
-		WorkerEp:          in.Id.WorkloadId,
-		PolicyNameIngress: in.Endpoint.Tiers[0].IngressPolicies,
-		PolicyNameEgress:  in.Endpoint.Tiers[0].EgressPolicies,
+		WorkerEp: in.Id.WorkloadId,
+	}
+
+	if len(in.Endpoint.Tiers[0].IngressPolicies) == 0 && len(in.Endpoint.Tiers[0].EgressPolicies) == 0 {
+		out.Successful = true
+		return out, nil
+	}
+
+	if len(in.Endpoint.Tiers[0].IngressPolicies) > 0 {
+		workerEp.PolicyNameIngress = in.Endpoint.Tiers[0].IngressPolicies
+	}
+	if len(in.Endpoint.Tiers[0].EgressPolicies) > 0 {
+		workerEp.PolicyNameEgress = in.Endpoint.Tiers[0].EgressPolicies
 	}
 
 	entry := workerEp.GetFromStore()
@@ -986,7 +1009,7 @@ func (s *ApiServer) RemoveLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 		Successful: true,
 	}
 
-	if in == nil || unsafe.Sizeof(*in) <= 0 {
+	if in == nil || reflect.DeepEqual(*in, proto.WorkloadEndpointRemove{}) {
 		err := errors.New("Empty remove local endpoint request")
 		logger.Errorf("Empty remove local endpoint request.")
 		out.Successful = false

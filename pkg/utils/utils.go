@@ -83,7 +83,9 @@ func NewIpsetidxStack() *IpsetidxStack {
 			data: make([]int, 256),
 			top:  -1,
 		}
+		IpsetidxSt.InitIpsetidxStack()
 	})
+
 	return IpsetidxSt
 }
 

@@ -324,6 +324,11 @@ func DstPortRcTable(ctx context.Context, p4RtC *client.Client,
 	var tableName string
 	var entry *p4_v1.TableEntry
 	var entryDelete *p4_v1.TableEntry
+	var ports = [][]byte{}
+
+	for i := range portrange {
+		ports = append(ports, valueToBytes16(portrange[i]))
+	}
 
 	if protocol == 6 {
 		tableName = "k8s_dp_control.tcp_dport_rc_table"
@@ -334,23 +339,7 @@ func DstPortRcTable(ctx context.Context, p4RtC *client.Client,
 					Value: valueToBytes16(polID),
 				},
 			},
-			p4RtC.NewTableActionDirect("k8s_dp_control.do_range_check_tcp",
-				[][]byte{valueToBytes16(portrange[0]),
-					valueToBytes16(portrange[1]),
-					valueToBytes16(portrange[2]),
-					valueToBytes16(portrange[3]),
-					valueToBytes16(portrange[4]),
-					valueToBytes16(portrange[5]),
-					valueToBytes16(portrange[6]),
-					valueToBytes16(portrange[7]),
-					valueToBytes16(portrange[8]),
-					valueToBytes16(portrange[9]),
-					valueToBytes16(portrange[10]),
-					valueToBytes16(portrange[11]),
-					valueToBytes16(portrange[12]),
-					valueToBytes16(portrange[13]),
-					valueToBytes16(portrange[14]),
-					valueToBytes16(portrange[15])}),
+			p4RtC.NewTableActionDirect("k8s_dp_control.do_range_check_tcp", ports),
 			nil,
 		)
 	}
@@ -363,23 +352,7 @@ func DstPortRcTable(ctx context.Context, p4RtC *client.Client,
 					Value: valueToBytes16(polID),
 				},
 			},
-			p4RtC.NewTableActionDirect("k8s_dp_control.do_range_check_udp",
-				[][]byte{valueToBytes16(portrange[0]),
-					valueToBytes16(portrange[1]),
-					valueToBytes16(portrange[2]),
-					valueToBytes16(portrange[3]),
-					valueToBytes16(portrange[4]),
-					valueToBytes16(portrange[5]),
-					valueToBytes16(portrange[6]),
-					valueToBytes16(portrange[7]),
-					valueToBytes16(portrange[8]),
-					valueToBytes16(portrange[9]),
-					valueToBytes16(portrange[10]),
-					valueToBytes16(portrange[11]),
-					valueToBytes16(portrange[12]),
-					valueToBytes16(portrange[13]),
-					valueToBytes16(portrange[14]),
-					valueToBytes16(portrange[15])}),
+			p4RtC.NewTableActionDirect("k8s_dp_control.do_range_check_udp", ports),
 			nil,
 		)
 	}
@@ -480,7 +453,6 @@ func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype Opera
 				}
 			}
 		}
-		log.Infof("Inserted policy entry into pipeline, %v", policy)
 		return nil
 
 	case PolicyDel:
@@ -502,7 +474,6 @@ func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype Opera
 				}
 			}
 		}
-		log.Infof("Deleted policy entry %v", policy)
 		return nil
 
 	case PolicyUpdate:
@@ -620,7 +591,6 @@ func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype Opera
 			}
 		}
 
-		log.Infof("Updated policy: %v", policy)
 		return nil
 
 	case WorkloadAdd:
@@ -646,7 +616,6 @@ func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype Opera
 				}
 			}
 		}
-		log.Infof("workloadep added: %s", workloadep)
 		return nil
 
 	case WorkloadDel:
@@ -672,7 +641,6 @@ func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype Opera
 				}
 			}
 		}
-		log.Infof("workload deleted: %s", workloadep)
 		return nil
 
 	case WorkloadUpdate:
@@ -735,7 +703,6 @@ func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype Opera
 				}
 			}
 		}
-		log.Infof("updated workloadep: %s", workloadep)
 		return nil
 	default:
 		return errors.New("Invalid operation type")
