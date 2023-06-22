@@ -56,6 +56,7 @@ It off-loads K8s dataplane to Infrastructure components.
 	Run: func(_ *cobra.Command, _ []string) {
 		interfaceType := viper.GetString("interfaceType")
 		ifName := viper.GetString("interface")
+		types.HostInterfaceMTU = viper.GetInt("hostIfaceMTU")
 		config, err := utils.GetK8sConfig()
 		if err != nil {
 			exitWithError(err, 2)
@@ -89,6 +90,7 @@ func init() {
 
 	intfTypeOpts := newFlagOpts([]string{types.SriovPodInterface, types.IpvlanPodInterface, types.TapInterface}, types.SriovPodInterface)
 	rootCmd.PersistentFlags().Var(intfTypeOpts, "interfaceType", "Pod Interface type (sriov|ipvlan|tap)")
+	rootCmd.PersistentFlags().Int("hostIfaceMTU", 1500, "Host Interface MTU size")
 	rootCmd.PersistentFlags().StringVar(&config.interfaceName, "interface", "", intfFlagHelpMsg)
 	rootCmd.PersistentFlags().StringVar(&config.cfgFile, "config", "/etc/infra/infraagent.yaml", "config file")
 	rootCmd.PersistentFlags().StringVar(&config.tapPrefix, "tapPrefix", types.TapInterfacePrefix, "Host TAP interface prefix for TAP interface type")
@@ -98,6 +100,10 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&config.clientKey, "client-key", types.AgentDefaultClientKey, "TLS Client key file for mTLS")
 	rootCmd.PersistentFlags().StringVar(&config.caCert, "ca-cert", types.AgentDefaultCACert, "TLS Client CA Cert file")
 
+	if err := viper.BindPFlag("hostIfaceMTU", rootCmd.PersistentFlags().Lookup("hostIfaceMTU")); err != nil {
+		fmt.Fprintf(os.Stderr, "There was an error while binding flags '%s'", err)
+		os.Exit(1)
+	}
 	if err := viper.BindPFlag("interfaceType", rootCmd.PersistentFlags().Lookup("interfaceType")); err != nil {
 		fmt.Fprintf(os.Stderr, "There was an error while binding flags '%s'", err)
 		os.Exit(1)
@@ -198,6 +204,10 @@ func validateConfigs() error {
 				}
 			}
 		}
+	}
+	hostIfaceMTU := viper.GetInt("hostIfaceMTU")
+	if hostIfaceMTU < 46 || hostIfaceMTU > 1500 {
+		err = fmt.Errorf("Invalid mtu size: %d", hostIfaceMTU)
 	}
 	return err
 }

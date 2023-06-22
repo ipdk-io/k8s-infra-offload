@@ -49,7 +49,6 @@ const (
 	HostInterfaceRefId          = "hostInterface"
 	DefaultRoute                = "169.254.1.1/32"
 	HostInterfaceAddr           = "200.1.1.2/32"
-	HostInterfaceMTU            = 1280
 	ArpProxyDefaultPort         = 0
 	AgentDefaultClientCert      = "/tmp/infraagent/cert/client/tls.crt"
 	AgentDefaultClientKey       = "/tmp/infraagent/cert/client/tls.key"
@@ -72,6 +71,8 @@ var (
 	CNIServerStatus            = ""
 	InfraManagerServerStatus   = ""
 )
+
+var HostInterfaceMTU int
 
 type PodInterface interface {
 	CreatePodInterface(in *pb.AddRequest) (*InterfaceInfo, error)
