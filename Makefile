@@ -14,7 +14,7 @@ KUBECONFIG_CM=infra-kubeconfig
 export INFRAAGENT_IMAGE?=$(IMAGE_REGISTRY)infraagent:$(IMAGE_VERSION)
 export INFRAMANAGER_IMAGE?=$(IMAGE_REGISTRY)inframanager:$(IMAGE_VERSION)
 
-tagname := mev
+tagname := dpdk
 arch := amd64
 
 DOCKERARGS?=
