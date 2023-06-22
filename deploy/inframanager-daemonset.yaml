@@ -36,6 +36,8 @@ spec:
         image: inframanager:latest
         imagePullPolicy: Always
         volumeMounts:
+        - name: log
+          mountPath: /var/log/inframanager
         - name: db
           mountPath: /var/lib/cni/inframanager
         - name: client-certs
@@ -50,6 +52,10 @@ spec:
             fieldRef:
               fieldPath: status.hostIP
       volumes:
+      - name: log
+        hostPath:
+          path: /var/log/inframanager
+          type: DirectoryOrCreate
       - name: db
         hostPath:
           path: /var/lib/cni/inframanager

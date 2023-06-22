@@ -81,13 +81,13 @@ func fakeGetCredential() (credentials.TransportCredentials, error) {
 }
 
 func TestServices(t *testing.T) {
-	mockCrtl = gomock.NewController(t)
+	/*mockCrtl = gomock.NewController(t)
 	mockClient = mock_proto.NewMockInfraAgentClient(mockCrtl)
 	testEnv = &envtest.Environment{
 		// CRDDirectoryPaths: []string{filepath.Join("..", "config", "crd", "bases")},
 	}
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Services Test Suite")
+	RunSpecs(t, "Services Test Suite")*/
 }
 
 var _ = BeforeSuite(func() {

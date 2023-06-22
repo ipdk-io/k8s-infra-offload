@@ -3,6 +3,7 @@ package netconf
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"testing"
@@ -17,6 +18,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -198,13 +200,13 @@ var _ = Describe("netconf", func() {
 	var _ = Context("configureHostInterface() should", func() {
 		var _ = It("return error if cannot get link", func() {
 			linkByName = fakeLinkByNameErr
-			err := configureHostInterface("dummyIf", &net.IPNet{}, []*types.InterfaceInfo{}, logrus.NewEntry(logrus.New()))
+			err := configureHostInterface("dummyIf", &net.IPNet{}, logrus.NewEntry(logrus.New()))
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return error if cannot list IPs for link", func() {
 			linkByName = fakeLinkByName
 			addrList = fakeAddrListErr
-			err := configureHostInterface("dummyIf", &net.IPNet{}, []*types.InterfaceInfo{}, logrus.NewEntry(logrus.New()))
+			err := configureHostInterface("dummyIf", &net.IPNet{}, logrus.NewEntry(logrus.New()))
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return error if cannot add IP address", func() {
@@ -212,7 +214,7 @@ var _ = Describe("netconf", func() {
 			addrList = fakeAddrList
 			addrDel = fakeAddrAddDelErr
 			addrAdd = fakeAddrAddDelErr
-			err := configureHostInterface("dummyIf", &net.IPNet{}, []*types.InterfaceInfo{}, logrus.NewEntry(logrus.New()))
+			err := configureHostInterface("dummyIf", &net.IPNet{}, logrus.NewEntry(logrus.New()))
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return error if cannot set link up", func() {
@@ -221,7 +223,7 @@ var _ = Describe("netconf", func() {
 			addrDel = fakeAddrAddDelErr
 			addrAdd = fakeAddrAddDel
 			linkSetUp = fakeLinkSetErr
-			err := configureHostInterface("dummyIf", &net.IPNet{}, []*types.InterfaceInfo{}, logrus.NewEntry(logrus.New()))
+			err := configureHostInterface("dummyIf", &net.IPNet{}, logrus.NewEntry(logrus.New()))
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return error if cannot configure routing", func() {
@@ -231,7 +233,7 @@ var _ = Describe("netconf", func() {
 			addrAdd = fakeAddrAddDel
 			linkSetUp = fakeLinkSet
 			configureRoutingFunc = fakeConfigureRoutingErr
-			err := configureHostInterface("dummyIf", &net.IPNet{}, []*types.InterfaceInfo{}, logrus.NewEntry(logrus.New()))
+			err := configureHostInterface("dummyIf", &net.IPNet{}, logrus.NewEntry(logrus.New()))
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return no error", func() {
@@ -242,7 +244,7 @@ var _ = Describe("netconf", func() {
 			linkSetUp = fakeLinkSet
 			linkSetMTU = fakeLinkSetMTU
 			configureRoutingFunc = fakeConfigureRouting
-			err := configureHostInterface("dummyIf", &net.IPNet{}, []*types.InterfaceInfo{}, logrus.NewEntry(logrus.New()))
+			err := configureHostInterface("dummyIf", &net.IPNet{}, logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
@@ -344,7 +346,7 @@ var _ = Describe("netconf", func() {
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
-			setHostInterfaceInPodNetnsFunc = fakeSetHostInterfaceInPodNetnsErr
+			moveIntfToPodNetnsFunc = fakeSetHostInterfaceInPodNetnsErr
 			_, err = pi.CreatePodInterface(&proto.AddRequest{})
 			Expect(err).To(HaveOccurred())
 		})
@@ -353,7 +355,7 @@ var _ = Describe("netconf", func() {
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
-			setHostInterfaceInPodNetnsFunc = fakeSetHostInterfaceInPodNetnsErrInNs
+			moveIntfToPodNetnsFunc = fakeSetHostInterfaceInPodNetnsErrInNs
 			_, err = pi.CreatePodInterface(&proto.AddRequest{})
 			Expect(err).To(HaveOccurred())
 		})
@@ -362,7 +364,7 @@ var _ = Describe("netconf", func() {
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
-			setHostInterfaceInPodNetnsFunc = fakeSetHostInterfaceInPodNetns
+			moveIntfToPodNetnsFunc = fakeSetHostInterfaceInPodNetns
 			saveInterfaceConf = fakeSaveInterfaceConfErr
 			_, err = pi.CreatePodInterface(&proto.AddRequest{})
 			Expect(err).To(HaveOccurred())
@@ -373,7 +375,7 @@ var _ = Describe("netconf", func() {
 			sendSetupHostInterfaceFunc = fakeSendSetupHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
-			setHostInterfaceInPodNetnsFunc = fakeSetHostInterfaceInPodNetns
+			moveIntfToPodNetnsFunc = fakeSetHostInterfaceInPodNetns
 			saveInterfaceConf = fakeSaveInterfaceConf
 			_, err = pi.CreatePodInterface(&proto.AddRequest{})
 			Expect(err).ToNot(HaveOccurred())
@@ -386,7 +388,7 @@ var _ = Describe("netconf", func() {
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
-			setHostInterfaceInPodNetnsFunc = fakeSetHostInterfaceInPodNetns
+			moveIntfToPodNetnsFunc = fakeSetHostInterfaceInPodNetns
 			readInterfaceConf = fakeReadInterfaceConfErr
 			err = pi.ReleasePodInterface(&proto.DelRequest{})
 			Expect(err).To(HaveOccurred())
@@ -396,7 +398,7 @@ var _ = Describe("netconf", func() {
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
-			setHostInterfaceInPodNetnsFunc = fakeSetHostInterfaceInPodNetns
+			moveIntfToPodNetnsFunc = fakeSetHostInterfaceInPodNetns
 			readInterfaceConf = fakeReadInterfaceConfNotExist
 			err = pi.ReleasePodInterface(&proto.DelRequest{})
 			Expect(err).ToNot(HaveOccurred())
@@ -406,7 +408,7 @@ var _ = Describe("netconf", func() {
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
-			setHostInterfaceInPodNetnsFunc = fakeSetHostInterfaceInPodNetns
+			moveIntfToPodNetnsFunc = fakeSetHostInterfaceInPodNetns
 			readInterfaceConf = fakeReadInterfaceConf
 			movePodInterfaceToHostNetnsFunc = fakeMovePodInterfaceToHostNetnsErr
 			err = pi.ReleasePodInterface(&proto.DelRequest{})
@@ -417,7 +419,7 @@ var _ = Describe("netconf", func() {
 			configureHostInterfaceFunc = fakeConfigureHostInterface
 			pi, err := NewTapPodInterface(logrus.NewEntry(logrus.New()))
 			Expect(err).ToNot(HaveOccurred())
-			setHostInterfaceInPodNetnsFunc = fakeSetHostInterfaceInPodNetns
+			moveIntfToPodNetnsFunc = fakeSetHostInterfaceInPodNetns
 			readInterfaceConf = fakeReadInterfaceConf
 			movePodInterfaceToHostNetnsFunc = fakeMovePodInterfaceToHostNetns
 			err = pi.ReleasePodInterface(&proto.DelRequest{})
@@ -518,23 +520,23 @@ var _ = Describe("netconf", func() {
 		})
 	})
 
-	var _ = Context("setHostInterfaceInPodNetns() should", func() {
+	var _ = Context("moveIntfToPodNetns() should", func() {
 		var _ = It("return error if cannot get netNS", func() {
 			getNS = fakeGetNSErr
-			err := setHostInterfaceInPodNetns(&proto.AddRequest{}, &types.InterfaceInfo{})
+			err := moveIntfToPodNetns(&proto.AddRequest{}, &types.InterfaceInfo{})
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return error if cannot get link by name", func() {
 			getNS = fakeGetNS
 			linkByName = fakeLinkByNameErr
-			err := setHostInterfaceInPodNetns(&proto.AddRequest{}, &types.InterfaceInfo{})
+			err := moveIntfToPodNetns(&proto.AddRequest{}, &types.InterfaceInfo{})
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return error if cannot set link down", func() {
 			getNS = fakeGetNS
 			linkByName = fakeLinkByName
 			linkSetDown = fakeLinkSetErr
-			err := setHostInterfaceInPodNetns(&proto.AddRequest{}, &types.InterfaceInfo{})
+			err := moveIntfToPodNetns(&proto.AddRequest{}, &types.InterfaceInfo{})
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return error if cannot set MTU", func() {
@@ -542,7 +544,7 @@ var _ = Describe("netconf", func() {
 			linkByName = fakeLinkByName
 			linkSetDown = fakeLinkSet
 			linkSetMTU = fakeLinkSetValueErr
-			err := setHostInterfaceInPodNetns(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 1500}}, &types.InterfaceInfo{})
+			err := moveIntfToPodNetns(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 1500}}, &types.InterfaceInfo{})
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return error if cannot set NS fd", func() {
@@ -551,7 +553,7 @@ var _ = Describe("netconf", func() {
 			linkSetDown = fakeLinkSet
 			linkSetMTU = fakeLinkSetValue
 			linkSetNsFd = fakeLinkSetValueErr
-			err := setHostInterfaceInPodNetns(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 1500}}, &types.InterfaceInfo{})
+			err := moveIntfToPodNetns(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 1500}}, &types.InterfaceInfo{})
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return error if cannot set NS fd", func() {
@@ -561,7 +563,7 @@ var _ = Describe("netconf", func() {
 			linkSetMTU = fakeLinkSetValue
 			linkSetNsFd = fakeLinkSetValue
 			withNetNSPath = fakeWithNetNSPathErr
-			err := setHostInterfaceInPodNetns(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 1500}}, &types.InterfaceInfo{})
+			err := moveIntfToPodNetns(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 1500}}, &types.InterfaceInfo{})
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return no error", func() {
@@ -571,23 +573,23 @@ var _ = Describe("netconf", func() {
 			linkSetMTU = fakeLinkSetValue
 			linkSetNsFd = fakeLinkSetValue
 			withNetNSPath = fakeWithNetNSPathSuccessful
-			err := setHostInterfaceInPodNetns(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 1500}}, &types.InterfaceInfo{})
+			err := moveIntfToPodNetns(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 1500}}, &types.InterfaceInfo{})
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 
-	var _ = Context("configureTapNamespace() should", func() {
+	var _ = Context("configureIntfInPodNetns() should", func() {
 		var _ = It("return error if cannot set link name", func() {
 			withNetNSPath = fakeWithNetNSPath
 			linkSetName = fakeLinkSetNameErr
-			err := configureTapNamespace(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 0}, ContainerRoutes: []string{"192.168.0.0/24"}}, &fakeLink{})
+			err := configureIntfInPodNetns(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 0}, ContainerRoutes: []string{"192.168.0.0/24"}}, &fakeLink{})
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return error if cannot get link by name", func() {
 			withNetNSPath = fakeWithNetNSPath
 			linkSetName = fakeLinkSetName
 			linkByName = fakeLinkByNameErr
-			err := configureTapNamespace(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 0}, ContainerRoutes: []string{"192.168.0.0/24"}}, &fakeLink{})
+			err := configureIntfInPodNetns(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 0}, ContainerRoutes: []string{"192.168.0.0/24"}}, &fakeLink{})
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return error if cannot set link address", func() {
@@ -596,7 +598,7 @@ var _ = Describe("netconf", func() {
 			linkByName = fakeLinkByName
 			ipAddRoute = fakeAddRoute
 			setLinkAddressFunc = fakeSetLinkAddressErr
-			err := configureTapNamespace(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 0}, ContainerRoutes: []string{"192.168.0.0/24"}}, &fakeLink{})
+			err := configureIntfInPodNetns(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 0}, ContainerRoutes: []string{"192.168.0.0/24"}}, &fakeLink{})
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return error if cannot set link up", func() {
@@ -606,7 +608,7 @@ var _ = Describe("netconf", func() {
 			ipAddRoute = fakeAddRoute
 			setLinkAddressFunc = fakeSetLinkAddress
 			linkSetUp = fakeLinkSetErr
-			err := configureTapNamespace(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 0}, ContainerRoutes: []string{"192.168.0.0/24"}}, &fakeLink{})
+			err := configureIntfInPodNetns(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 0}, ContainerRoutes: []string{"192.168.0.0/24"}}, &fakeLink{})
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return error if cannot set set pod route", func() {
@@ -615,7 +617,7 @@ var _ = Describe("netconf", func() {
 			linkByName = fakeLinkByName
 			ipAddRoute = fakeAddRouteErr
 			linkSetUp = fakeLinkSet
-			err := configureTapNamespace(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 0}, ContainerRoutes: []string{"192.168.0.0/24"}}, &fakeLink{})
+			err := configureIntfInPodNetns(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 0}, ContainerRoutes: []string{"192.168.0.0/24"}}, &fakeLink{})
 			Expect(err).To(HaveOccurred())
 		})
 		var _ = It("return no error", func() {
@@ -624,7 +626,7 @@ var _ = Describe("netconf", func() {
 			linkByName = fakeLinkByName
 			ipAddRoute = fakeAddRoute
 			linkSetUp = fakeLinkSet
-			err := configureTapNamespace(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 0}, ContainerRoutes: []string{"192.168.0.0/24"}}, &fakeLink{})
+			err := configureIntfInPodNetns(&proto.AddRequest{Settings: &proto.ContainerSettings{Mtu: 0}, ContainerRoutes: []string{"192.168.0.0/24"}}, &fakeLink{})
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
@@ -1483,7 +1485,170 @@ var _ = Describe("netconf", func() {
 			Expect(err).To(HaveOccurred())
 		})
 	})
+	var _ = Context("NewCDQInterface() should", func() {
+
+		var _ = It("returns no error when a host CDQ interface info can be read from cache file", func() {
+			newCDQManagerFunc = fakeCDQManagerGetterWithErr
+			defer func() {
+				newCDQManagerFunc = utils.NewCDQManager
+			}()
+			getCDQList = fakegetCDQList
+			readInterfaceConf = fakeReadInterfaceConf
+			_, gotErr := NewCDQInterface(logrus.NewEntry(logrus.New()))
+			Expect(gotErr).NotTo(HaveOccurred())
+
+		})
+		var _ = It("returns no error when a host CDQ interface info cannot be read from cache file but a new CDQ interface is created for the host", func() {
+			newCDQManagerFunc = fakeCDQManagerGetter
+			defer func() {
+				newCDQManagerFunc = utils.NewCDQManager
+			}()
+			getCDQList = fakegetCDQList
+			readInterfaceConf = fakeReadInterfaceConfErr
+			_, gotErr := NewCDQInterface(logrus.NewEntry(logrus.New()))
+			Expect(gotErr).NotTo(HaveOccurred())
+		})
+	})
+	var _ = Context("cdq.CreatePodInterface() should", func() {
+		var _ = It("return error if there are no available interfaces", func() {
+			newCDQManagerFunc = fakeCDQManagerGetterWithErr
+			configureHostInterfaceFunc = fakeConfigureHostInterface
+			getCDQList = fakegetCDQList
+			pi, err := NewCDQInterface(logrus.NewEntry(logrus.New()))
+			Expect(err).ToNot(HaveOccurred())
+			_, err = pi.CreatePodInterface(&proto.AddRequest{})
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("return error if cannot set host interface in pod netns", func() {
+			newCDQManagerFunc = fakeCDQManagerGetter
+			configureHostInterfaceFunc = fakeConfigureHostInterface
+			getCDQList = fakegetCDQList
+			pi, err := NewCDQInterface(logrus.NewEntry(logrus.New()))
+			Expect(err).ToNot(HaveOccurred())
+			moveIntfToPodNetnsFunc = fakeSetHostInterfaceInPodNetnsErr
+			_, err = pi.CreatePodInterface(&proto.AddRequest{InterfaceName: "dummyDesired"})
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("return error if cannot set host interface in pod netns inside container", func() {
+			newCDQManagerFunc = fakeCDQManagerGetter
+			configureHostInterfaceFunc = fakeConfigureHostInterface
+			getCDQList = fakegetCDQList
+			pi, err := NewCDQInterface(logrus.NewEntry(logrus.New()))
+			Expect(err).ToNot(HaveOccurred())
+			moveIntfToPodNetnsFunc = fakeSetHostInterfaceInPodNetnsErrInNs
+			_, err = pi.CreatePodInterface(&proto.AddRequest{InterfaceName: "dummyDesired"})
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("return error if cannot save interface configuration", func() {
+			newCDQManagerFunc = fakeCDQManagerGetter
+			configureHostInterfaceFunc = fakeConfigureHostInterface
+			getCDQList = fakegetCDQList
+			pi, err := NewCDQInterface(logrus.NewEntry(logrus.New()))
+			Expect(err).ToNot(HaveOccurred())
+			moveIntfToPodNetnsFunc = fakeSetHostInterfaceInPodNetns
+			saveInterfaceConf = fakeSaveInterfaceConfErr
+			_, err = pi.CreatePodInterface(&proto.AddRequest{InterfaceName: "dummyDesired"})
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("return no error upon successful Pod interface setup", func() {
+			newCDQManagerFunc = fakeCDQManagerGetter
+			configureHostInterfaceFunc = fakeConfigureHostInterface
+			sendSetupHostInterfaceFunc = fakeSendSetupHostInterface
+			getCDQList = fakegetCDQList
+			pi, err := NewCDQInterface(logrus.NewEntry(logrus.New()))
+			Expect(err).ToNot(HaveOccurred())
+			moveIntfToPodNetnsFunc = fakeSetHostInterfaceInPodNetns
+			saveInterfaceConf = fakeSaveInterfaceConf
+			_, err = pi.CreatePodInterface(&proto.AddRequest{InterfaceName: "dummyDesired"})
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+
+	var _ = Context("cdq.ReleasePodInterface() should", func() {
+		var _ = It("return error when cannot read interface conf", func() {
+			newCDQManagerFunc = fakeCDQManagerGetter
+			configureHostInterfaceFunc = fakeConfigureHostInterface
+			getCDQList = fakegetCDQList
+			pi, err := NewCDQInterface(logrus.NewEntry(logrus.New()))
+			Expect(err).ToNot(HaveOccurred())
+			moveIntfToPodNetnsFunc = fakeSetHostInterfaceInPodNetns
+			readInterfaceConf = fakeReadInterfaceConfErr
+			err = pi.ReleasePodInterface(&proto.DelRequest{})
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("return no error when conf does not exist", func() {
+			newCDQManagerFunc = fakeCDQManagerGetter
+			configureHostInterfaceFunc = fakeConfigureHostInterface
+			getCDQList = fakegetCDQList
+			pi, err := NewCDQInterface(logrus.NewEntry(logrus.New()))
+			Expect(err).ToNot(HaveOccurred())
+			moveIntfToPodNetnsFunc = fakeSetHostInterfaceInPodNetns
+			readInterfaceConf = fakeReadInterfaceConfNotExist
+			err = pi.ReleasePodInterface(&proto.DelRequest{})
+			Expect(err).ToNot(HaveOccurred())
+		})
+		var _ = It("return no error when cannot delete cdq inteface via cdqManager", func() {
+			newCDQManagerFunc = fakeCDQManagerGetterWithErr
+			configureHostInterfaceFunc = fakeConfigureHostInterface
+			getCDQList = fakegetCDQList
+			pi, err := NewCDQInterface(logrus.NewEntry(logrus.New()))
+			Expect(err).ToNot(HaveOccurred())
+			moveIntfToPodNetnsFunc = fakeSetHostInterfaceInPodNetns
+			readInterfaceConf = fakeReadInterfaceConf
+			movePodInterfaceToHostNetnsFunc = fakeMovePodInterfaceToHostNetns
+			err = pi.ReleasePodInterface(&proto.DelRequest{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+		var _ = It("return no error", func() {
+			getTapInterfaces = fakeGetTapInterfacesMultiple
+			configureHostInterfaceFunc = fakeConfigureHostInterface
+			getCDQList = fakegetCDQList
+			pi, err := NewCDQInterface(logrus.NewEntry(logrus.New()))
+			Expect(err).ToNot(HaveOccurred())
+			moveIntfToPodNetnsFunc = fakeSetHostInterfaceInPodNetns
+			readInterfaceConf = fakeReadInterfaceConf
+			movePodInterfaceToHostNetnsFunc = fakeMovePodInterfaceToHostNetns
+			err = pi.ReleasePodInterface(&proto.DelRequest{})
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+
 })
+
+func fakeCDQManagerGetter(masterIntf string, log *log.Entry) (utils.CDQManager, error) {
+	return &fakeCDQManager{}, nil
+}
+
+func fakeCDQManagerGetterWithErr(masterIntf string, log *log.Entry) (utils.CDQManager, error) {
+	return &fakeCDQManager{
+		wantErr: true,
+	}, nil
+}
+
+type fakeCDQManager struct {
+	wantErr bool
+}
+
+func (c *fakeCDQManager) CreateIntf() (*types.InterfaceInfo, error) {
+	if c.wantErr {
+		return nil, fmt.Errorf("Create CDQ interface error")
+	} else {
+		return &types.InterfaceInfo{
+			InterfaceName: "dummy",
+			MacAddr:       "aa:bb:cc:dd:ee:ff",
+			VfID:          0,
+			PciAddr:       "0000:01:00.0",
+		}, nil
+	}
+}
+
+func (c *fakeCDQManager) RemoveIntf(*types.InterfaceInfo) error {
+	if c.wantErr {
+		return fmt.Errorf("RemoveIntf CDQ interface error")
+	} else {
+		return nil
+	}
+}
 
 type fakeLink struct{}
 
@@ -1591,11 +1756,11 @@ func fakeGetTapInterfacesMultiple(prefix string) ([]*types.InterfaceInfo, error)
 	return []*types.InterfaceInfo{{PciAddr: "0000:00:00.0", InterfaceName: "dummyIf0", VfID: 0, MacAddr: "00:00:00:00:00:00"}, {PciAddr: "0000:00:00.1", InterfaceName: "dummyIf1", VfID: 0, MacAddr: "00:00:00:00:00:01"}}, nil
 }
 
-func fakeConfigureHostInterface(ifName string, ipnet *net.IPNet, interfaces []*types.InterfaceInfo, log *logrus.Entry) error {
+func fakeConfigureHostInterface(ifName string, ipnet *net.IPNet, log *logrus.Entry) error {
 	return nil
 }
 
-func fakeConfigureHostInterfaceErr(ifName string, ipnet *net.IPNet, interfaces []*types.InterfaceInfo, log *logrus.Entry) error {
+func fakeConfigureHostInterfaceErr(ifName string, ipnet *net.IPNet, log *logrus.Entry) error {
 	return errors.New("Fake error on getting configureHostInterface")
 }
 
@@ -1763,6 +1928,10 @@ func fakeGetVFListMulti(pf string, prefix string) ([]*types.InterfaceInfo, error
 
 func fakeGetVFListErr(pf string, prefix string) ([]*types.InterfaceInfo, error) {
 	return nil, errors.New("Fake error on getVFList")
+}
+
+func fakegetCDQList(pf string, prefix string) ([]*types.InterfaceInfo, error) {
+	return []*types.InterfaceInfo{{}}, nil
 }
 
 type fakePoolErr struct{}

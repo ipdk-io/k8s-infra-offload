@@ -1,0 +1,207 @@
+pkg_info {
+  arch: "pna"
+}
+tables {
+  preamble {
+    id: 46628447
+    name: "main.k8s_dp_control.comms_channel_table"
+    alias: "comms_channel_table"
+  }
+  match_fields {
+    id: 1
+    name: "meta.common.vsi"
+    bitwidth: 11
+    match_type: EXACT
+  }
+  match_fields {
+    id: 2
+    name: "user_meta.cmeta.flex16"
+    bitwidth: 16
+    match_type: EXACT
+  }
+  action_refs {
+    id: 23782209
+  }
+  action_refs {
+    id: 19775096
+  }
+  action_refs {
+    id: 21257015
+    annotations: "@defaultonly"
+    scope: DEFAULT_ONLY
+  }
+  size: 1024
+}
+tables {
+  preamble {
+    id: 47945435
+    name: "main.k8s_dp_control.ipv4_to_port_table_tx"
+    alias: "ipv4_to_port_table_tx"
+  }
+  match_fields {
+    id: 1
+    name: "hdrs.ipv4[meta.common.depth].dst_ip"
+    bitwidth: 32
+    match_type: EXACT
+  }
+  action_refs {
+    id: 21001439
+  }
+  action_refs {
+    id: 19775096
+  }
+  const_default_action_id: 19775096
+  size: 1024
+}
+tables {
+  preamble {
+    id: 45213226
+    name: "main.k8s_dp_control.ipv4_to_port_table_rx"
+    alias: "ipv4_to_port_table_rx"
+  }
+  match_fields {
+    id: 1
+    name: "hdrs.ipv4[meta.common.depth].dst_ip"
+    bitwidth: 32
+    match_type: EXACT
+  }
+  action_refs {
+    id: 24323121
+  }
+  action_refs {
+    id: 19775096
+  }
+  const_default_action_id: 19775096
+  size: 1024
+}
+tables {
+  preamble {
+    id: 38064986
+    name: "main.k8s_dp_control.arp_to_port_table"
+    alias: "arp_to_port_table"
+  }
+  match_fields {
+    id: 1
+    name: "hdrs.arp.tpa"
+    bitwidth: 32
+    match_type: EXACT
+  }
+  action_refs {
+    id: 24323121
+  }
+  action_refs {
+    id: 19775096
+  }
+  const_default_action_id: 19775096
+  size: 1024
+}
+tables {
+  preamble {
+    id: 37747514
+    name: "main.k8s_dp_control.pod_gateway_mac_mod_table"
+    alias: "pod_gateway_mac_mod_table"
+  }
+  match_fields {
+    id: 1
+    name: "meta.common.mod_blob_ptr"
+    bitwidth: 24
+    match_type: EXACT
+  }
+  action_refs {
+    id: 22778003
+  }
+  action_refs {
+    id: 21257015
+    annotations: "@defaultonly"
+    scope: DEFAULT_ONLY
+  }
+  size: 1024
+}
+actions {
+  preamble {
+    id: 21257015
+    name: "NoAction"
+    alias: "NoAction"
+    annotations: "@noWarn(\"unused\")"
+  }
+}
+actions {
+  preamble {
+    id: 19775096
+    name: "k8s_dp_control.drop"
+    alias: "drop"
+  }
+}
+actions {
+  preamble {
+    id: 23782209
+    name: "k8s_dp_control.send"
+    alias: "send"
+  }
+  params {
+    id: 1
+    name: "port"
+    bitwidth: 32
+    type_name {
+      name: "PortId_t"
+    }
+  }
+}
+actions {
+  preamble {
+    id: 21001439
+    name: "k8s_dp_control.set_dest_mac_vport"
+    alias: "set_dest_mac_vport"
+  }
+  params {
+    id: 1
+    name: "p"
+    bitwidth: 32
+    type_name {
+      name: "PortId_t"
+    }
+  }
+  params {
+    id: 2
+    name: "ptr"
+    bitwidth: 24
+  }
+}
+actions {
+  preamble {
+    id: 24323121
+    name: "k8s_dp_control.set_dest_vport"
+    alias: "set_dest_vport"
+  }
+  params {
+    id: 1
+    name: "p"
+    bitwidth: 32
+    type_name {
+      name: "PortId_t"
+    }
+  }
+}
+actions {
+  preamble {
+    id: 22778003
+    name: "k8s_dp_control.update_src_dst_mac"
+    alias: "update_src_dst_mac"
+  }
+  params {
+    id: 1
+    name: "new_dmac"
+    bitwidth: 48
+  }
+}
+type_info {
+  new_types {
+    key: "PortId_t"
+    value {
+      translated_type {
+        uri: "p4.org/pna/v1/PortId_t"
+        sdn_bitwidth: 32
+      }
+    }
+  }
+}
