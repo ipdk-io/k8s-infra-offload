@@ -405,7 +405,6 @@ func (s *ApiServer) CreateNetwork(ctx context.Context, in *proto.CreateNetworkRe
 	macAddr := in.MacAddr
 	macAddress, _ := net.ParseMAC(in.MacAddr)
 	portID, err := getPortID(in.HostIfName, macAddress)
-	//portID, err := getPortID(in.HostIfName)
 	if err != nil {
 		logger.Errorf("Failed to get port id for %s, err: %v",
 			in.HostIfName, err)

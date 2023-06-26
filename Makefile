@@ -65,9 +65,13 @@ build:
 ifeq ($(tagname),mev)
 	cp -f k8s_dp/mev/*  k8s_dp/.
 	cp -f scripts/mev/* scripts/.
+	cp -f deploy/mev/infraagent-configmap.yaml deploy/.
+	cp -f hack/cicd/mev/run-tests.sh hack/cicd/.
 else
 	cp -f k8s_dp/dpdk/* k8s_dp/.
 	cp -f scripts/dpdk/* scripts/.
+	cp -f deploy/dpdk/infraagent-configmap.yaml deploy/.
+	cp -f hack/cicd/dpdk/run-tests.sh hack/cicd/.
 endif
 	go build -o ./bin/infraagent ./infraagent/agent/main.go
 	go build -o ./bin/felix-api-proxy ./infraagent/felix_api_proxy/main.go
