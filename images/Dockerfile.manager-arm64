@@ -12,8 +12,8 @@ RUN go mod download
 COPY inframanager inframanager
 COPY proto proto
 COPY pkg pkg
-COPY k8s_dp/mev k8s_dp
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 GO111MODULE=on go build -tags mev -o ./bin/inframanager ./inframanager/cmd/main.go
+COPY k8s_dp/es2k k8s_dp
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 GO111MODULE=on go build -tags es2k -o ./bin/inframanager ./inframanager/cmd/main.go
 
 FROM arm64v8/alpine
 WORKDIR /

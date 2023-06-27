@@ -52,9 +52,9 @@ LINTER = $(go env GOPATH)/bin/golangci-lint
 lint: golangci-lint
 	$(LINTER) run
 
-mev:
-	@echo "Building project for mev"
-	$(MAKE) tagname=mev build
+es2k:
+	@echo "Building project for es2k"
+	$(MAKE) tagname=es2k build
 
 dpdk:
 	@echo "Building project for dpdk"
@@ -62,11 +62,11 @@ dpdk:
 
 build:
 	@echo "Building project for $(tagname)"
-ifeq ($(tagname),mev)
-	cp -f k8s_dp/mev/*  k8s_dp/.
-	cp -f scripts/mev/* scripts/.
-	cp -f deploy/mev/infraagent-configmap.yaml deploy/.
-	cp -f hack/cicd/mev/run-tests.sh hack/cicd/.
+ifeq ($(tagname),es2k)
+	cp -f k8s_dp/es2k/*  k8s_dp/.
+	cp -f scripts/es2k/* scripts/.
+	cp -f deploy/es2k/infraagent-configmap.yaml deploy/.
+	cp -f hack/cicd/es2k/run-tests.sh hack/cicd/.
 else
 	cp -f k8s_dp/dpdk/* k8s_dp/.
 	cp -f scripts/dpdk/* scripts/.
@@ -78,7 +78,7 @@ endif
 	go build -tags $(tagname) -o ./bin/inframanager ./inframanager/cmd/main.go 
 	go build -o ./bin/arp-proxy ./arp-proxy/cmd/main.go
 
-# Make install is used by mev targets
+# Make install is used by es2k targets
 install:
 	@echo "Installing build artifacts"
 	install -d $(DESTDIR)$(cnidir)/inframanager
@@ -89,8 +89,8 @@ install:
 	install -d $(DESTDIR)$(sbindir)
 	install -m 0755 bin/* $(DESTDIR)$(bindir)
 	install -C -m 0755 ./inframanager/config.yaml $(DESTDIR)$(sysconfdir)/config.yaml
-	install -C -m 0755 ./scripts/mev/*.sh $(DESTDIR)$(sbindir)
-	install -C -m 0755 -t $(DESTDIR)$(datadir) ./k8s_dp/mev/* ./LICENSE
+	install -C -m 0755 ./scripts/es2k/*.sh $(DESTDIR)$(sbindir)
+	install -C -m 0755 -t $(DESTDIR)$(datadir) ./k8s_dp/es2k/* ./LICENSE
 
 test:
 	./hack/cicd/run-tests.sh
@@ -121,7 +121,7 @@ docker-build-manager:
 	docker build -f images/Dockerfile.manager -t $(INFRAMANAGER_IMAGE) $(DOCKERARGS) --build-arg TAG=$(tagname) --build-arg ARCH=$(arch) .
 
 docker-build-manager-arm:
-	@echo "Building Docker image $(INFRAMANAGER_IMAGE) - target - mev arch - arm64"
+	@echo "Building Docker image $(INFRAMANAGER_IMAGE) - target - es2k arch - arm64"
 	docker build -f images/Dockerfile.manager-arm64 -t $(INFRAMANAGER_IMAGE) $(DOCKERARGS) .
 
 docker-push: docker-push-agent docker-push-manager
