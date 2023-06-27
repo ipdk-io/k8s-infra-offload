@@ -35,6 +35,7 @@ type ServerConf struct {
 	CACert     string `mapstructure:"ca-cert"`
 }
 type ManagerConf struct {
+	ArpMac       string   `mapstructure:"arp-mac"`
 	Conn         string   `mapstructure:"conn"`
 	ServerCert   string   `mapstructure:"server-cert"`
 	ServerKey    string   `mapstructure:"server-key"`

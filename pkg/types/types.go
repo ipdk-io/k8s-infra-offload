@@ -34,6 +34,7 @@ const (
 	SriovPodInterface           = "sriov"
 	IpvlanPodInterface          = "ipvlan"
 	TapInterface                = "tap"
+	CDQInterface                = "cdq"
 	TapInterfacePrefix          = "P4TAP_"
 	InfraHostDummyContainerId   = "60e2aea2_2d40_44ac_b9b1_ace4ceda528e"
 	InfraDummyNetNS             = "/var/run/netns/cni-60e2aea2-2d40-44ac-b9b1-ace4ceda528e"
@@ -59,6 +60,7 @@ const (
 	ManagerDefaultServerCert    = "/tmp/inframanager/cert/server/tls.crt"
 	ManagerDefaultServerKey     = "/tmp/inframanager/cert/server/tls.key"
 	ManagerDefaultCACert        = "/tmp/inframanager/cert/client/ca.crt"
+	IfTtype                     = "cdq"
 )
 
 var (

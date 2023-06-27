@@ -14,19 +14,8 @@ KUBECONFIG_CM=infra-kubeconfig
 export INFRAAGENT_IMAGE?=$(IMAGE_REGISTRY)infraagent:$(IMAGE_VERSION)
 export INFRAMANAGER_IMAGE?=$(IMAGE_REGISTRY)inframanager:$(IMAGE_VERSION)
 
-#ifdef TARGET
-#        tagname=$(TARGET)
-#else
-#	tagname=mev
-#endif
-
-#ifneq ($(tagname), dpdk)
-#	ifneq ($(tagname), mev)
-#		tagname=mev
-#	endif
-#endif
-
 tagname := dpdk
+arch := amd64
 
 DOCKERARGS?=
 ifdef HTTP_PROXY
@@ -36,20 +25,25 @@ ifdef HTTPS_PROXY
         DOCKERARGS += --build-arg https_proxy=$(HTTPS_PROXY)
 endif
 
-LOGDIR := /var/log
-CNIDIR := /var/lib/cni
+logdir=/var/log
+cnidir=/var/lib/cni
+sysconfdir=/etc/infra
+datadir=/share/infra/k8s_dp
+bindir=/opt/infra
+sbindir=/sbin/infra
 
-RUNDIRS := ${LOGDIR}/arp_proxy* ${CNIDIR}/infra*
+RUNFILES:=$(logdir)/arp-proxy* $(logdir)/infra* $(cnidir)/infra* $(sysconfdir)/config.yaml $(datadir)
+RUNFILES+=$(bindir)/felix-api* $(bindir)/infra* $(bindir)/arp-proxy*
 
 .PHONY: all
 
-all: check-fmt vet build
+all: check-fmt build
 
 fmt: ## Run go fmt against code.
 	go fmt ./...
 
 vet: ## Run go vet against code.
-	go vet -tags dpdk ./...
+	go vet -tags $(tagname) ./...
 
 check-fmt: ## Check go formatting issues against code.
 	./hack/cicd/check-go-fmt.sh
@@ -58,36 +52,77 @@ LINTER = $(go env GOPATH)/bin/golangci-lint
 lint: golangci-lint
 	$(LINTER) run
 
-mev:
-	$(MAKE) tagname=mev
+es2k:
+	@echo "Building project for es2k"
+	$(MAKE) tagname=es2k build
+
+dpdk:
+	@echo "Building project for dpdk"
+	$(MAKE) tagname=dpdk build
 
 build:
 	@echo "Building project for $(tagname)"
+ifeq ($(tagname),es2k)
+	cp -f k8s_dp/es2k/*  k8s_dp/.
+	cp -f scripts/es2k/* scripts/.
+	cp -f deploy/es2k/infraagent-configmap.yaml deploy/.
+	cp -f hack/cicd/es2k/run-tests.sh hack/cicd/.
+else
+	cp -f k8s_dp/dpdk/* k8s_dp/.
+	cp -f scripts/dpdk/* scripts/.
+	cp -f deploy/dpdk/infraagent-configmap.yaml deploy/.
+	cp -f hack/cicd/dpdk/run-tests.sh hack/cicd/.
+endif
 	go build -o ./bin/infraagent ./infraagent/agent/main.go
 	go build -o ./bin/felix-api-proxy ./infraagent/felix_api_proxy/main.go
 	go build -tags $(tagname) -o ./bin/inframanager ./inframanager/cmd/main.go 
-	go build -o ./bin/arp_proxy ./arp-proxy/cmd/main.go
+	go build -o ./bin/arp-proxy ./arp-proxy/cmd/main.go
+
+# Make install is used by es2k targets
+install:
+	@echo "Installing build artifacts"
+	install -d $(DESTDIR)$(cnidir)/inframanager
+	install -d $(DESTDIR)$(logdir)/inframanager
+	install -d $(DESTDIR)$(sysconfdir)
+	install -d $(DESTDIR)$(datadir)
+	install -d $(DESTDIR)$(bindir)
+	install -d $(DESTDIR)$(sbindir)
+	install -m 0755 bin/* $(DESTDIR)$(bindir)
+	install -C -m 0755 ./inframanager/config.yaml $(DESTDIR)$(sysconfdir)/config.yaml
+	install -C -m 0755 ./scripts/es2k/*.sh $(DESTDIR)$(sbindir)
+	install -C -m 0755 -t $(DESTDIR)$(datadir) ./k8s_dp/es2k/* ./LICENSE
+
+test:
+	./hack/cicd/run-tests.sh
 
 clean:
 	@echo "Remove bin directory"
 	rm -rf ./bin
 
-clean-dirs:
+distclean: clean
 	pkill arp_proxy || true
-	rm -rf ${RUNDIRS}
+	rm -rf ${RUNFILES}
 
-test:
-	./hack/cicd/run-tests.sh
+# docker-build now will be with args for tagname and arch
+ifeq (docker-build, $(firstword $(MAKECMDGOALS)))
+  runargs := $(wordlist 2, $(words $(MAKECMDGOALS)), $(MAKECMDGOALS))
+  $(eval $(runargs):;@true)
+endif
 
-docker-build: docker-build-agent docker-build-manager
+docker-build: docker-build-manager docker-build-agent
 
 docker-build-agent:
 	@echo "Building Docker image $(INFRAAGENT_IMAGE)"
 	docker build -f images/Dockerfile.agent -t $(INFRAAGENT_IMAGE) $(DOCKERARGS) .
 
+# docker-build now will be with args for tagname and arch
 docker-build-manager:
-	@echo "Building Docker image $(INFRAMANAGER_IMAGE)"
-	docker build -f images/Dockerfile.manager -t $(INFRAMANAGER_IMAGE) $(DOCKERARGS) --build-arg tagname=$(tagname) .
+	@echo "Building Docker image $(INFRAMANAGER_IMAGE) - target $(tagname) arch - $(arch)"
+	docker build -f images/Dockerfile.manager -t $(INFRAMANAGER_IMAGE) $(DOCKERARGS) --build-arg TAG=$(tagname) --build-arg ARCH=$(arch) .
+
+docker-build-manager-arm:
+	@echo "Building Docker image $(INFRAMANAGER_IMAGE) - target - es2k arch - arm64"
+	docker build -f images/Dockerfile.manager-arm64 -t $(INFRAMANAGER_IMAGE) $(DOCKERARGS) .
 
 docker-push: docker-push-agent docker-push-manager
 
@@ -101,9 +136,11 @@ deploy: kustomize create-kubeconfig-cm
 	cd deploy && $(KUSTOMIZE) edit set image infraagent:latest=$(INFRAAGENT_IMAGE) && $(KUSTOMIZE) edit set image inframanager:latest=$(INFRAMANAGER_IMAGE)
 	$(KUSTOMIZE) build --load-restrictor LoadRestrictionsNone deploy | envsubst | kubectl apply -f -
 
-undeploy: clean-dirs kustomize delete-kubeconfig-cm
+undeploy: kustomize delete-kubeconfig-cm
 	cd deploy
 	$(KUSTOMIZE) build --load-restrictor LoadRestrictionsNone deploy | envsubst | kubectl delete -f -
+	pkill arp_proxy || true
+	rm -rf ${RUNFILES}
 
 deploy-calico:
 	kubectl apply -f deploy/calico-with-grpc.yaml 

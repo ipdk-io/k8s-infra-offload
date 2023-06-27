@@ -27,7 +27,7 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 	viper.SetConfigName(cfgFileName)
 
 	// Set the path to look for the configurations file
-	viper.AddConfigPath(".")
+	viper.AddConfigPath("/etc/infra")
 
 	// Enable VIPER to read Environment Variables
 	viper.AutomaticEnv()
@@ -35,13 +35,13 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 	viper.SetConfigType("yaml")
 
 	viper.SetDefault("Infrap4dGrpcServer.Addr", "localhost:9559")
-	viper.SetDefault("Infrap4dGrpcServer.conn", "insecure")
+	viper.SetDefault("Infrap4dGrpcServer.conn", "mtls")
 	viper.SetDefault("Infrap4dGrpcServer.client-cert", types.ManagerDefaultClientCert)
 	viper.SetDefault("Infrap4dGrpcServer.client-key", types.ManagerDefaultClientKey)
 	viper.SetDefault("Infrap4dGrpcServer.ca-cert", types.ManagerDefaultCACert)
 
 	viper.SetDefault("Infrap4dGnmiServer.Addr", "localhost:9339")
-	viper.SetDefault("Infrap4dGnmiServer.conn", "insecure")
+	viper.SetDefault("Infrap4dGnmiServer.conn", "mtls")
 	viper.SetDefault("Infrap4dGnmiServer.client-cert", types.ManagerDefaultClientCert)
 	viper.SetDefault("Infrap4dGnmiServer.client-key", types.ManagerDefaultClientKey)
 	viper.SetDefault("Infrap4dGnmiServer.ca-cert", types.ManagerDefaultCACert)
