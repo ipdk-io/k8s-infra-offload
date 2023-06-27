@@ -27,6 +27,8 @@ func NewPodInterface(t string, log *log.Entry) (types.PodInterface, error) {
 		return NewSriovPodInterface(log)
 	case types.TapInterface:
 		return NewTapPodInterface(log)
+	case types.CDQInterface:
+		return NewCDQInterface(log)
 	}
 	log.Errorf("invalid or unsupported interface type: %s", t)
 	return nil, nil

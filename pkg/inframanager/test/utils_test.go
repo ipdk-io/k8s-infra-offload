@@ -1,5 +1,3 @@
-//go:build dpdk
-
 package test
 
 import (
@@ -12,7 +10,9 @@ import (
 )
 
 const (
-	defaultDeviceID = 1
+	defaultDeviceID        = 1
+	DEFAULT_UUID_CNT_CACHE = 512
+	MAXUINT32              = 4294967295
 )
 
 var (

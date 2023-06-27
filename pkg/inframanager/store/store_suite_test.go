@@ -12,6 +12,10 @@ import (
 	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
 )
 
+var (
+	tempDir string
+)
+
 func TestStore(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Store Suite")
@@ -45,6 +49,15 @@ var _ = Describe("Storeendpoint", func() {
 
 			BeforeEach(func() {
 				store.NewEndPoint()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.StoreEpFile = store.StorePath + "cni_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
 			})
 
 			It("returns true if map is invalid or is empty", func() {
@@ -75,10 +88,19 @@ var _ = Describe("Storeendpoint", func() {
 
 		Context("Initializes store for cni add", func() {
 
+			BeforeEach(func() {
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.StoreEpFile = store.StorePath + "cni_db.json"
+			})
+
 			AfterEach(func() {
 				store.NewOpenFile = restoreopenfile
 				store.NewReadFile = restorereadfile
 				store.JsonUnmarshal = restorejsonunmarshal
+				_ = os.RemoveAll(tempDir)
 			})
 
 			It("returns true if flag is true/false", func() {
@@ -107,7 +129,10 @@ var _ = Describe("Storeendpoint", func() {
 					PodMacAddress: "00:00:00:aa:aa:aa",
 				}
 				data_valid.WriteToStore()
-				file, _ := restoreopenfile(store.StoreEpFile, os.O_CREATE, 0600)
+				err1 := os.Mkdir(store.StorePath, 0755)
+				Expect(err1).ShouldNot(HaveOccurred())
+				file, err := restoreopenfile(store.StoreEpFile, os.O_CREATE, 0755)
+				Expect(err).ShouldNot(HaveOccurred())
 				file.Close()
 				store.RunSyncEndPointInfo()
 				ret := store.InitEndPointStore(false)
@@ -124,6 +149,11 @@ var _ = Describe("Storeendpoint", func() {
 
 			BeforeEach(func() {
 				store.NewEndPoint()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.StoreEpFile = store.StorePath + "cni_db.json"
 			})
 
 			It("writes the data to the store if data is valid and returns true", func() {
@@ -166,6 +196,11 @@ var _ = Describe("Storeendpoint", func() {
 
 			BeforeEach(func() {
 				store.NewEndPoint()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.StoreEpFile = store.StorePath + "cni_db.json"
 			})
 
 			It("Deletes the data from the store and returns true if data is valid and is present in the store", func() {
@@ -199,6 +234,11 @@ var _ = Describe("Storeendpoint", func() {
 
 			BeforeEach(func() {
 				store.NewEndPoint()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.StoreEpFile = store.StorePath + "cni_db.json"
 			})
 
 			It("Gets the data from the store and returns true when input is valid", func() {
@@ -245,17 +285,25 @@ var _ = Describe("Storeendpoint", func() {
 
 			BeforeEach(func() {
 				store.NewEndPoint()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.StoreEpFile = store.StorePath + "cni_db.json"
 				data_valid := store.EndPoint{
 					PodIpAddress:  "10.10.10.4",
 					InterfaceID:   4,
 					PodMacAddress: "00:00:00:aa:aa:aa",
 				}
 				data_valid.WriteToStore()
+				err1 := os.Mkdir(store.StorePath, 0755)
+				Expect(err1).ShouldNot(HaveOccurred())
 			})
 
 			AfterEach(func() {
 				store.NewWriteFile = restorewritefile
 				store.JsonMarshalIndent = restoremarshalindent
+				_ = os.RemoveAll(tempDir)
 			})
 
 			It("returns true", func() {
@@ -287,14 +335,25 @@ var _ = Describe("Storeservice", func() {
 
 		Context("checks if service map is empty or not", func() {
 
-			It("returns true if map is invalid or is empty", func() {
+			BeforeEach(func() {
 				store.NewService()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.ServicesFile = store.StorePath + "services_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
+			})
+
+			It("returns true if map is invalid or is empty", func() {
 				ret := store.IsServiceStoreEmpty()
 				Expect(ret).To(Equal(true))
 			})
 
 			It("returns false if map is valid and not empty", func() {
-				store.NewService()
 				ep1 := store.ServiceEndPoint{
 					IpAddress: "10.10.10.1",
 					Port:      8081,
@@ -331,10 +390,20 @@ var _ = Describe("Storeservice", func() {
 
 		Context("Initializes store for service", func() {
 
+			BeforeEach(func() {
+				store.NewService()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.ServicesFile = store.StorePath + "services_db.json"
+			})
+
 			AfterEach(func() {
 				store.NewOpenFile = restoreopenfile
 				store.NewReadFile = restorereadfile
 				store.JsonUnmarshal = restorejsonunmarshal
+				_ = os.RemoveAll(tempDir)
 			})
 
 			It("returns true when the flag is true/false", func() {
@@ -356,7 +425,6 @@ var _ = Describe("Storeservice", func() {
 
 			It("returns false if unmarshal fails", func() {
 				store.JsonUnmarshal = fakeunmarshal
-				store.NewService()
 				ep1 := store.ServiceEndPoint{
 					IpAddress: "10.10.10.1",
 					Port:      8081,
@@ -377,7 +445,10 @@ var _ = Describe("Storeservice", func() {
 				data_valid.ServiceEndPoint["10.10.10.1"] = ep1
 				data_valid.ServiceEndPoint["10.10.10.2"] = ep2
 				data_valid.WriteToStore()
-				file, _ := restoreopenfile(store.ServicesFile, os.O_CREATE, 0600)
+				err1 := os.Mkdir(store.StorePath, 0755)
+				Expect(err1).ShouldNot(HaveOccurred())
+				file, err := restoreopenfile(store.ServicesFile, os.O_CREATE, 0755)
+				Expect(err).ShouldNot(HaveOccurred())
 				file.Close()
 				store.RunSyncServiceInfo()
 				ret := store.InitServiceStore(false)
@@ -394,6 +465,15 @@ var _ = Describe("Storeservice", func() {
 
 			BeforeEach(func() {
 				store.NewService()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.ServicesFile = store.StorePath + "services_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
 			})
 
 			It("returns false if getkey fails", func() {
@@ -478,6 +558,15 @@ var _ = Describe("Storeservice", func() {
 
 			BeforeEach(func() {
 				store.NewService()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.ServicesFile = store.StorePath + "services_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
 			})
 
 			It("returns false if getkey fails", func() {
@@ -564,6 +653,15 @@ var _ = Describe("Storeservice", func() {
 
 			BeforeEach(func() {
 				store.NewService()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.ServicesFile = store.StorePath + "services_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
 			})
 
 			It("gets data from the store and returns true when input is valid and is present in the store", func() {
@@ -649,6 +747,15 @@ var _ = Describe("Storeservice", func() {
 
 			BeforeEach(func() {
 				store.NewService()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.ServicesFile = store.StorePath + "services_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
 			})
 
 			It("returns false if get from store fails", func() {
@@ -718,6 +825,11 @@ var _ = Describe("Storeservice", func() {
 
 			BeforeEach(func() {
 				store.NewService()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.ServicesFile = store.StorePath + "services_db.json"
 				ep1 := store.ServiceEndPoint{
 					IpAddress: "10.10.10.1",
 					Port:      8081,
@@ -738,11 +850,14 @@ var _ = Describe("Storeservice", func() {
 				data_valid.ServiceEndPoint["10.10.10.1"] = ep1
 				data_valid.ServiceEndPoint["10.10.10.2"] = ep2
 				data_valid.WriteToStore()
+				err1 := os.Mkdir(store.StorePath, 0755)
+				Expect(err1).ShouldNot(HaveOccurred())
 			})
 
 			AfterEach(func() {
 				store.NewWriteFile = restorewritefile
 				store.JsonMarshalIndent = restorejsonmarshalindent
+				_ = os.RemoveAll(tempDir)
 			})
 
 			It("returns true", func() {
@@ -766,4 +881,1287 @@ var _ = Describe("Storeservice", func() {
 
 	})
 
+})
+
+var _ = Describe("Storepolicy", func() {
+
+	Describe("IsPolicyStoreEmpty()", func() {
+
+		Context("checks if Policy store map is empty or not", func() {
+
+			BeforeEach(func() {
+				store.NewPolicy()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.PolicyFile = store.StorePath + "policy_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
+			})
+
+			It("returns true if map is invalid or is empty", func() {
+				ret := store.IsPolicyStoreEmpty()
+				Expect(ret).To(Equal(true))
+			})
+
+			It("returns false when map is valid and not empty", func() {
+				r1 := store.Rule{
+					RuleID:    "rule1",
+					PortRange: []uint16{80, 443},
+					RuleMask:  0xff,
+					Cidr:      "192.168.1.0/24",
+					IpSetID:   "ipset1",
+				}
+
+				ipsetidx := store.IpSetIDX{
+					IpSetIDx:  1,
+					Direction: "RX",
+					Protocol:  "tcp",
+					RuleID:    make(map[string]store.Rule),
+				}
+				ipsetidx.RuleID["rule1"] = r1
+
+				data_valid := store.Policy{
+					PolicyName: "policy1",
+					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+				}
+				data_valid.IpSetIDx[1] = ipsetidx
+
+				data_valid.WriteToStore()
+				ret := store.IsPolicyStoreEmpty()
+				Expect(ret).To(Equal(false))
+
+			})
+		})
+	})
+
+	Describe("IsIpsetStoreEmpty", func() {
+
+		Context("checks if Ipset store map is empty or not", func() {
+
+			BeforeEach(func() {
+				store.NewPolicy()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.IpsetFile = store.StorePath + "ipset_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
+			})
+
+			It("returns true if map is invalid or is empty", func() {
+				ret := store.IsIpsetStoreEmpty()
+				Expect(ret).To(Equal(true))
+			})
+
+			It("returns false when map is valid and not empty", func() {
+				data_valid := store.IpSet{
+					IpsetID:    "1234",
+					IpSetIDx:   1,
+					PolicyName: "Policy1",
+					RuleID:     "RuleID01",
+					IpAddr:     []string{"10.10.10.1"},
+				}
+				data_valid.WriteToStore()
+				ret := store.IsIpsetStoreEmpty()
+				Expect(ret).To(Equal(false))
+			})
+		})
+	})
+
+	Describe("IsWorkerepStoreEmpty", func() {
+
+		Context("checks if WorkerEp store map is empty or not", func() {
+
+			BeforeEach(func() {
+				store.NewPolicy()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.WorkerepFile = store.StorePath + "workerep_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
+			})
+
+			It("returns true if map is invalid or is empty", func() {
+				ret := store.IsWorkerepStoreEmpty()
+				Expect(ret).To(Equal(true))
+			})
+
+			It("returns false when map is valid and not empty", func() {
+				data_valid := store.PolicyWorkerEndPoint{
+					WorkerEp:          "10.10.10.1/24",
+					PolicyNameIngress: []string{"policy1", "policy2"},
+					PolicyNameEgress:  []string{"policy3", "policy4"},
+				}
+				data_valid.WriteToStore()
+				ret := store.IsWorkerepStoreEmpty()
+				Expect(ret).To(Equal(false))
+			})
+
+		})
+	})
+
+	Describe("InitPolicyStore", func() {
+
+		restoreopenfile := store.NewOpenFile
+		restorereadfile := store.NewReadFile
+		restorejsonunmarshal := store.JsonUnmarshal
+
+		Context("Initializes store for policy", func() {
+
+			BeforeEach(func() {
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.PolicyFile = store.StorePath + "policy_db.json"
+				store.IpsetFile = store.StorePath + "ipset_db.json"
+				store.WorkerepFile = store.StorePath + "workerep_db.json"
+			})
+
+			AfterEach(func() {
+				store.NewOpenFile = restoreopenfile
+				store.NewReadFile = restorereadfile
+				store.JsonUnmarshal = restorejsonunmarshal
+				_ = os.RemoveAll(tempDir)
+			})
+
+			It("returns true if flag is true/false", func() {
+				ret := store.InitPolicyStore(false)
+				Expect(ret).To(Equal(true))
+			})
+
+			It("returns false if file open fails", func() {
+				store.NewOpenFile = fakeopenfile
+				ret := store.InitPolicyStore(true)
+				Expect(ret).To(Equal(false))
+			})
+
+			It("returns false if reading from file fails", func() {
+				store.NewReadFile = fakereadfile
+				ret := store.InitPolicyStore(true)
+				Expect(ret).To(Equal(false))
+			})
+
+			It("returns false if unmarshal fails", func() {
+				store.JsonUnmarshal = fakeunmarshal
+				store.NewPolicy()
+
+				//Policy
+				r1 := store.Rule{
+					RuleID:    "rule1",
+					PortRange: []uint16{80, 443},
+					RuleMask:  0xff,
+					Cidr:      "192.168.1.0/24",
+					IpSetID:   "ipset1",
+				}
+
+				ipsetidx := store.IpSetIDX{
+					IpSetIDx:  1,
+					Direction: "RX",
+					Protocol:  "tcp",
+					RuleID:    make(map[string]store.Rule),
+				}
+				ipsetidx.RuleID["rule1"] = r1
+
+				data_valid := store.Policy{
+					PolicyName: "policy1",
+					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+				}
+				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.WriteToStore()
+				err := os.Mkdir(store.StorePath, 0755)
+				Expect(err).ShouldNot(HaveOccurred())
+				file, err1 := restoreopenfile(store.PolicyFile, os.O_CREATE, 0755)
+				Expect(err1).ShouldNot(HaveOccurred())
+				file.Close()
+				store.RunSyncPolicyInfo()
+
+				//IpSet
+				data_valid1 := store.IpSet{
+					IpsetID:    "1234",
+					IpSetIDx:   1,
+					PolicyName: "Policy1",
+					RuleID:     "RuleID01",
+					IpAddr:     []string{"10.10.10.1"},
+				}
+				data_valid1.WriteToStore()
+				file1, err2 := restoreopenfile(store.IpsetFile, os.O_CREATE, 0755)
+				Expect(err2).ShouldNot(HaveOccurred())
+				file1.Close()
+				store.RunSyncIpSetInfo()
+
+				//WorkerEndPoint
+				data_valid2 := store.PolicyWorkerEndPoint{
+					WorkerEp:          "10.10.10.1/24",
+					PolicyNameIngress: []string{"policy1", "policy2"},
+					PolicyNameEgress:  []string{"policy3", "policy4"},
+				}
+				data_valid2.WriteToStore()
+				file2, err3 := restoreopenfile(store.WorkerepFile, os.O_CREATE, 0755)
+				Expect(err3).ShouldNot(HaveOccurred())
+				file2.Close()
+				store.RunSyncWorkerEpInfo()
+
+				ret := store.InitPolicyStore(false)
+				Expect(ret).To(Equal(false))
+			})
+
+			It("returns true after running the RunSync*Info", func() {
+				store.NewPolicy()
+
+				//Policy
+				r1 := store.Rule{
+					RuleID:    "rule1",
+					PortRange: []uint16{80, 443},
+					RuleMask:  0xff,
+					Cidr:      "192.168.1.0/24",
+					IpSetID:   "ipset1",
+				}
+
+				ipsetidx := store.IpSetIDX{
+					IpSetIDx:  1,
+					Direction: "RX",
+					Protocol:  "tcp",
+					RuleID:    make(map[string]store.Rule),
+				}
+				ipsetidx.RuleID["rule1"] = r1
+
+				data_valid := store.Policy{
+					PolicyName: "policy2",
+					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+				}
+				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.WriteToStore()
+				err := os.Mkdir(store.StorePath, 0755)
+				Expect(err).ShouldNot(HaveOccurred())
+				file, err1 := restoreopenfile(store.PolicyFile, os.O_CREATE, 0755)
+				Expect(err1).ShouldNot(HaveOccurred())
+				file.Close()
+				store.RunSyncPolicyInfo()
+
+				//IpSet
+				data_valid1 := store.IpSet{
+					IpsetID:    "12345",
+					IpSetIDx:   1,
+					PolicyName: "Policy2",
+					RuleID:     "RuleID01",
+					IpAddr:     []string{"10.10.10.1"},
+				}
+				data_valid1.WriteToStore()
+				file1, err2 := restoreopenfile(store.IpsetFile, os.O_CREATE, 0755)
+				Expect(err2).ShouldNot(HaveOccurred())
+				file1.Close()
+				store.RunSyncIpSetInfo()
+
+				//WorkerEndPoint
+				data_valid2 := store.PolicyWorkerEndPoint{
+					WorkerEp:          "10.10.10.3/24",
+					PolicyNameIngress: []string{"policy1", "policy2"},
+					PolicyNameEgress:  []string{"policy3", "policy4"},
+				}
+				data_valid2.WriteToStore()
+				file2, err3 := restoreopenfile(store.WorkerepFile, os.O_CREATE, 0755)
+				Expect(err3).ShouldNot(HaveOccurred())
+				file2.Close()
+				store.RunSyncWorkerEpInfo()
+
+				ret := store.InitPolicyStore(false)
+				Expect(ret).To(Equal(true))
+			})
+		})
+	})
+
+	//policyadd : Write to Store
+	Describe("WriteToStore", func() {
+
+		Context("writes Policy data to the store", func() {
+
+			BeforeEach(func() {
+				store.NewPolicy()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.PolicyFile = store.StorePath + "policy_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
+			})
+
+			//Valid case 1
+			It("writes the data to the store if data is valid and returns true", func() {
+
+				r1 := store.Rule{
+					RuleID:    "rule1",
+					PortRange: []uint16{80, 443},
+					RuleMask:  0xff,
+					Cidr:      "192.168.1.0/24",
+					IpSetID:   "ipset1",
+				}
+
+				ipsetidx := store.IpSetIDX{
+					IpSetIDx:  1,
+					Direction: "RX",
+					Protocol:  "tcp",
+					RuleID:    make(map[string]store.Rule),
+				}
+				ipsetidx.RuleID["rule1"] = r1
+
+				data_valid := store.Policy{
+					PolicyName: "policy1",
+					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+				}
+				data_valid.IpSetIDx[1] = ipsetidx
+
+				ret := data_valid.WriteToStore()
+				Expect(ret).To(Equal(true))
+			})
+			//Invalid case 1
+			It("returns error if Cidr ip is invalid", func() {
+				r1 := store.Rule{
+					RuleID:    "rule1",
+					PortRange: []uint16{80, 443},
+					RuleMask:  0xff,
+					Cidr:      "10.10.10.ff/44",
+					IpSetID:   "ipset1",
+				}
+
+				ipsetidx := store.IpSetIDX{
+					IpSetIDx:  1,
+					Direction: "RX",
+					Protocol:  "tcp",
+					RuleID:    make(map[string]store.Rule),
+				}
+				ipsetidx.RuleID["rule1"] = r1
+
+				data_invalid1 := store.Policy{
+					PolicyName: "policy1",
+					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+				}
+				data_invalid1.IpSetIDx[1] = ipsetidx
+
+				ret := data_invalid1.WriteToStore()
+				Expect(ret).To(Equal(false))
+			})
+			//Invalid case 2
+			It("returns error if port range len is invalid", func() {
+				r1 := store.Rule{
+					RuleID:    "rule1",
+					PortRange: []uint16{80, 202, 430},
+					RuleMask:  0xff,
+					Cidr:      "192.168.ab.cd/24",
+					IpSetID:   "ipset1",
+				}
+
+				ipsetidx := store.IpSetIDX{
+					IpSetIDx:  1,
+					Direction: "RX",
+					Protocol:  "tcp",
+					RuleID:    make(map[string]store.Rule),
+				}
+				ipsetidx.RuleID["rule1"] = r1
+
+				data_invalid2 := store.Policy{
+					PolicyName: "policy1",
+					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+				}
+				data_invalid2.IpSetIDx[1] = ipsetidx
+
+				ret := data_invalid2.WriteToStore()
+				Expect(ret).To(Equal(false))
+			})
+			//Invalid case 3
+			It("Returns error if Direction is invalid", func() {
+				r1 := store.Rule{
+					RuleID:    "rule1",
+					PortRange: []uint16{80, 443},
+					RuleMask:  0xff,
+					Cidr:      "192.168.1.0/24",
+					IpSetID:   "ipset1",
+				}
+				ipsetidx := store.IpSetIDX{
+					IpSetIDx:  1,
+					Direction: "ingress",
+					Protocol:  "tcp",
+					RuleID:    make(map[string]store.Rule),
+				}
+				ipsetidx.RuleID["rule1"] = r1
+
+				data_valid3 := store.Policy{
+					PolicyName: "policy1",
+					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+				}
+				data_valid3.IpSetIDx[1] = ipsetidx
+
+				ret := data_valid3.WriteToStore()
+				Expect(ret).To(Equal(false))
+			})
+		})
+	})
+
+	//ipsetadd
+	Describe("WriteToStore", func() {
+
+		Context("writes IpSet data to the store", func() {
+
+			BeforeEach(func() {
+				store.NewPolicy()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.IpsetFile = store.StorePath + "ipset_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
+			})
+
+			//Valid case 1
+			It("writes the data to the store if data is valid and returns true", func() {
+				data_valid := store.IpSet{
+					IpsetID:    "1234",
+					IpSetIDx:   1,
+					PolicyName: "Policy1",
+					RuleID:     "RuleID",
+					IpAddr:     []string{"10.10.10.1"},
+				}
+				ret := data_valid.WriteToStore()
+				Expect(ret).To(Equal(true))
+			})
+			//Invalid case 1
+			It("returns error if ip is invalid", func() {
+				data_invalid1 := store.IpSet{
+					IpsetID:    "1234",
+					IpSetIDx:   1,
+					PolicyName: "Policy1",
+					RuleID:     "RuleID",
+					IpAddr:     []string{"10.10.ab.cd"},
+				}
+				ret := data_invalid1.WriteToStore()
+				Expect(ret).To(Equal(false))
+			})
+			//Invalid case 2
+			It("returns error if IpSetIDx is invalid, [IpSetIDx should be 0-255]", func() {
+				data_invalid2 := store.IpSet{
+					IpsetID:    "1234",
+					IpSetIDx:   266,
+					PolicyName: "Policy1",
+					RuleID:     "RuleID",
+					IpAddr:     []string{"10.10.10.1"},
+				}
+				ret := data_invalid2.WriteToStore()
+				Expect(ret).To(Equal(false))
+			})
+		})
+	})
+
+	//workereEp add
+	Describe("WriteToStore", func() {
+
+		Context("writes PolicyWorkerEndPoint data to the store", func() {
+
+			BeforeEach(func() {
+				store.NewPolicy()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.WorkerepFile = store.StorePath + "workerep_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
+			})
+
+			//Valid case 1
+			It("writes the data to the store if data is valid and returns true", func() {
+				data_valid := store.PolicyWorkerEndPoint{
+					WorkerEp:          "10.10.10.1/24",
+					PolicyNameIngress: []string{"policy1", "policy2"},
+					PolicyNameEgress:  []string{"policy3", "policy4"},
+				}
+				ret := data_valid.WriteToStore()
+				Expect(ret).To(Equal(true))
+			})
+			//Invalid case 1
+			It("returns error if WorkerEp is invalid", func() {
+				data_invalid1 := store.PolicyWorkerEndPoint{
+					WorkerEp:          "10.10.a.b/44",
+					PolicyNameIngress: []string{"policy1", "policy2"},
+					PolicyNameEgress:  []string{"policy3", "policy4"},
+				}
+				ret := data_invalid1.WriteToStore()
+				Expect(ret).To(Equal(false))
+			})
+		})
+	})
+
+	//Policy: Delete from store
+	Describe("DeleteFromStore", func() {
+
+		Context("Deletes Policy data from the store", func() {
+
+			BeforeEach(func() {
+				store.NewPolicy()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.PolicyFile = store.StorePath + "policy_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
+			})
+
+			//Valid case 1
+			It("Deletes the policy data from the store and returns true if data is present in the store", func() {
+				r1 := store.Rule{
+					RuleID:    "rule1",
+					PortRange: []uint16{80, 443},
+					RuleMask:  0xff,
+					Cidr:      "192.168.1.0/24",
+					IpSetID:   "ipset1",
+				}
+
+				ipsetidx := store.IpSetIDX{
+					IpSetIDx:  1,
+					Direction: "RX",
+					Protocol:  "tcp",
+					RuleID:    make(map[string]store.Rule),
+				}
+				ipsetidx.RuleID["rule1"] = r1
+
+				data_valid := store.Policy{
+					PolicyName: "policy1",
+					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+				}
+				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.WriteToStore()
+				ret := data_valid.DeleteFromStore()
+				Expect(ret).To(Equal(true))
+			})
+			//Invalid case 1
+			It("returns error when data is not present in store", func() {
+				r1 := store.Rule{
+					RuleID:    "rule1",
+					PortRange: []uint16{80, 443},
+					RuleMask:  0xff,
+					Cidr:      "192.168.ab.cd/24",
+					IpSetID:   "ipset1",
+				}
+
+				ipsetidx := store.IpSetIDX{
+					IpSetIDx:  1,
+					Direction: "RX",
+					Protocol:  "tcp",
+					RuleID:    make(map[string]store.Rule),
+				}
+				ipsetidx.RuleID["rule1"] = r1
+
+				data_invalid := store.Policy{
+					PolicyName: "policy",
+					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+				}
+				data_invalid.IpSetIDx[1] = ipsetidx
+				ret := data_invalid.DeleteFromStore()
+				Expect(ret).To(Equal(false))
+			})
+		})
+	})
+
+	//IpSet: Delete from store
+	Describe("DeleteFromStore", func() {
+
+		Context("Deletes IpSet data from the store", func() {
+
+			BeforeEach(func() {
+				store.NewPolicy()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.IpsetFile = store.StorePath + "ipset_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
+			})
+
+			//Valid case 1
+			It("Deletes the data from the store and returns true if data is present in the store", func() {
+				r1 := store.Rule{
+					RuleID:    "rule1",
+					PortRange: []uint16{80, 443},
+					RuleMask:  0xff,
+					Cidr:      "192.168.1.0/24",
+					IpSetID:   "1234",
+				}
+				ipsetidx := store.IpSetIDX{
+					IpSetIDx:  1,
+					Direction: "RX",
+					Protocol:  "tcp",
+					RuleID:    make(map[string]store.Rule),
+				}
+				ipsetidx.RuleID["rule1"] = r1
+
+				data_valid1 := store.Policy{
+					PolicyName: "Policy1",
+					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+				}
+				data_valid1.IpSetIDx[1] = ipsetidx
+				data_valid1.WriteToStore()
+
+				data_valid := store.IpSet{
+					IpsetID:    "1234",
+					IpSetIDx:   1,
+					PolicyName: "Policy1",
+					RuleID:     "RuleID",
+					IpAddr:     []string{"10.10.10.1"},
+				}
+				data_valid.WriteToStore()
+				ret := data_valid.DeleteFromStore()
+				Expect(ret).To(Equal(true))
+			})
+			//Invalid case 1
+			It("returns error when data is not present in store", func() {
+				data_invalid := store.IpSet{
+					IpsetID:    "123",
+					IpSetIDx:   1,
+					PolicyName: "Policy1",
+					RuleID:     "RuleID",
+					IpAddr:     []string{"10.10.10.1"},
+				}
+				ret := data_invalid.DeleteFromStore()
+				Expect(ret).To(Equal(false))
+			})
+		})
+	})
+
+	//PolicyworkerEndPoint: Delete from store
+	Describe("DeleteFromStore", func() {
+
+		Context("Deletes PolicyworkerEndPoint data from the store", func() {
+
+			BeforeEach(func() {
+				store.NewPolicy()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.WorkerepFile = store.StorePath + "workerep_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
+			})
+
+			//Valid case 1
+			It("Deletes the data from the store and returns true if data is present in the store", func() {
+				data_valid := store.PolicyWorkerEndPoint{
+					WorkerEp:          "10.10.10.1/24",
+					PolicyNameIngress: []string{"policy1", "policy2"},
+					PolicyNameEgress:  []string{"policy3", "policy4"},
+				}
+				data_valid.WriteToStore()
+				ret := data_valid.DeleteFromStore()
+				Expect(ret).To(Equal(true))
+			})
+			//Invalid case 1
+			It("returns error when data is not present in store", func() {
+				data_invalid := store.PolicyWorkerEndPoint{
+					WorkerEp:          "10.10.10.2/24",
+					PolicyNameIngress: []string{"policy1", "policy2"},
+					PolicyNameEgress:  []string{"policy3", "policy4"},
+				}
+				ret := data_invalid.DeleteFromStore()
+				Expect(ret).To(Equal(false))
+			})
+		})
+	})
+
+	//Policy: GetFromStore
+	Describe("GetFromStore", func() {
+
+		Context("Gets the Policy data from store", func() {
+
+			BeforeEach(func() {
+				store.NewPolicy()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.PolicyFile = store.StorePath + "policy_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
+			})
+
+			//Valid case 1
+			It("Gets the data from the store and returns true when data is present", func() {
+				r1 := store.Rule{
+					RuleID:    "rule1",
+					PortRange: []uint16{80, 443},
+					RuleMask:  0xff,
+					Cidr:      "192.168.1.0/24",
+					IpSetID:   "ipset1",
+				}
+
+				ipsetidx := store.IpSetIDX{
+					IpSetIDx:  1,
+					Direction: "RX",
+					Protocol:  "tcp",
+					RuleID:    make(map[string]store.Rule),
+				}
+				ipsetidx.RuleID["rule1"] = r1
+
+				data_valid := store.Policy{
+					PolicyName: "policy1",
+					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+				}
+				data_valid.IpSetIDx[1] = ipsetidx
+
+				data_valid.WriteToStore()
+				ret := data_valid.GetFromStore()
+				Expect(ret).To(Equal(data_valid))
+			})
+			//Invalid case 1
+			It("returns nil when data is not present", func() {
+				r1 := store.Rule{
+					RuleID:    "rule1",
+					PortRange: []uint16{80, 443},
+					RuleMask:  0xff,
+					Cidr:      "192.168.1.0/24",
+					IpSetID:   "ipset1",
+				}
+
+				ipsetidx := store.IpSetIDX{
+					IpSetIDx:  1,
+					Direction: "RX",
+					Protocol:  "tcp",
+					RuleID:    make(map[string]store.Rule),
+				}
+				ipsetidx.RuleID["rule1"] = r1
+
+				data_invalid1 := store.Policy{
+					PolicyName: "policy",
+					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+				}
+				data_invalid1.IpSetIDx[1] = ipsetidx
+				ret := data_invalid1.GetFromStore()
+				Expect(ret).Should(BeNil())
+			})
+		})
+	})
+
+	//IpSet: GetFromStore
+	Describe("GetFromStore", func() {
+
+		Context("Gets the Policy-IpSet data from store", func() {
+
+			BeforeEach(func() {
+				store.NewPolicy()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.IpsetFile = store.StorePath + "ipset_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
+			})
+
+			//Valid case 1
+			It("Gets the data from the store and returns true when input is valid", func() {
+				data_valid := store.IpSet{
+					IpsetID:    "1234",
+					IpSetIDx:   1,
+					PolicyName: "Policy1",
+					RuleID:     "RuleID",
+					IpAddr:     []string{"10.10.10.1"},
+				}
+				data_valid.WriteToStore()
+				ret := data_valid.GetFromStore()
+				Expect(ret).To(Equal(data_valid))
+			})
+			//Invalid case 1
+			It("returns nil when data is not present", func() {
+				data_invalid := store.IpSet{
+					IpsetID:    "123",
+					IpSetIDx:   1,
+					PolicyName: "Policy1",
+					RuleID:     "RuleID",
+					IpAddr:     []string{"10.10.10.1"},
+				}
+				ret := data_invalid.GetFromStore()
+				Expect(ret).Should(BeNil())
+			})
+		})
+	})
+
+	//WorkerEndPoint: GetFromStore
+	Describe("GetFromStore", func() {
+
+		Context("Gets the Policy-WorkerEndPoint data from store", func() {
+
+			BeforeEach(func() {
+				store.NewPolicy()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.WorkerepFile = store.StorePath + "workerep_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
+			})
+
+			// Valid case 1
+			It("Gets the data from the store and returns true when input is valid", func() {
+				data_valid := store.PolicyWorkerEndPoint{
+					WorkerEp:          "10.10.10.1/24",
+					PolicyNameIngress: []string{"policy1", "policy2"},
+					PolicyNameEgress:  []string{"policy3", "policy4"},
+				}
+				data_valid.WriteToStore()
+				ret := data_valid.GetFromStore()
+				Expect(ret).To(Equal(data_valid))
+			})
+			//Invalid case 1
+			It("returns nil when data is not present", func() {
+				data_invalid := store.PolicyWorkerEndPoint{
+					WorkerEp:          "10.10.10.2/24",
+					PolicyNameIngress: []string{"policy1", "policy2"},
+					PolicyNameEgress:  []string{"policy3", "policy4"},
+				}
+				ret := data_invalid.GetFromStore()
+				Expect(ret).Should(BeNil())
+			})
+		})
+	})
+
+	//Policy: UpdateToStore
+	Describe("UpdateToStore", func() {
+
+		Context("updates Policy data to the store", func() {
+
+			BeforeEach(func() {
+				store.NewPolicy()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.PolicyFile = store.StorePath + "policy_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
+			})
+
+			//Valid case 1
+			It("returns true if data is valid and update to store succeeds", func() {
+				r1 := store.Rule{
+					RuleID:    "rule1",
+					PortRange: []uint16{80, 443},
+					RuleMask:  0xff,
+					Cidr:      "192.168.1.0/24",
+					IpSetID:   "ipset1",
+				}
+				ipsetidx := store.IpSetIDX{
+					IpSetIDx:  1,
+					Direction: "RX",
+					Protocol:  "tcp",
+					RuleID:    make(map[string]store.Rule),
+				}
+				ipsetidx.RuleID["rule1"] = r1
+
+				data_valid := store.Policy{
+					PolicyName: "policy1",
+					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+				}
+				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.WriteToStore()
+
+				//Updating data
+				r2 := store.Rule{
+					RuleID:    "rule1",
+					PortRange: []uint16{80, 443},
+					RuleMask:  0xff,
+					Cidr:      "192.168.1.0/24",
+					IpSetID:   "ipset1",
+				}
+				ipsetidx1 := store.IpSetIDX{
+					IpSetIDx:  1,
+					Direction: "TX",
+					Protocol:  "udp",
+					RuleID:    make(map[string]store.Rule),
+				}
+				ipsetidx1.RuleID["rule1"] = r2
+
+				data_valid1 := store.Policy{
+					PolicyName: "policy1",
+					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+				}
+				data_valid1.IpSetIDx[1] = ipsetidx1
+				ret := data_valid1.UpdateToStore()
+				Expect(ret).To(Equal(true))
+			})
+			//Invalid case 1
+			It("returns false if data doesn't exits in store", func() {
+				r1 := store.Rule{
+					RuleID:    "rule1",
+					PortRange: []uint16{80, 443},
+					RuleMask:  0xff,
+					Cidr:      "192.168.1.0/24",
+					IpSetID:   "ipset1",
+				}
+
+				ipsetidx := store.IpSetIDX{
+					IpSetIDx:  1,
+					Direction: "RX",
+					Protocol:  "tcp",
+					RuleID:    make(map[string]store.Rule),
+				}
+				ipsetidx.RuleID["rule1"] = r1
+
+				data_valid1 := store.Policy{
+					PolicyName: "policy",
+					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+				}
+				data_valid1.IpSetIDx[1] = ipsetidx
+				ret := data_valid1.UpdateToStore()
+				Expect(ret).To(Equal(false))
+			})
+			//Invalid case 2
+			It("returns false if data already exits in store", func() {
+				r1 := store.Rule{
+					RuleID:    "rule1",
+					PortRange: []uint16{80, 443},
+					RuleMask:  0xff,
+					Cidr:      "192.168.1.0/24",
+					IpSetID:   "ipset1",
+				}
+
+				ipsetidx := store.IpSetIDX{
+					IpSetIDx:  1,
+					Direction: "RX",
+					Protocol:  "tcp",
+					RuleID:    make(map[string]store.Rule),
+				}
+				ipsetidx.RuleID["rule1"] = r1
+
+				data_valid2 := store.Policy{
+					PolicyName: "policy1",
+					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+				}
+				data_valid2.IpSetIDx[1] = ipsetidx
+				data_valid2.WriteToStore()
+				//Try to update the same data which is already available in store
+				ret := data_valid2.UpdateToStore()
+				Expect(ret).To(Equal(false))
+			})
+		})
+	})
+
+	//IpSet: UpdateToStore
+	Describe("UpdateToStore", func() {
+
+		Context("updates Policy-IpSet data to the store", func() {
+
+			BeforeEach(func() {
+				store.NewPolicy()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.IpsetFile = store.StorePath + "ipset_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
+			})
+
+			//Valid case 1
+			It("returns true if data is valid and update to store succeeds", func() {
+				data_valid := store.IpSet{
+					IpsetID:    "1234",
+					IpSetIDx:   1,
+					PolicyName: "Policy1",
+					RuleID:     "RuleID",
+					IpAddr:     []string{"10.10.10.1"},
+				}
+
+				data_valid.WriteToStore()
+				data_valid.IpAddr = append(data_valid.IpAddr, "10.10.10.2")
+				ret := data_valid.UpdateToStore()
+				Expect(ret).To(Equal(true))
+			})
+			//Invalid case 1
+			It("returns false if data doesn't exits in store", func() {
+				data_valid1 := store.IpSet{
+					IpsetID:    "123",
+					IpSetIDx:   1,
+					PolicyName: "Policy1",
+					RuleID:     "RuleID",
+					IpAddr:     []string{"10.10.10.1"},
+				}
+				ret := data_valid1.UpdateToStore()
+				Expect(ret).To(Equal(false))
+			})
+			//Invalid case 2
+			It("returns false if Same data exits in store", func() {
+				data_valid2 := store.IpSet{
+					IpsetID:    "1234",
+					IpSetIDx:   1,
+					PolicyName: "Policy1",
+					RuleID:     "RuleID",
+					IpAddr:     []string{"10.10.10.1"},
+				}
+				data_valid2.WriteToStore()
+				//Try to update the same data which is already available in store
+				ret := data_valid2.UpdateToStore()
+				Expect(ret).To(Equal(false))
+			})
+		})
+	})
+
+	//WorkerEp: UpdateToStore
+	Describe("UpdateToStore", func() {
+
+		Context("updates Policy-WorkerEp data to the store", func() {
+
+			BeforeEach(func() {
+				store.NewPolicy()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.WorkerepFile = store.StorePath + "workerep_db.json"
+			})
+
+			AfterEach(func() {
+				_ = os.RemoveAll(tempDir)
+			})
+
+			//Valid case 1
+			It("returns true if data is valid and update to store succeeds", func() {
+				data_valid := store.PolicyWorkerEndPoint{
+					WorkerEp:          "10.10.10.1/24",
+					PolicyNameIngress: []string{"policy1", "policy2"},
+					PolicyNameEgress:  []string{"policy3", "policy4"},
+				}
+
+				data_valid.WriteToStore()
+				data_valid.PolicyNameIngress = append(data_valid.PolicyNameIngress, "policy5")
+				data_valid.PolicyNameEgress = append(data_valid.PolicyNameEgress, "policy6")
+				ret := data_valid.UpdateToStore()
+				Expect(ret).To(Equal(true))
+			})
+			//Invalid case 1
+			It("returns false if data doesn't exits in store", func() {
+				data_valid1 := store.PolicyWorkerEndPoint{
+					WorkerEp:          "10.10.10.2/24",
+					PolicyNameIngress: []string{"policy1", "policy2"},
+					PolicyNameEgress:  []string{"policy3", "policy4"},
+				}
+				ret := data_valid1.UpdateToStore()
+				Expect(ret).To(Equal(false))
+			})
+			//Invalid case 2
+			It("returns false if same data exits in store", func() {
+				data_valid2 := store.PolicyWorkerEndPoint{
+					WorkerEp:          "10.10.10.1/24",
+					PolicyNameIngress: []string{"policy1", "policy2"},
+					PolicyNameEgress:  []string{"policy3", "policy4"},
+				}
+				data_valid2.WriteToStore()
+				//Try to update the same data to store
+				ret := data_valid2.UpdateToStore()
+				Expect(ret).To(Equal(false))
+			})
+		})
+	})
+
+	//Polciy: RunSyncPolicyInfo
+	Describe("RunSyncPolicyInfo", func() {
+
+		Context("Writes to persistent storage", func() {
+
+			restorewritefile := store.NewWriteFile
+			restoremarshalindent := store.JsonMarshalIndent
+
+			BeforeEach(func() {
+				store.NewPolicy()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.PolicyFile = store.StorePath + "policy_db.json"
+				r1 := store.Rule{
+					RuleID:    "rule1",
+					PortRange: []uint16{80, 443},
+					RuleMask:  0xff,
+					Cidr:      "192.168.1.0/24",
+					IpSetID:   "ipset1",
+				}
+				ipsetidx := store.IpSetIDX{
+					IpSetIDx:  1,
+					Direction: "RX",
+					Protocol:  "tcp",
+					RuleID:    make(map[string]store.Rule),
+				}
+				ipsetidx.RuleID["rule1"] = r1
+
+				data_valid := store.Policy{
+					PolicyName: "policy1",
+					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+				}
+				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.WriteToStore()
+				err1 := os.Mkdir(store.StorePath, 0755)
+				Expect(err1).ShouldNot(HaveOccurred())
+			})
+
+			AfterEach(func() {
+				store.NewWriteFile = restorewritefile
+				store.JsonMarshalIndent = restoremarshalindent
+				_ = os.RemoveAll(tempDir)
+			})
+
+			It("returns true", func() {
+				ret := store.RunSyncPolicyInfo()
+				Expect(ret).To(Equal(true))
+			})
+
+			It("returns false if write to file fails", func() {
+				store.NewWriteFile = fakewritefile
+				ret := store.RunSyncPolicyInfo()
+				Expect(ret).To(Equal(false))
+			})
+
+			It("returns false if marshal fails", func() {
+				store.JsonMarshalIndent = fakemarshal
+				ret := store.RunSyncPolicyInfo()
+				Expect(ret).To(Equal(false))
+			})
+		})
+	})
+
+	//IpSet: RunSyncIpSetInfo
+	Describe("RunSyncIpSetInfo", func() {
+
+		Context("Writes to persistent storage", func() {
+
+			restorewritefile := store.NewWriteFile
+			restoremarshalindent := store.JsonMarshalIndent
+
+			BeforeEach(func() {
+				store.NewPolicy()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.IpsetFile = store.StorePath + "ipset_db.json"
+				data_valid := store.IpSet{
+					IpsetID:    "1234",
+					IpSetIDx:   1,
+					PolicyName: "Policy1",
+					RuleID:     "RuleID",
+					IpAddr:     []string{"10.10.10.1"},
+				}
+				data_valid.WriteToStore()
+				err1 := os.Mkdir(store.StorePath, 0755)
+				Expect(err1).ShouldNot(HaveOccurred())
+			})
+
+			AfterEach(func() {
+				store.NewWriteFile = restorewritefile
+				store.JsonMarshalIndent = restoremarshalindent
+				_ = os.RemoveAll(tempDir)
+			})
+
+			It("returns true", func() {
+				ret := store.RunSyncIpSetInfo()
+				Expect(ret).To(Equal(true))
+			})
+
+			It("returns false if write to file fails", func() {
+				store.NewWriteFile = fakewritefile
+				ret := store.RunSyncIpSetInfo()
+				Expect(ret).To(Equal(false))
+			})
+
+			It("returns false if marshal fails", func() {
+				store.JsonMarshalIndent = fakemarshal
+				ret := store.RunSyncIpSetInfo()
+				Expect(ret).To(Equal(false))
+			})
+		})
+	})
+
+	//WorkerEp: RunSyncWorkerEpInfo
+	Describe("RunSyncWorkerEpInfo", func() {
+
+		Context("Writes to persistent storage", func() {
+
+			restorewritefile := store.NewWriteFile
+			restoremarshalindent := store.JsonMarshalIndent
+
+			BeforeEach(func() {
+				store.NewPolicy()
+				var err error
+				tempDir, err = os.MkdirTemp("", "test")
+				Expect(err).ShouldNot(HaveOccurred())
+				store.StorePath = tempDir + "/inframanager/"
+				store.WorkerepFile = store.StorePath + "workerep_db.json"
+				data_valid := store.PolicyWorkerEndPoint{
+					WorkerEp:          "10.10.10.1/24",
+					PolicyNameIngress: []string{"policy1", "policy2"},
+					PolicyNameEgress:  []string{"policy3", "policy4"},
+				}
+				data_valid.WriteToStore()
+				err1 := os.Mkdir(store.StorePath, 0755)
+				Expect(err1).ShouldNot(HaveOccurred())
+			})
+
+			AfterEach(func() {
+				store.NewWriteFile = restorewritefile
+				store.JsonMarshalIndent = restoremarshalindent
+				_ = os.RemoveAll(tempDir)
+			})
+
+			It("returns true", func() {
+				ret := store.RunSyncWorkerEpInfo()
+				Expect(ret).To(Equal(true))
+			})
+
+			It("returns false if write to file fails", func() {
+				store.NewWriteFile = fakewritefile
+				ret := store.RunSyncWorkerEpInfo()
+				Expect(ret).To(Equal(false))
+			})
+
+			It("returns false if marshal fails", func() {
+				store.JsonMarshalIndent = fakemarshal
+				ret := store.RunSyncWorkerEpInfo()
+				Expect(ret).To(Equal(false))
+			})
+		})
+	})
 })
