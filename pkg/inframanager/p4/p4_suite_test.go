@@ -123,12 +123,22 @@ var _ = Describe("cni", func() {
 		Context("Programs cni rules", func() {
 
 			It("returns error if IP is invalid", func() {
-				err := p4.InsertCniRules(ctx, p4RtC, "00:00:00:aa:aa:aa", "a.b.c.d", 1, 1)
+				ep := store.EndPoint{
+					PodIpAddress:  "a.b.c.d",
+					InterfaceID:   1,
+					PodMacAddress: "00:00:00:aa:aa:aa",
+				}
+				ep, err := p4.InsertCniRules(ctx, p4RtC, ep, 1)
 				Expect(err).To(HaveOccurred())
 			})
 
 			It("returns error if MAC is invalid", func() {
-				err := p4.InsertCniRules(ctx, p4RtC, "z.z.z.z.z", "10.10.10.1", 1, 1)
+				ep := store.EndPoint{
+					PodIpAddress:  "10.10.10.1",
+					InterfaceID:   1,
+					PodMacAddress: "z.z.z.z",
+				}
+				ep, err := p4.InsertCniRules(ctx, p4RtC, ep, 1)
 				Expect(err).To(HaveOccurred())
 			})
 

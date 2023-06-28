@@ -67,6 +67,14 @@ InfraManager:
           "TLS_AES_256_GCM_SHA384",
         ]
 
+# Type of network interface
+# Possible values
+# - sriov
+# - cdq
+# - tap
+# If none specified, defaults to cdq
+InterfaceType: tap
+
 P4InfoPath: /share/infra/k8s_dp/p4Info.txt
 p4BinPath: /share/infra/k8s_dp/k8s_dp.pb.bin
 DeviceId: 1

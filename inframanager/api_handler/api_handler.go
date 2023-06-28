@@ -162,63 +162,59 @@ func CloseGNMIConn() {
 }
 
 func getPortID(ifName string, macAddr net.HardwareAddr) (portID uint32, err error) {
-	portID = (uint32(macAddr[1]) + 16)
-	log.Infof("Infra Manager interface %v %d", macAddr, portID)
 
-	/*
-		//TODO: Test for SRIOV
-		switch types.IfTtype {
-		case types.SriovPodInterface:
-		case types.CDQInterface:
-			portID = (uint32(macAddr[1]) + 16)
+	//TODO: Test for SRIOV
+	switch config.InterfaceType {
+	case types.SriovPodInterface:
+	case types.CDQInterface:
+		portID = (uint32(macAddr[1]) + 16)
+		return
+	case types.TapInterface:
+		var resp *pb.GetResponse
+
+		if len(ifName) == 0 {
+			err = fmt.Errorf("Empty interface name. Provide a valid input")
 			return
-		case types.TapInterface:
-			//var resp *pb.GetResponse
+		}
 
-			if len(ifName) == 0 {
-				err = fmt.Errorf("Empty interface name. Provide a valid input")
-				return
-			}
+		req := &pb.GetRequest{
+			Path: []*pb.Path{
+				&pb.Path{
+					Elem: []*pb.PathElem{
+						&pb.PathElem{
+							Name: "interfaces",
+						},
+						&pb.PathElem{
+							Name: "virtual-interface",
+							Key: map[string]string{
+								"name": ifName,
+							},
+						},
+						&pb.PathElem{
+							Name: "config",
+						},
+						&pb.PathElem{
+							Name: "tdi-portin-id",
+						},
+					},
+				},
+			},
+			Type:     pb.GetRequest_ALL,
+			Encoding: pb.Encoding_PROTO,
+		}
+
+		server := NewApiServer()
+		if resp, err = server.gNMIClient.Get(context.Background(),
+			req); err != nil {
 			return
+		}
 
-			   req := &pb.GetRequest{
-			          Path: []*pb.Path{
-			                   &pb.Path{
-			                           Elem: []*pb.PathElem{
-			                                   &pb.PathElem{
-			                                           Name: "interfaces",
-			                                   },
-			                                   &pb.PathElem{
-			                                           Name: "virtual-interface",
-			                                           Key: map[string]string{
-			                                                   "name": ifName,
-			                                           },
-			                                   },
-			                                   &pb.PathElem{
-			                                           Name: "config",
-			                                   },
-			                                   &pb.PathElem{
-			                                          Name: "tdi-portin-id",
-			                                   },
-			                           },
-			                   },
-			           },
-			           Type:     pb.GetRequest_ALL,
-			           Encoding: pb.Encoding_PROTO,
-			   }
-
-			   server := NewApiServer()
-			   if resp, err = server.gNMIClient.Get(context.Background(),
-			           req); err != nil {
-			           return
-			   }
-
-			   val := (resp.Notification[0].Update[0].Val.Value).(*pb.TypedValue_UintVal)
-			   portID = (uint32)(val.UintVal)
-			   return
-
-	*/
-
+		val := (resp.Notification[0].Update[0].Val.Value).(*pb.TypedValue_UintVal)
+		portID = (uint32)(val.UintVal)
+		return
+	default:
+		return
+	}
 	return
 }
 
@@ -266,6 +262,9 @@ func CreateServer(log *log.Entry) *ApiServer {
 }
 
 func InsertDefaultRule() {
+	var portID uint32
+	var err error
+
 	server := NewApiServer()
 
 	IP, netIp, err := net.ParseCIDR(types.DefaultRoute)
@@ -282,12 +281,19 @@ func InsertDefaultRule() {
 		return
 	}
 
-	macAddress, _ := net.ParseMAC(config.InfraManager.ArpMac)
-	portID, err := getPortID("dummy", macAddress)
-	if err != nil {
-		log.Errorf("Failed to get port id for %s, err: %v",
-			"dummy", err)
-		return
+	if config.InterfaceType == types.TapInterface {
+		portID = types.ArpProxyDefaultPort
+	} else {
+		macAddress, err := net.ParseMAC(config.InfraManager.ArpMac)
+		if err != nil {
+			log.Errorf("Invalid MAC Address: %s, err: %v", config.InfraManager.ArpMac, err)
+			return
+		}
+		if portID, err = getPortID("dummy", macAddress); err != nil {
+			log.Errorf("Failed to get port id for %s, err: %v",
+				"dummy", err)
+			return
+		}
 	}
 
 	log.Infof("Inserting default gateway rule for arp-proxy route, arp mac: %s", config.InfraManager.ArpMac)
@@ -296,6 +302,7 @@ func InsertDefaultRule() {
 		portID, true); err != nil {
 		log.Errorf("Failed to insert the default rule for arp-proxy")
 	}
+	return
 }
 
 func (s *ApiServer) Start(t *tomb.Tomb) {
@@ -403,7 +410,13 @@ func (s *ApiServer) CreateNetwork(ctx context.Context, in *proto.CreateNetworkRe
 
 	ipAddr := strings.Split(in.AddRequest.ContainerIps[0].Address, "/")[0]
 	macAddr := in.MacAddr
-	macAddress, _ := net.ParseMAC(in.MacAddr)
+	macAddress, err := net.ParseMAC(in.MacAddr)
+	if err != nil {
+		logger.Errorf("Invalid MAC Address %s, err: %v", in.MacAddr, err)
+		out.Successful = false
+		return out, err
+	}
+
 	portID, err := getPortID(in.HostIfName, macAddress)
 	if err != nil {
 		logger.Errorf("Failed to get port id for %s, err: %v",
@@ -483,161 +496,160 @@ func (s *ApiServer) SetSnatAddress(ctx context.Context, in *proto.SetSnatAddress
 }
 
 func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslation) (*proto.Reply, error) {
-	/*
-		var err error
-		var podPortIDs []uint16
-		var podIpAddrs []string
-		var serviceEpIpAddrs []string
-	*/
+	var err error
+	var podPortIDs []uint16
+	var podIpAddrs []string
+	var serviceEpIpAddrs []string
 
 	out := &proto.Reply{
 		Successful: true,
 	}
-	return out, nil
+	/* Currently supporting services only for the dpdk target */
+	if config.InterfaceType != types.TapInterface {
+		return out, nil
+	}
 
-	/*
-			update := false
+	update := false
 
-			logger := log.WithField("func", "NatTranslationAdd")
+	logger := log.WithField("func", "NatTranslationAdd")
 
-			if in == nil || in.Endpoint == nil {
-				logger.Errorf("Invalid NatTranslationAdd request")
-				err := fmt.Errorf("Invalid NatTranslationAdd request")
-				return out, err
-			}
+	if in == nil || in.Endpoint == nil {
+		logger.Errorf("Invalid NatTranslationAdd request")
+		err := fmt.Errorf("Invalid NatTranslationAdd request")
+		return out, err
+	}
 
-			//
-			//	If there are no backend endpoints for the service,
-			//	nothing to program the pipeline. Simply return from
-			//	the function call.
-			//
-			if len(in.Backends) == 0 {
-				logger.Errorf("No endpoints in the service %s:%s:%d. No rules inserted",
-					in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
-				return out, nil
-			}
+	//
+	//	If there are no backend endpoints for the service,
+	//	nothing to program the pipeline. Simply return from
+	//	the function call.
+	//
+	if len(in.Backends) == 0 {
+		logger.Errorf("No endpoints in the service %s:%s:%d. No rules inserted",
+			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
+		return out, nil
+	}
 
-			if len(hostInterfaceMac) == 0 {
-				logger.Errorf("Host Interface is not yet setup. Cannot program rules for service %s:%s:%d",
-					in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
-				err = fmt.Errorf("Host Interface is not yet setup. Cannot program rules for service %s:%s:%d",
-					in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
-				out.Successful = false
-				return out, err
-			}
+	if len(hostInterfaceMac) == 0 {
+		logger.Errorf("Host Interface is not yet setup. Cannot program rules for service %s:%s:%d",
+			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
+		err = fmt.Errorf("Host Interface is not yet setup. Cannot program rules for service %s:%s:%d",
+			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
+		out.Successful = false
+		return out, err
+	}
 
-			// Use Host Interface MAC address for service
+	// Use Host Interface MAC address for service
 
-			serviceMacAddr := hostInterfaceMac
-			serviceIpAddr := in.Endpoint.Ipv4Addr
+	serviceMacAddr := hostInterfaceMac
+	serviceIpAddr := in.Endpoint.Ipv4Addr
 
-			service := store.Service{
-				ClusterIp: serviceIpAddr,
-				Port:      in.Endpoint.Port,
-				Proto:     in.Proto,
-			}
+	service := store.Service{
+		ClusterIp: serviceIpAddr,
+		Port:      in.Endpoint.Port,
+		Proto:     in.Proto,
+	}
 
-			entry := service.GetFromStore()
-			//
-			//	Service already exists in the store.
-			//	Update with new endpoints.
-			//
-			if entry != nil {
-				logger.Infof("Incoming NatTranslationUpdate %+v", in)
-				logger.Debugf("Service ip %v and proto %v port %v , num of endpoints %v",
-					in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port, len(in.Backends))
+	entry := service.GetFromStore()
+	//
+	//	Service already exists in the store.
+	//	Update with new endpoints.
+	//
+	if entry != nil {
+		logger.Infof("Incoming NatTranslationUpdate %+v", in)
+		logger.Debugf("Service ip %v and proto %v port %v , num of endpoints %v",
+			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port, len(in.Backends))
 
-				service = entry.(store.Service)
-				if service.Port != in.Endpoint.Port {
-					logger.Errorf("Port mismatch for the service %v, old port: %v, new port : %v",
-						service.ClusterIp, service.Port, in.Endpoint.Port)
-					err = fmt.Errorf("Port mismatch for the service %v, old port: %v, new port : %v",
-						service.ClusterIp, service.Port, in.Endpoint.Port)
-					out.Successful = false
-		            return out, err
-			    }
-				for ipAddr := range service.ServiceEndPoint {
-					serviceEpIpAddrs = append(serviceEpIpAddrs, ipAddr)
-				}
+		service = entry.(store.Service)
+		if service.Port != in.Endpoint.Port {
+			logger.Errorf("Port mismatch for the service %v, old port: %v, new port : %v",
+				service.ClusterIp, service.Port, in.Endpoint.Port)
+			err = fmt.Errorf("Port mismatch for the service %v, old port: %v, new port : %v",
+				service.ClusterIp, service.Port, in.Endpoint.Port)
+			out.Successful = false
+			return out, err
+		}
+		for ipAddr := range service.ServiceEndPoint {
+			serviceEpIpAddrs = append(serviceEpIpAddrs, ipAddr)
+		}
 
-				update = true
+		update = true
 
-			} else {
-				//
-				//	New service. Add it to store
-				//
-				logger.Infof("Incoming NatTranslationAdd %+v", in)
-				logger.Debugf("Service ip %v proto %v port %v, num of endpoints %v",
-					in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port, len(in.Backends))
+	} else {
+		//
+		//	New service. Add it to store
+		//
+		logger.Infof("Incoming NatTranslationAdd %+v", in)
+		logger.Debugf("Service ip %v proto %v port %v, num of endpoints %v",
+			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port, len(in.Backends))
 
-				service.MacAddr = serviceMacAddr
-				service.NumEndPoints = 0
-				service.ServiceEndPoint = make(map[string]store.ServiceEndPoint)
-			}
+		service.MacAddr = serviceMacAddr
+		service.NumEndPoints = 0
+		service.ServiceEndPoint = make(map[string]store.ServiceEndPoint)
+	}
 
-			server := NewApiServer()
-			newEps := 0
+	server := NewApiServer()
+	newEps := 0
 
-			for _, e := range in.Backends {
-				ipAddr := e.DstEp.Ipv4Addr
-				if utils.IsIn(ipAddr, serviceEpIpAddrs) {
-					continue
-				}
-				newEps++
+	for _, e := range in.Backends {
+		ipAddr := e.DstEp.Ipv4Addr
+		if utils.IsIn(ipAddr, serviceEpIpAddrs) {
+			continue
+		}
+		newEps++
 
-				podIpAddrs = append(podIpAddrs, ipAddr)
-				podPortIDs = append(podPortIDs, uint16(e.DstEp.Port))
+		podIpAddrs = append(podIpAddrs, ipAddr)
+		podPortIDs = append(podPortIDs, uint16(e.DstEp.Port))
 
-			}
+	}
 
-			if newEps == 0 {
-				logger.Info("No new endpoints in the service. No rules inserted")
-				return out, err
-			}
+	if newEps == 0 {
+		logger.Info("No new endpoints in the service. No rules inserted")
+		return out, err
+	}
 
-			if err, service = p4.InsertServiceRules(ctx, server.p4RtC, podIpAddrs,
-				podPortIDs, service, update); err != nil {
-				logger.Errorf("Failed to insert the service entry %s:%s:%d, backends: %v, into the pipeline",
-					serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
-				out.Successful = false
-				return out, err
-			}
-			logger.Debugf("Inserted the service entry %s:%s:%d, backends: %v into the pipeline",
+	if err, service = p4.InsertServiceRules(ctx, server.p4RtC, podIpAddrs,
+		podPortIDs, service, update); err != nil {
+		logger.Errorf("Failed to insert the service entry %s:%s:%d, backends: %v, into the pipeline",
+			serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
+		out.Successful = false
+		return out, err
+	}
+	logger.Debugf("Inserted the service entry %s:%s:%d, backends: %v into the pipeline",
+		serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
+
+	if update {
+		// Update only the endpoint details to the store
+		if !service.UpdateToStore() {
+			logger.Errorf("Failed to update service entry %s:%s:%d, backends: %v, into the store. Reverting from the pipeline",
 				serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
 
-			if update {
-				// Update only the endpoint details to the store
-				if !service.UpdateToStore() {
-					logger.Errorf("Failed to update service entry %s:%s:%d, backends: %v, into the store. Reverting from the pipeline",
-						serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
+			p4.DeleteServiceRules(ctx, server.p4RtC, service)
 
-					p4.DeleteServiceRules(ctx, server.p4RtC, service)
-
-					err = fmt.Errorf("Failed to update service %s:%s:%d, backends: %v into the store",
-						serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
-					out.Successful = false
-					return out, err
-				}
-				logger.Debugf("Updated the service entry %s:%s:%d, backends: %v in the store",
-					serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
-			} else {
-				if !service.WriteToStore() {
-					logger.Errorf("Failed to insert service entry %s:%s:%d, backends: %v into the store. Reverting from the pipeline",
-						serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
-
-					p4.DeleteServiceRules(ctx, server.p4RtC, service)
-
-					err = fmt.Errorf("Failed to insert service %s:%s:%d, backends: %v into the store",
-						serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
-					out.Successful = false
-					return out, err
-				}
-				logger.Debugf("Inserted the service entry %s:%s:%d, backends: %v into the store",
-					serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
-			}
-
+			err = fmt.Errorf("Failed to update service %s:%s:%d, backends: %v into the store",
+				serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
+			out.Successful = false
 			return out, err
-	*/
+		}
+		logger.Debugf("Updated the service entry %s:%s:%d, backends: %v in the store",
+			serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
+	} else {
+		if !service.WriteToStore() {
+			logger.Errorf("Failed to insert service entry %s:%s:%d, backends: %v into the store. Reverting from the pipeline",
+				serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
+
+			p4.DeleteServiceRules(ctx, server.p4RtC, service)
+
+			err = fmt.Errorf("Failed to insert service %s:%s:%d, backends: %v into the store",
+				serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
+			out.Successful = false
+			return out, err
+		}
+		logger.Debugf("Inserted the service entry %s:%s:%d, backends: %v into the store",
+			serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
+	}
+
+	return out, err
 }
 
 func (s *ApiServer) AddDelSnatPrefix(ctx context.Context, in *proto.AddDelSnatPrefixRequest) (*proto.Reply, error) {
@@ -853,7 +865,12 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 
 	ipAddr := strings.Split(in.Ipv4Addr, "/")[0]
 	macAddr := in.MacAddr
-	macAddress, _ := net.ParseMAC(in.MacAddr)
+	macAddress, err := net.ParseMAC(in.MacAddr)
+	if err != nil {
+		logger.Errorf("Invalid MAC address: %s, err: %v", in.MacAddr, err)
+		out.Successful = false
+		return out, err
+	}
 	portID, err := getPortID(in.IfName, macAddress)
 	if err != nil {
 		logger.Errorf("Failed to get port id for %s, err: %v",
