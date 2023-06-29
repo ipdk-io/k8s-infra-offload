@@ -48,6 +48,8 @@ const (
 const (
 	MAXUINT32              = 4294967295
 	DEFAULT_UUID_CNT_CACHE = 512
+	PROTO_TCP              = 6
+	PROTO_UDP              = 17
 )
 
 type UUIDGenerator struct {

@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/p4"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
 )
 
@@ -919,7 +920,7 @@ var _ = Describe("Storepolicy", func() {
 				ipsetidx := store.IpSetIDX{
 					IpSetIDx:  1,
 					Direction: "RX",
-					Protocol:  "tcp",
+					Protocol:  p4.PROTO_TCP,
 					RuleID:    make(map[string]store.Rule),
 				}
 				ipsetidx.RuleID["rule1"] = r1
@@ -1069,7 +1070,7 @@ var _ = Describe("Storepolicy", func() {
 				ipsetidx := store.IpSetIDX{
 					IpSetIDx:  1,
 					Direction: "RX",
-					Protocol:  "tcp",
+					Protocol:  p4.PROTO_TCP,
 					RuleID:    make(map[string]store.Rule),
 				}
 				ipsetidx.RuleID["rule1"] = r1
@@ -1132,7 +1133,7 @@ var _ = Describe("Storepolicy", func() {
 				ipsetidx := store.IpSetIDX{
 					IpSetIDx:  1,
 					Direction: "RX",
-					Protocol:  "tcp",
+					Protocol:  p4.PROTO_TCP,
 					RuleID:    make(map[string]store.Rule),
 				}
 				ipsetidx.RuleID["rule1"] = r1
@@ -1214,7 +1215,7 @@ var _ = Describe("Storepolicy", func() {
 				ipsetidx := store.IpSetIDX{
 					IpSetIDx:  1,
 					Direction: "RX",
-					Protocol:  "tcp",
+					Protocol:  p4.PROTO_TCP,
 					RuleID:    make(map[string]store.Rule),
 				}
 				ipsetidx.RuleID["rule1"] = r1
@@ -1241,7 +1242,7 @@ var _ = Describe("Storepolicy", func() {
 				ipsetidx := store.IpSetIDX{
 					IpSetIDx:  1,
 					Direction: "RX",
-					Protocol:  "tcp",
+					Protocol:  p4.PROTO_TCP,
 					RuleID:    make(map[string]store.Rule),
 				}
 				ipsetidx.RuleID["rule1"] = r1
@@ -1268,7 +1269,7 @@ var _ = Describe("Storepolicy", func() {
 				ipsetidx := store.IpSetIDX{
 					IpSetIDx:  1,
 					Direction: "RX",
-					Protocol:  "tcp",
+					Protocol:  p4.PROTO_TCP,
 					RuleID:    make(map[string]store.Rule),
 				}
 				ipsetidx.RuleID["rule1"] = r1
@@ -1294,7 +1295,7 @@ var _ = Describe("Storepolicy", func() {
 				ipsetidx := store.IpSetIDX{
 					IpSetIDx:  1,
 					Direction: "ingress",
-					Protocol:  "tcp",
+					Protocol:  p4.PROTO_TCP,
 					RuleID:    make(map[string]store.Rule),
 				}
 				ipsetidx.RuleID["rule1"] = r1
@@ -1440,7 +1441,7 @@ var _ = Describe("Storepolicy", func() {
 				ipsetidx := store.IpSetIDX{
 					IpSetIDx:  1,
 					Direction: "RX",
-					Protocol:  "tcp",
+					Protocol:  p4.PROTO_TCP,
 					RuleID:    make(map[string]store.Rule),
 				}
 				ipsetidx.RuleID["rule1"] = r1
@@ -1467,7 +1468,7 @@ var _ = Describe("Storepolicy", func() {
 				ipsetidx := store.IpSetIDX{
 					IpSetIDx:  1,
 					Direction: "RX",
-					Protocol:  "tcp",
+					Protocol:  p4.PROTO_TCP,
 					RuleID:    make(map[string]store.Rule),
 				}
 				ipsetidx.RuleID["rule1"] = r1
@@ -1513,7 +1514,7 @@ var _ = Describe("Storepolicy", func() {
 				ipsetidx := store.IpSetIDX{
 					IpSetIDx:  1,
 					Direction: "RX",
-					Protocol:  "tcp",
+					Protocol:  p4.PROTO_TCP,
 					RuleID:    make(map[string]store.Rule),
 				}
 				ipsetidx.RuleID["rule1"] = r1
@@ -1624,7 +1625,7 @@ var _ = Describe("Storepolicy", func() {
 				ipsetidx := store.IpSetIDX{
 					IpSetIDx:  1,
 					Direction: "RX",
-					Protocol:  "tcp",
+					Protocol:  p4.PROTO_TCP,
 					RuleID:    make(map[string]store.Rule),
 				}
 				ipsetidx.RuleID["rule1"] = r1
@@ -1652,7 +1653,7 @@ var _ = Describe("Storepolicy", func() {
 				ipsetidx := store.IpSetIDX{
 					IpSetIDx:  1,
 					Direction: "RX",
-					Protocol:  "tcp",
+					Protocol:  p4.PROTO_TCP,
 					RuleID:    make(map[string]store.Rule),
 				}
 				ipsetidx.RuleID["rule1"] = r1
@@ -1786,7 +1787,7 @@ var _ = Describe("Storepolicy", func() {
 				ipsetidx := store.IpSetIDX{
 					IpSetIDx:  1,
 					Direction: "RX",
-					Protocol:  "tcp",
+					Protocol:  p4.PROTO_TCP,
 					RuleID:    make(map[string]store.Rule),
 				}
 				ipsetidx.RuleID["rule1"] = r1
@@ -1809,7 +1810,7 @@ var _ = Describe("Storepolicy", func() {
 				ipsetidx1 := store.IpSetIDX{
 					IpSetIDx:  1,
 					Direction: "TX",
-					Protocol:  "udp",
+					Protocol:  p4.PROTO_UDP,
 					RuleID:    make(map[string]store.Rule),
 				}
 				ipsetidx1.RuleID["rule1"] = r2
@@ -1835,7 +1836,7 @@ var _ = Describe("Storepolicy", func() {
 				ipsetidx := store.IpSetIDX{
 					IpSetIDx:  1,
 					Direction: "RX",
-					Protocol:  "tcp",
+					Protocol:  p4.PROTO_TCP,
 					RuleID:    make(map[string]store.Rule),
 				}
 				ipsetidx.RuleID["rule1"] = r1
@@ -1861,7 +1862,7 @@ var _ = Describe("Storepolicy", func() {
 				ipsetidx := store.IpSetIDX{
 					IpSetIDx:  1,
 					Direction: "RX",
-					Protocol:  "tcp",
+					Protocol:  p4.PROTO_TCP,
 					RuleID:    make(map[string]store.Rule),
 				}
 				ipsetidx.RuleID["rule1"] = r1
@@ -2023,7 +2024,7 @@ var _ = Describe("Storepolicy", func() {
 				ipsetidx := store.IpSetIDX{
 					IpSetIDx:  1,
 					Direction: "RX",
-					Protocol:  "tcp",
+					Protocol:  p4.PROTO_TCP,
 					RuleID:    make(map[string]store.Rule),
 				}
 				ipsetidx.RuleID["rule1"] = r1

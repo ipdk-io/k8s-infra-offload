@@ -34,6 +34,7 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 
 	viper.SetConfigType("yaml")
 
+	viper.SetDefault("InterfaceType", types.CDQInterface)
 	viper.SetDefault("Infrap4dGrpcServer.Addr", "localhost:9559")
 	viper.SetDefault("Infrap4dGrpcServer.conn", "mtls")
 	viper.SetDefault("Infrap4dGrpcServer.client-cert", types.ManagerDefaultClientCert)
