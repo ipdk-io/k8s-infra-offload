@@ -59,7 +59,7 @@ InfraManager:
 #        for the list of supported ciphersuites.
 
 # Not required for dpdk
-  arp-mac: "00:0f:00:04:03:14"
+  arp-mac: "00:09:00:04:03:14"
 
   conn: mtls
   server-cert: "/tmp/inframanager/cert/server/tls.crt"
