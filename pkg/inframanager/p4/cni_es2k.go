@@ -251,6 +251,11 @@ func DeleteCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 		return err
 	}
 
+	if _, err := net.ParseMAC(ep.PodMacAddress); err != nil {
+		err = fmt.Errorf("Invalid MAC Address")
+		return err
+	}
+
 	err := ArptToPortTable(ctx, p4RtC, ep.PodIpAddress, 0, false)
 	if err != nil {
 		return err

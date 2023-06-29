@@ -19,6 +19,7 @@ type Configuration struct {
 	Infrap4dGrpcServer ServerConf  `yaml:"Infrap4dGrpcServer"`
 	Infrap4dGnmiServer ServerConf  `yaml:"Infrap4dGnmiServer"`
 	InfraManager       ManagerConf `yaml:"InfraManager"`
+	InterfaceType      string      `yaml:"InterfaceType"`
 	NodeIP             string
 	LogLevel           string
 	P4InfoPath         string
