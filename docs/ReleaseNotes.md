@@ -1,68 +1,60 @@
-# Release Notes: IPDK 23.01 K8s Infra Offload
+# IPDK Kubernetes* Infrastructure Offload Release Notes
 
-## Overview
+## What's New in This Release
 
-This is part of IPDK 23.01 release for end users and the validation team
-to use latest K8s offload features enabled by the IPDK K8S-Infra-Offload
-recipe.
+### IPDK 23.07 K8s-Infra-Offload Component
 
-## What's Supported
+- This is the release of K8s-Infra-Offload recipe for ES2K and DPDK targets.
+This is the first release that supports both these targets.
 
 ### Highlights
 
+#### DPDK and ES2K targets
 - Support for Kubernetes Container Network Interface (CNI) to enable pods to
   send/receive traffic.
 - Intra Node L3 Forwarding to enable pod to pod communication, on the same node,
   via CNI interfaces.
+
+#### DPDK target
 - Service Load Balancing within the node to allow multiple pods on same node to
   act as end points providing any application service.
 - Bi-directional Auto Learning and Flow Pinning (a.k.a Connection Tracking),
   used with load balancing, to allow consistent end point pod selection, once it
   has been selected for the first packet.
 - DNS service provided by Core DNS pods to other pods.
-- Support for TLS traffic between DNS server pods and Kube API.
 
-## Documentation
-
-- The [Kubernetes Infra Offload Usage Guide](https://github.com/ipdk-io/k8s-infra-offload/blob/main/README.md) provides the installation and deployment instructions.
-
-## Security Domain
+### Security Domain
 
 This release does not support multi-tenant or multi-node deployments. At
-present, the underlying IPDK networking recipe needs to be run on bare metal.
-The entire node, used for deployment, is assumed to be within the trusted zone
-and hence, gRPC/gNMI channels for communication is not secured using TLS. When
-running infrap4d or gnmi-ctl, the "grpc_open_insecure_mode" option is set to
-true.
+present, the underlying IPDK networking recipe needs to be run on bare metal
+on host CPU cores. The entire node, used for deployment, is assumed to be an
+untrusted zone and hence, gRPC/gNMI channels for communications need to be
+secured using TLS. For that, the user should create the TLS keys and
+certificates and install them as per the steps given in the README.
 
-## Bug Fixes
+### Bug Fixes
 
-- Added test pod remains in pending state
 
-- Need support to set log-level in Infra Manager
+### Known Issues
 
-- Need ability to run ARP proxy setup in a script
 
-- Unable to create pods after add/delete a few times
+### Coming Attractions
 
-- Unable to start service after start/delete a few times
+- Support for Service and Load balancing on ES2K target.
 
-- /var/log/inframanager.log is not deleted after "make undeploy"
-
-- Unused params in "inframanager/config.yaml" should be removed from input file
-
-## Known Issues
-
-- The LogLevel configuration option in the config.yaml file does not apply in
-  a consistent manner. For example, the logs generated at some places may be
-  more than configured level.
-
-## Coming Attractions
-
-- Support for TLS protected gRPC channels used for communication
-
-- Support for multi-tenancy (multiple VMs) on single node
+- Support for Kubernetes Network Policy feature.
 
 - Support for multi-node deployment with inter node L3 forwarding
 
-- Support for K8s Network Policy
+## Installation and Build Instructions
+
+See the following for more information:
+- [Kubernetes*, Docker*, and containerd* Installation](k8s-docker-containerd-install.md) 
+- [Kubernetes* Infrastructure Offload Readme](IPDK_K8s_Recipe_Readme.md)
+
+## License, Notices, & Disclaimers
+
+### Licensing
+
+For licensing information, see the file "LICENSE" in the root folder of the
+repository.
