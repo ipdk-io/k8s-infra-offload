@@ -29,7 +29,11 @@ Infrap4dGnmiServer:
   conn: mtls
 
 InfraManager: 
-# Possible connection types
+#  - arp-mac
+#    This is the mac address of the interface given to
+#    arp-proxy namespace using the arp_proxy.sh script
+#
+#  Possible connection types
 #  - insecure
 #  - tls
 #    For tls, also provide the ca-cert
@@ -53,7 +57,10 @@ InfraManager:
 #        ]
 #        Check https://pkg.go.dev/crypto/tls
 #        for the list of supported ciphersuites.
-#
+
+# Not required for dpdk
+  arp-mac: "00:09:00:04:03:14"
+
   conn: mtls
   server-cert: "/tmp/inframanager/cert/server/tls.crt"
   server-key: "/tmp/inframanager/cert/server/tls.key"
@@ -63,8 +70,16 @@ InfraManager:
           "TLS_AES_256_GCM_SHA384",
         ]
 
-P4InfoPath: k8s_dp/p4Info.txt
-p4BinPath: k8s_dp/k8s_dp.pb.bin
+# Type of network interface
+# Possible values
+# - sriov
+# - cdq
+# - tap
+# If none specified, defaults to cdq
+InterfaceType: cdq
+
+P4InfoPath: /share/infra/k8s_dp/p4Info.txt
+p4BinPath: /share/infra/k8s_dp/k8s_dp.pb.bin
 DeviceId: 1
 # Possible debug levels
 #  "Panic"

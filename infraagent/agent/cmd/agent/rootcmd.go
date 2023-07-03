@@ -43,6 +43,14 @@ var config struct {
 	caCert        string
 }
 
+var supporteIntfTypes = []string{
+	types.SriovPodInterface,
+	types.IpvlanPodInterface,
+	types.TapInterface,
+	types.CDQInterface,
+}
+var defaultIntfType = types.SriovPodInterface
+
 var rootCmd = &cobra.Command{
 	Use:   types.InfraAgentCLIName,
 	Short: "Infra Agent is daemon that exposes a calico CNI gRPC backend for Intel MEV",
@@ -74,7 +82,7 @@ It off-loads K8s dataplane to Infrastructure components.
 }
 
 func exitWithError(err error, exitCode int) {
-	fmt.Fprintf(os.Stderr, "There was an error while executing %s: '%s'\n", types.InfraAgentCLIName, err)
+	fmt.Fprintf(os.Stderr, "There was an error while executing %s: %s\n", types.InfraAgentCLIName, err.Error())
 	os.Exit(exitCode)
 }
 
@@ -87,8 +95,8 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	intfTypeOpts := newFlagOpts([]string{types.SriovPodInterface, types.IpvlanPodInterface, types.TapInterface}, types.SriovPodInterface)
-	rootCmd.PersistentFlags().Var(intfTypeOpts, "interfaceType", "Pod Interface type (sriov|ipvlan|tap)")
+	intfTypeOpts := newFlagOpts(supporteIntfTypes, defaultIntfType)
+	rootCmd.PersistentFlags().Var(intfTypeOpts, "interfaceType", "Pod Interface type (sriov|cdq|ipvlan|tap)")
 	rootCmd.PersistentFlags().StringVar(&config.interfaceName, "interface", "", intfFlagHelpMsg)
 	rootCmd.PersistentFlags().StringVar(&config.cfgFile, "config", "/etc/infra/infraagent.yaml", "config file")
 	rootCmd.PersistentFlags().StringVar(&config.tapPrefix, "tapPrefix", types.TapInterfacePrefix, "Host TAP interface prefix for TAP interface type")
@@ -176,19 +184,25 @@ func validateConfigs() error {
 	var err error
 	// validate interface type
 	interfaceType := viper.GetString("interfaceType")
-	if newErr := newFlagOpts([]string{types.SriovPodInterface, types.IpvlanPodInterface, types.TapInterface}, types.SriovPodInterface).Set(interfaceType); newErr != nil {
+	if newErr := newFlagOpts(supporteIntfTypes, defaultIntfType).Set(interfaceType); newErr != nil {
 		err = fmt.Errorf("error validating interfaceType: %w", newErr)
+
 	}
 
-	// When validating other configs wrap add error msgs in one and then return it at the end.
-	// For example:
-	//
-	// anotherParam := viper.GetString("anotherParam")
-	// if newErr := validate("anotherParam"); newErr != nil {
-	// 	err = fmt.Errorf("%s;\nerror validating anotherField: %s", err, newErr)
-	// }
+	switch interfaceType {
+	case types.CDQInterface, types.SriovPodInterface:
+		if intfName := viper.GetString("interface"); intfName == "" {
+			newErr := fmt.Errorf("'interface' option cannot be empty for interfaceType: %s", interfaceType)
+			if err != nil {
+				// Wrap other errors
+				err = fmt.Errorf("%s: %w", newErr.Error(), err)
+			} else {
+				err = newErr
+			}
+		}
+	}
 
-	// If (--insecure==false && mtls==true) then validate that the cert,key,cacert files exist
+	// If (insecure==false && mtls==true) then validate that the cert,key,cacert files exist
 	if !viper.GetBool("insecure") {
 		if viper.GetBool("mtls") {
 			tlsFiles := []string{viper.GetString("client-cert"), viper.GetString("client-key"), viper.GetString("ca-cert")}

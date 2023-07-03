@@ -2,10 +2,14 @@ name: Build and Test
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - ipdk_v*
 
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+      - ipdk_v*
 
 concurrency:
   # if workflow for PR or push is already running stop it, and start new one
@@ -25,10 +29,10 @@ jobs:
     - name: "Set up Go"
       uses: actions/setup-go@v4
       with:
-        go-version: 1.19.4
+        go-version: 1.20.5
 
     - name: "Build"
-      run: make
+      run: make dpdk
 
     - name: Change Permissions
       run: |
@@ -54,7 +58,7 @@ jobs:
     - name: "Set up Go"
       uses: actions/setup-go@v4
       with:
-        go-version: 1.19.4
+        go-version: 1.20.5
 
     - name: "Create k8s Kind Cluster"
       uses: helm/kind-action@v1.5.0
@@ -73,6 +77,7 @@ jobs:
 
     - name: "docker deploy"
       run: |
+        cp -f deploy/dpdk/infraagent-configmap.yaml deploy/.
         make deploy IMAGE_REGISTRY=ghcr.io//${{ github.repository_owner }}k8s-infra-offload/ IMAGE_VERSION=sha-${GITHUB_SHA::7}
         # getnodes using kubectl
         kubectl get nodes -o wide

@@ -54,6 +54,8 @@ spec:
         volumeMounts:
         - name: client-certs
           mountPath: /tmp/infraagent/cert/client/
+        - name: config-volume
+          mountPath: /etc/infra/
       containers:
       - name: agent
         image: infraagent:latest

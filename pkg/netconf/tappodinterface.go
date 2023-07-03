@@ -32,9 +32,9 @@ import (
 )
 
 var (
-	getTapInterfaces               = utils.GetTapInterfaces
-	configureHostInterfaceFunc     = configureHostInterface
-	setHostInterfaceInPodNetnsFunc = setHostInterfaceInPodNetns
+	getTapInterfaces           = utils.GetTapInterfaces
+	configureHostInterfaceFunc = configureHostInterface
+	moveIntfToPodNetnsFunc     = moveIntfToPodNetns
 )
 
 type tapPodInterface struct {
@@ -105,7 +105,7 @@ func (pi *tapPodInterface) setup(intfs []*types.InterfaceInfo) error {
 	}
 	pi.log.Printf("Host IP address: %s", ipnet)
 
-	if err := configureHostInterfaceFunc(res.InterfaceInfo.InterfaceName, ipnet, intfs, pi.log); err != nil {
+	if err := configureHostInterfaceFunc(res.InterfaceInfo.InterfaceName, ipnet, pi.log); err != nil {
 		return fmt.Errorf("Failed to configure host interface %s with IP configurations: %w", res.InterfaceInfo.InterfaceName, err)
 	}
 	// set host interface name
@@ -127,8 +127,7 @@ func (pi *tapPodInterface) setup(intfs []*types.InterfaceInfo) error {
 	return nil
 }
 
-func configureHostInterface(ifName string, ipnet *net.IPNet, interfaces []*types.InterfaceInfo, log *logrus.Entry) error {
-
+func configureHostInterface(ifName string, ipnet *net.IPNet, log *logrus.Entry) error {
 	link, err := linkByName(ifName)
 	if err != nil {
 		log.WithError(err).Errorf("error getting netlink object with inteface name: %s", ifName)
@@ -178,7 +177,7 @@ func (pi *tapPodInterface) CreatePodInterface(in *pb.AddRequest) (*types.Interfa
 	}
 	pi.log.Infof("Interface allocated for Pod: %s", res.InterfaceInfo.InterfaceName)
 
-	if err := setHostInterfaceInPodNetnsFunc(in, res.InterfaceInfo); err != nil {
+	if err := moveIntfToPodNetnsFunc(in, res.InterfaceInfo); err != nil {
 		if _, ok := err.(nsError); ok {
 			_ = movePodInterfaceToHostNetnsFunc(in.Netns, in.InterfaceName, res.InterfaceInfo)
 		}

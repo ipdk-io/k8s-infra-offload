@@ -24,8 +24,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	ServicesFile = storePath + "services_db.json"
+var (
+	ServicesFile = StorePath + "services_db.json"
 )
 
 func IsServiceStoreEmpty() bool {
@@ -50,16 +50,16 @@ func InitServiceStore(setFwdPipe bool) bool {
 		flags = flags | os.O_TRUNC
 	}
 
-	if _, err := os.Stat(storePath); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(storePath, 0640)
+	if _, err := os.Stat(StorePath); errors.Is(err, os.ErrNotExist) {
+		err := os.MkdirAll(StorePath, 0755)
 		if err != nil {
-			log.Error("Failed to create directory ", storePath)
+			log.Error("Failed to create directory ", StorePath)
 			return false
 		}
 	}
 
 	/* Create the store file if it doesn't exist */
-	file, err := NewOpenFile(ServicesFile, flags, 0600)
+	file, err := NewOpenFile(ServicesFile, flags, 0755)
 	if err != nil {
 		log.Error("Failed to open", ServicesFile)
 		return false
@@ -192,7 +192,7 @@ func RunSyncServiceInfo() bool {
 		return false
 	}
 
-	if err = NewWriteFile(ServicesFile, jsonStr, 0600); err != nil {
+	if err = NewWriteFile(ServicesFile, jsonStr, 0755); err != nil {
 		log.Errorf("Failed to write entries to %s, err %s",
 			ServicesFile, err)
 		return false

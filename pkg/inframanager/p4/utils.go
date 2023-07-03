@@ -48,6 +48,8 @@ const (
 const (
 	MAXUINT32              = 4294967295
 	DEFAULT_UUID_CNT_CACHE = 512
+	PROTO_TCP              = 6
+	PROTO_UDP              = 17
 )
 
 type UUIDGenerator struct {
@@ -85,7 +87,7 @@ func (this *UUIDGenerator) getUUID() uint32 {
 
 var uuidFactory = newUUIDGenerator()
 
-func valueToBytes(value uint32) []byte {
+func ValueToBytes(value uint32) []byte {
 	buf := new(bytes.Buffer)
 	err := binary.Write(buf, binary.BigEndian, value)
 	if err != nil {
@@ -95,7 +97,7 @@ func valueToBytes(value uint32) []byte {
 	return buf.Bytes()
 }
 
-func valueToBytes16(value uint16) []byte {
+func ValueToBytes16(value uint16) []byte {
 	buf := new(bytes.Buffer)
 	err := binary.Write(buf, binary.BigEndian, value)
 	if err != nil {

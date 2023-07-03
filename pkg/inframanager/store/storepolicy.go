@@ -1,10 +1,9 @@
 package store
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"net"
 	"os"
 	"reflect"
 
@@ -19,10 +18,10 @@ const (
 	Datapresent
 )
 
-const (
-	PolicyFile   = storePath + "policy_db.json"
-	IpsetFile    = storePath + "ipset_db.json"
-	WorkerepFile = storePath + "workerep_db.json"
+var (
+	PolicyFile   = StorePath + "policy_db.json"
+	IpsetFile    = StorePath + "ipset_db.json"
+	WorkerepFile = StorePath + "workerep_db.json"
 )
 
 func IsPolicyStoreEmpty() bool {
@@ -50,7 +49,7 @@ func IsWorkerepStoreEmpty() bool {
 }
 
 func OpenPolicyStoreFiles(fileName string, flags int) (retflag, []byte) {
-	file, err := NewOpenFile(fileName, flags, 0600)
+	file, err := NewOpenFile(fileName, flags, 0755)
 	if err != nil {
 		log.Error("Failed to open", fileName)
 		return Fail, nil
@@ -84,10 +83,10 @@ func InitPolicyStore(setFwdPipe bool) bool {
 		flags = flags | os.O_TRUNC
 	}
 
-	if _, err := os.Stat(storePath); errors.Is(err, os.ErrNotExist) {
-		err := os.Mkdir(storePath, 0640)
+	if _, err := os.Stat(StorePath); errors.Is(err, os.ErrNotExist) {
+		err := os.MkdirAll(StorePath, 0755)
 		if err != nil {
-			log.Error("Failed to create directory ", storePath)
+			log.Error("Failed to create directory ", StorePath)
 			return false
 		}
 	}
@@ -136,6 +135,30 @@ func InitPolicyStore(setFwdPipe bool) bool {
 }
 
 func (policyadd Policy) WriteToStore() bool {
+
+	for key, _ := range policyadd.IpSetIDx {
+		//Direction
+		direction := policyadd.IpSetIDx[key].Direction
+		if direction != "TX" && direction != "RX" {
+			return false
+		}
+
+		for key1, _ := range policyadd.IpSetIDx[key].RuleID {
+			//Cidr
+			cidr := policyadd.IpSetIDx[key].RuleID[key1].Cidr
+			ip, ipset, err := net.ParseCIDR(cidr)
+			if err != nil {
+				log.Errorf("Invalid Cidr = %s, ip=%s, ipset=%s", cidr, ip, ipset)
+				return false
+			}
+			//PortRange
+			portrange := policyadd.IpSetIDx[key].RuleID[key1].PortRange
+			if len(portrange) > 2 {
+				return false
+			}
+		}
+	}
+
 	PolicySet.PolicyLock.Lock()
 	PolicySet.PolicyMap[policyadd.PolicyName] = policyadd
 	PolicySet.PolicyLock.Unlock()
@@ -143,6 +166,16 @@ func (policyadd Policy) WriteToStore() bool {
 }
 
 func (ipsetadd IpSet) WriteToStore() bool {
+	if ipsetadd.IpSetIDx < 0 || ipsetadd.IpSetIDx > 255 {
+		return false
+	}
+
+	for _, ip := range ipsetadd.IpAddr {
+		if net.ParseIP(ip) == nil {
+			return false
+		}
+	}
+
 	PolicySet.PolicyLock.Lock()
 	PolicySet.IpSetMap[ipsetadd.IpsetID] = ipsetadd
 	PolicySet.PolicyLock.Unlock()
@@ -150,6 +183,11 @@ func (ipsetadd IpSet) WriteToStore() bool {
 }
 
 func (workerepadd PolicyWorkerEndPoint) WriteToStore() bool {
+	_, _, err := net.ParseCIDR(workerepadd.WorkerEp)
+	if err != nil {
+		log.Errorf("Invalid WorkerEp = %s", workerepadd.WorkerEp)
+		return false
+	}
 	PolicySet.PolicyLock.Lock()
 	PolicySet.WorkerEpMap[workerepadd.WorkerEp] = workerepadd
 	PolicySet.PolicyLock.Unlock()
@@ -169,6 +207,12 @@ func remove(s []string, r string) ([]string, bool) {
 }
 
 func (policydel Policy) DeleteFromStore() bool {
+
+	policyEntry := PolicySet.PolicyMap[policydel.PolicyName]
+	if reflect.DeepEqual(policyEntry, Policy{}) {
+		return false
+	}
+
 	//delete the corresponding ipsetid from ipset map
 	var f bool
 	for ipsetidx, _ := range policydel.IpSetIDx {
@@ -201,6 +245,12 @@ func (policydel Policy) DeleteFromStore() bool {
 }
 
 func (ipsetdel IpSet) DeleteFromStore() bool {
+
+	ipsetEntry := PolicySet.IpSetMap[ipsetdel.IpsetID]
+	if reflect.DeepEqual(ipsetEntry, IpSet{}) {
+		return false
+	}
+
 	ipsetidx := ipsetdel.IpSetIDx
 	ruleid := ipsetdel.RuleID
 
@@ -227,6 +277,12 @@ func (ipsetdel IpSet) DeleteFromStore() bool {
 }
 
 func (workerepdel PolicyWorkerEndPoint) DeleteFromStore() bool {
+
+	workerepEntry := PolicySet.WorkerEpMap[workerepdel.WorkerEp]
+	if reflect.DeepEqual(workerepEntry, PolicyWorkerEndPoint{}) {
+		return false
+	}
+
 	PolicySet.PolicyLock.Lock()
 	delete(PolicySet.WorkerEpMap, workerepdel.WorkerEp)
 	PolicySet.PolicyLock.Unlock()
@@ -266,8 +322,11 @@ func (workerepget PolicyWorkerEndPoint) GetFromStore() store {
 func (policymod Policy) UpdateToStore() bool {
 	policyEntry := PolicySet.PolicyMap[policymod.PolicyName]
 	if reflect.DeepEqual(policyEntry, Policy{}) {
-		//		return false
-		return policymod.WriteToStore()
+		return false
+	}
+
+	if reflect.DeepEqual(policyEntry, policymod) {
+		return false
 	}
 
 	ret := policyEntry.DeleteFromStore()
@@ -283,6 +342,9 @@ func (ipsetmod IpSet) UpdateToStore() bool {
 	if reflect.DeepEqual(ipsetEntry, IpSet{}) {
 		return false
 	}
+	if reflect.DeepEqual(ipsetEntry, ipsetmod) {
+		return false
+	}
 
 	ipsetEntry.IpAddr = nil
 	ipsetEntry.IpAddr = ipsetmod.IpAddr
@@ -295,43 +357,55 @@ func (workerepmod PolicyWorkerEndPoint) UpdateToStore() bool {
 		return false
 	}
 
+	if reflect.DeepEqual(workerepEntry, workerepmod) {
+		return false
+	}
 	workerepEntry.PolicyNameIngress = workerepmod.PolicyNameIngress
 	workerepEntry.PolicyNameEgress = workerepmod.PolicyNameEgress
 	return workerepEntry.WriteToStore()
 }
 
 func RunSyncPolicyInfo() bool {
-	jsonStr, err := json.MarshalIndent(PolicySet.PolicyMap, "", " ")
+	jsonStr, err := JsonMarshalIndent(PolicySet.PolicyMap, "", " ")
 	if err != nil {
 		fmt.Println(err)
 		return false
 	}
 
-	_ = ioutil.WriteFile(PolicyFile, jsonStr, 0777)
+	if err = NewWriteFile(PolicyFile, jsonStr, 0755); err != nil {
+		log.Errorf("Failed to write entries, err: %s", err)
+		return false
+	}
 
 	return true
 }
 
 func RunSyncIpSetInfo() bool {
-	jsonStr, err := json.MarshalIndent(PolicySet.IpSetMap, "", " ")
+	jsonStr, err := JsonMarshalIndent(PolicySet.IpSetMap, "", " ")
 	if err != nil {
 		fmt.Println(err)
 		return false
 	}
 
-	_ = ioutil.WriteFile(IpsetFile, jsonStr, 0777)
+	if err = NewWriteFile(IpsetFile, jsonStr, 0755); err != nil {
+		log.Errorf("Failed to write entries, err: %s", err)
+		return false
+	}
 
 	return true
 }
 
 func RunSyncWorkerEpInfo() bool {
-	jsonStr, err := json.MarshalIndent(PolicySet.WorkerEpMap, "", " ")
+	jsonStr, err := JsonMarshalIndent(PolicySet.WorkerEpMap, "", " ")
 	if err != nil {
 		fmt.Println(err)
 		return false
 	}
 
-	_ = ioutil.WriteFile(WorkerepFile, jsonStr, 0777)
+	if err = NewWriteFile(WorkerepFile, jsonStr, 0755); err != nil {
+		log.Errorf("Failed to write entries, err: %s", err)
+		return false
+	}
 
 	return true
 }
