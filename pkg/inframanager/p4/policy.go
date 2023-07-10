@@ -330,7 +330,7 @@ func DstPortRcTable(ctx context.Context, p4RtC *client.Client,
 		ports = append(ports, valueToBytes16(portrange[i]))
 	}
 
-	if protocol == 6 {
+	if protocol == PROTO_TCP {
 		tableName = "k8s_dp_control.tcp_dport_rc_table"
 		entry = p4RtC.NewTableEntry(
 			"k8s_dp_control.tcp_dport_rc_table",
@@ -343,7 +343,7 @@ func DstPortRcTable(ctx context.Context, p4RtC *client.Client,
 			nil,
 		)
 	}
-	if protocol == 17 {
+	if protocol == PROTO_UDP {
 		tableName = "k8s_dp_control.udp_dport_rc_table"
 		entry = p4RtC.NewTableEntry(
 			"k8s_dp_control.udp_dport_rc_table",
