@@ -67,8 +67,8 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 						},
 					},
 					p4RtC.NewTableActionDirect("k8s_dp_control.set_range_check_ref",
-						[][]byte{valueToBytes16(polID),
-							valueToBytes16(rangeID)}),
+						[][]byte{ValueToBytes16(polID),
+							ValueToBytes16(rangeID)}),
 					nil,
 				)
 			} else {
@@ -84,7 +84,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 						},
 					},
 					p4RtC.NewTableActionDirect("k8s_dp_control.set_status_match_ipset_only",
-						[][]byte{valueToBytes16(polID)}),
+						[][]byte{ValueToBytes16(polID)}),
 					nil,
 				)
 			}
@@ -107,8 +107,8 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 						},
 					},
 					p4RtC.NewTableActionDirect("k8s_dp_control.set_range_check_ref",
-						[][]byte{valueToBytes16(polID),
-							valueToBytes16(rangeID)}),
+						[][]byte{ValueToBytes16(polID),
+							ValueToBytes16(rangeID)}),
 					nil,
 				)
 			} else {
@@ -124,7 +124,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 						},
 					},
 					p4RtC.NewTableActionDirect("k8s_dp_control.set_status_match_ipset_only",
-						[][]byte{valueToBytes16(polID)}),
+						[][]byte{ValueToBytes16(polID)}),
 					nil,
 				)
 			}
@@ -235,7 +235,7 @@ func AclIpSetMatchTable(ctx context.Context, p4RtC *client.Client,
 				"k8s_dp_control.acl_ipset_match_table_egress",
 				map[string]client.MatchInterface{
 					"meta.acl_pol_id": &client.ExactMatch{
-						Value: valueToBytes16(polID),
+						Value: ValueToBytes16(polID),
 					},
 					"hdr.ipv4.dst_addr": &client.LpmMatch{
 						Value: Pack32BinaryIP4(ip),
@@ -252,7 +252,7 @@ func AclIpSetMatchTable(ctx context.Context, p4RtC *client.Client,
 				"k8s_dp_control.acl_ipset_match_table_ingress",
 				map[string]client.MatchInterface{
 					"meta.acl_pol_id": &client.ExactMatch{
-						Value: valueToBytes16(polID),
+						Value: ValueToBytes16(polID),
 					},
 					"hdr.ipv4.src_addr": &client.LpmMatch{
 						Value: Pack32BinaryIP4(ip),
@@ -277,7 +277,7 @@ func AclIpSetMatchTable(ctx context.Context, p4RtC *client.Client,
 				"k8s_dp_control.acl_ipset_match_table_egress",
 				map[string]client.MatchInterface{
 					"meta.acl_pol_id": &client.ExactMatch{
-						Value: valueToBytes16(polID),
+						Value: ValueToBytes16(polID),
 					},
 					"hdr.ipv4.dst_addr": &client.LpmMatch{
 						Value: Pack32BinaryIP4(ip),
@@ -293,7 +293,7 @@ func AclIpSetMatchTable(ctx context.Context, p4RtC *client.Client,
 				"k8s_dp_control.acl_ipset_match_table_ingress",
 				map[string]client.MatchInterface{
 					"meta.acl_pol_id": &client.ExactMatch{
-						Value: valueToBytes16(polID),
+						Value: ValueToBytes16(polID),
 					},
 					"hdr.ipv4.src_addr": &client.LpmMatch{
 						Value: Pack32BinaryIP4(ip),
@@ -336,7 +336,7 @@ func DstPortRcTable(ctx context.Context, p4RtC *client.Client,
 			"k8s_dp_control.tcp_dport_rc_table",
 			map[string]client.MatchInterface{
 				"meta.acl_pol_id": &client.ExactMatch{
-					Value: valueToBytes16(polID),
+					Value: ValueToBytes16(polID),
 				},
 			},
 			p4RtC.NewTableActionDirect("k8s_dp_control.do_range_check_tcp", ports),
@@ -349,7 +349,7 @@ func DstPortRcTable(ctx context.Context, p4RtC *client.Client,
 			"k8s_dp_control.udp_dport_rc_table",
 			map[string]client.MatchInterface{
 				"meta.acl_pol_id": &client.ExactMatch{
-					Value: valueToBytes16(polID),
+					Value: ValueToBytes16(polID),
 				},
 			},
 			p4RtC.NewTableActionDirect("k8s_dp_control.do_range_check_udp", ports),
@@ -377,7 +377,7 @@ func DstPortRcTable(ctx context.Context, p4RtC *client.Client,
 				"k8s_dp_control.tcp_dport_rc_table",
 				map[string]client.MatchInterface{
 					"meta.acl_pol_id": &client.ExactMatch{
-						Value: valueToBytes16(polID),
+						Value: ValueToBytes16(polID),
 					},
 				},
 				nil,
@@ -390,7 +390,7 @@ func DstPortRcTable(ctx context.Context, p4RtC *client.Client,
 				"k8s_dp_control.udp_dport_rc_table",
 				map[string]client.MatchInterface{
 					"meta.acl_pol_id": &client.ExactMatch{
-						Value: valueToBytes16(polID),
+						Value: ValueToBytes16(polID),
 					},
 				},
 				nil,

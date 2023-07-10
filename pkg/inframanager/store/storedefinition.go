@@ -24,8 +24,8 @@ import (
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 )
 
-const (
-	storePath = "/var/lib/cni/inframanager/"
+var (
+	StorePath = "/var/lib/cni/inframanager/"
 )
 
 type store interface {
@@ -36,8 +36,9 @@ type store interface {
 }
 
 type EndPoint struct {
-	PodIpAddress  string
+	ModPtr        uint32
 	InterfaceID   uint32
+	PodIpAddress  string
 	PodMacAddress string
 }
 

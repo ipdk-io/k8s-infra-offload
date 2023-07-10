@@ -23,8 +23,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	StoreEpFile = storePath + "cni_db.json"
+var (
+	StoreEpFile = StorePath + "cni_db.json"
 )
 
 func IsEndPointStoreEmpty() bool {
@@ -49,18 +49,19 @@ func InitEndPointStore(setFwdPipe bool) bool {
 		flags = flags | os.O_TRUNC
 	}
 
-	if _, err := os.Stat(storePath); errors.Is(err, os.ErrNotExist) {
-		err := os.MkdirAll(storePath, 0640)
+	if _, err := os.Stat(StorePath); errors.Is(err, os.ErrNotExist) {
+		err := os.MkdirAll(StorePath, 0755)
 		if err != nil {
-			log.Error("Failed to create directory ", storePath)
+			log.Error("Failed to create directory, err ", StorePath, err)
 			return false
 		}
 	}
 
 	/* Create the store file if it doesn't exist */
-	file, err := NewOpenFile(StoreEpFile, flags, 0600)
+	file, err := NewOpenFile(StoreEpFile, flags, 0755)
+	log.Info("store ep file path:", StoreEpFile)
 	if err != nil {
-		log.Error("Failed to open", StoreEpFile)
+		log.Error("Failed to open with error", StoreEpFile, err)
 		return false
 	}
 	file.Close()
@@ -146,7 +147,7 @@ func RunSyncEndPointInfo() bool {
 		return false
 	}
 
-	if err = NewWriteFile(StoreEpFile, jsonStr, 0600); err != nil {
+	if err = NewWriteFile(StoreEpFile, jsonStr, 0755); err != nil {
 		log.Errorf("Failed to write entries to %s, err %s",
 			StoreEpFile, err)
 		return false

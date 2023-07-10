@@ -287,6 +287,52 @@ var _ = Describe("utils", func() {
 			Expect(err).To(HaveOccurred())
 		})
 	})
+	var _ = Context("GetIntfPciAddress() should", func() {
+		var _ = It("return error if cannot read symlink", func() {
+			fs := &FakeFilesystem{
+				Dirs: []string{
+					"sys/class/net/dummyPf1",
+					"sys/class/net/dummyPf2",
+				},
+			}
+			tempRoot, tearDown, err := fs.Use(tempDir)
+			Expect(err).ToNot(HaveOccurred())
+			defer tearDown()
+			fakeSysFs := filepath.Join(tempRoot, SysClassNet)
+			result, err := GetIntfPciAddress("dummyPf", fakeSysFs)
+			Expect(result).To(Equal(""))
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("return error if device does not exist", func() {
+			fs := &FakeFilesystem{
+				Dirs: []string{"sys/class/net/"},
+			}
+			tempRoot, tearDown, err := fs.Use(tempDir)
+			Expect(err).ToNot(HaveOccurred())
+			defer tearDown()
+			fakeSysFs := filepath.Join(tempRoot, SysClassNet)
+			result, err := GetIntfPciAddress("dummyPf", fakeSysFs)
+			Expect(result).To(Equal(""))
+			Expect(err).To(HaveOccurred())
+		})
+		var _ = It("return correct PCI address for an interface name", func() {
+			fs := &FakeFilesystem{
+				Dirs: []string{
+					"sys/class/net/dummyPf",
+				},
+				Symlinks: map[string]string{
+					"sys/class/net/dummyPf/device/": "../../../0000:a0:00.0",
+				},
+			}
+			tempRoot, tearDown, err := fs.Use(tempDir)
+			Expect(err).ToNot(HaveOccurred())
+			defer tearDown()
+			fakeSysFs := filepath.Join(tempRoot, SysClassNet)
+			result, err := GetIntfPciAddress("dummyPf", fakeSysFs)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal("0000:a0:00.0"))
+		})
+	})
 
 	var _ = Context("GetTapInterfaces() should", func() {
 		var _ = It("return no error", func() {

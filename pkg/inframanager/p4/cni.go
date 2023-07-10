@@ -20,12 +20,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
 	log "github.com/sirupsen/logrus"
 	"net"
 )
 
 var Env string
-
 var P4w P4RtCWrapper
 
 func ArptToPortTable(ctx context.Context, p4RtC *client.Client, arpTpa string, port uint32, flag bool) error {
@@ -41,7 +41,7 @@ func ArptToPortTable(ctx context.Context, p4RtC *client.Client, arpTpa string, p
 					Value: Pack32BinaryIP4(arpTpa),
 				},
 			},
-			P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.set_dest_vport", [][]byte{valueToBytes(port)}),
+			P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.set_dest_vport", [][]byte{ValueToBytes(port)}),
 			nil,
 		)
 		if err = P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
@@ -91,7 +91,7 @@ func Ipv4ToPortTable(ctx context.Context, p4RtC *client.Client, ipAddr string, m
 				},
 			},
 			//TODO: properly handle k8s_dp_control.send
-			P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.set_dest_mac_vport", [][]byte{valueToBytes(port), dmac}),
+			P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.set_dest_mac_vport", [][]byte{ValueToBytes(port), dmac}),
 			nil,
 		)
 		if err = P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
@@ -119,47 +119,48 @@ func Ipv4ToPortTable(ctx context.Context, p4RtC *client.Client, ipAddr string, m
 	return nil
 }
 
-func InsertCniRules(ctx context.Context, p4RtC *client.Client, macAddr string, ipAddr string, portId int, ifaceType InterfaceType) error {
+func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint,
+	ifaceType InterfaceType) (store.EndPoint, error) {
 	/*
 		TODO. Distinguish for interface type
 		and program the rules accordingly.
 	*/
-	if net.ParseIP(ipAddr) == nil {
+	if net.ParseIP(ep.PodIpAddress) == nil {
 		err := fmt.Errorf("Invalid IP Address")
-		return err
+		return ep, err
 	}
 
-	_, err := net.ParseMAC(macAddr)
+	_, err := net.ParseMAC(ep.PodMacAddress)
 	if err != nil {
 		err = fmt.Errorf("Invalid MAC Address")
-		return err
+		return ep, err
 	}
 
-	err = ArptToPortTable(ctx, p4RtC, ipAddr, uint32(portId), true)
+	err = ArptToPortTable(ctx, p4RtC, ep.PodIpAddress, ep.InterfaceID, true)
 	if err != nil {
-		return err
+		return ep, err
 	}
 
-	err = Ipv4ToPortTable(ctx, p4RtC, ipAddr, macAddr, uint32(portId), true)
+	err = Ipv4ToPortTable(ctx, p4RtC, ep.PodIpAddress, ep.PodMacAddress, ep.InterfaceID, true)
 	if err != nil {
-		return err
+		return ep, err
 	}
 
-	return nil
+	return ep, nil
 }
 
-func DeleteCniRules(ctx context.Context, p4RtC *client.Client, macAddr string, ipAddr string) error {
-	if net.ParseIP(ipAddr) == nil {
+func DeleteCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint) error {
+	if net.ParseIP(ep.PodIpAddress) == nil {
 		err := fmt.Errorf("Invalid IP Address")
 		return err
 	}
 
-	err := ArptToPortTable(ctx, p4RtC, ipAddr, 0, false)
+	err := ArptToPortTable(ctx, p4RtC, ep.PodIpAddress, 0, false)
 	if err != nil {
 		return err
 	}
 
-	err = Ipv4ToPortTable(ctx, p4RtC, ipAddr, "", 0, false)
+	err = Ipv4ToPortTable(ctx, p4RtC, ep.PodIpAddress, "", 0, false)
 	if err != nil {
 		return err
 	}

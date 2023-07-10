@@ -40,11 +40,6 @@ const (
 	EXCEPTION
 )
 
-const (
-	MAXUINT32              = 4294967295
-	DEFAULT_UUID_CNT_CACHE = 512
-)
-
 var (
 	podIps = [4]string{"10.10.10.1", "10.10.10.2", "10.10.10.3", "10.10.10.4"}
 )

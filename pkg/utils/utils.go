@@ -16,6 +16,7 @@ package utils
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -145,6 +146,10 @@ func ReadInterfaceConf(dataDir, refid, podIface string) (*types.InterfaceInfo, e
 	if err != nil {
 		return nil, err
 	}
+	if len(data) == 0 {
+		return nil, errors.New("No data in the file")
+	}
+
 	conf := &types.InterfaceInfo{}
 	if err = json.Unmarshal(data, conf); err != nil {
 		return nil, err
@@ -246,7 +251,88 @@ func GetNodeName() (string, error) {
 	return nodeName, nil
 }
 
-// GetVFList returns SRIO-VF for given pf network interface name
+// GetIntfPciAddress takes in an interface name as string and returns it's PCI address
+// when prefix will be not empty it will be prepended before default
+// "/sys/class/net" directory name
+func GetIntfPciAddress(ifName string, prefix string) (string, error) {
+	var pciaddr string
+	devicePath := filepath.Join(prefix, ifName, "device")
+	dirInfo, err := os.Lstat(devicePath)
+	if err != nil {
+		return pciaddr, fmt.Errorf("can't get the symbolic link of device for interface name %s in %s: %v", ifName, devicePath, err)
+	}
+
+	if (dirInfo.Mode() & os.ModeSymlink) == 0 {
+		return pciaddr, fmt.Errorf("device location is not a symbolic link for the interface %s", ifName)
+	}
+
+	pciinfo, err := os.Readlink(devicePath)
+	if err != nil {
+		return pciaddr, fmt.Errorf("can't read the device symlink for the interface %s: %v", ifName, err)
+	}
+
+	pciaddr = filepath.Base(pciinfo)
+	return pciaddr, nil
+}
+
+func sortIInfo(ifaceName string) string {
+	i := len(ifaceName) - 1
+	for ; i >= 0; i-- {
+		if ifaceName[i] < '0' || ifaceName[i] > '9' {
+			break
+		}
+	}
+	i++
+	num := ifaceName[i:]
+	byteNum := make([]byte, 8)
+	if len(num) > 0 {
+		u64, err := strconv.ParseUint(num, 10, 64)
+		if err == nil {
+			binary.BigEndian.PutUint64(byteNum, u64+1)
+		}
+	}
+	return ifaceName[:i] + string(byteNum)
+}
+
+func GetCDQList(pf string, devicePath string) ([]*types.InterfaceInfo, error) {
+	out := make([]*types.InterfaceInfo, 0)
+	de, err := os.ReadDir(devicePath)
+	if err != nil {
+		return nil, err
+	}
+
+	/*
+	   Match all interfaces starting with prefix of "pf",
+	   followed by any letter and ending with a number
+	   starting from 4. The first three devices are used by
+	   the system.
+	*/
+	exp := pf + ".*([4-9]|([1-9][0-9]+))"
+
+	for _, entry := range de {
+		name := entry.Name()
+		match, err := regexp.MatchString(exp, name)
+		if err == nil && match == true {
+			addressPath := path.Join(devicePath, entry.Name(), "address")
+			mac, err := os.ReadFile(addressPath)
+			if err != nil {
+				continue
+			}
+			macStr := strings.Trim(string(mac), "\n")
+			iface := &types.InterfaceInfo{InterfaceName: name, MacAddr: macStr}
+			out = append(out, iface)
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		return sortIInfo(out[i].InterfaceName) < sortIInfo(out[j].InterfaceName)
+	},
+	)
+
+	return out, nil
+
+}
+
+// GetVFList returns SRIOV-VF for given pf network interface name
 // when prefix will be not empty it will be prepended before default
 // "/sys/class/net" directory name
 func GetVFList(pf string, prefix string) ([]*types.InterfaceInfo, error) {
