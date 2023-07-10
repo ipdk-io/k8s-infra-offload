@@ -144,23 +144,23 @@ func InitPolicyStore(setFwdPipe bool) bool {
 
 func (policyadd Policy) WriteToStore() bool {
 
-	for key, _ := range policyadd.IpSetIDx {
+	for _, ipSetIDX := range policyadd.IpSetIDXs {
 		//Direction
-		direction := policyadd.IpSetIDx[key].Direction
+		direction := ipSetIDX.Direction
 		if direction != "TX" && direction != "RX" {
 			return false
 		}
 
-		for key1, _ := range policyadd.IpSetIDx[key].RuleID {
+		for _, rule := range ipSetIDX.Rules {
 			//Cidr
-			cidr := policyadd.IpSetIDx[key].RuleID[key1].Cidr
+			cidr := rule.Cidr
 			ip, ipset, err := net.ParseCIDR(cidr)
 			if err != nil {
 				log.Errorf("Invalid Cidr = %s, ip=%s, ipset=%s", cidr, ip, ipset)
 				return false
 			}
 			//PortRange
-			portrange := policyadd.IpSetIDx[key].RuleID[key1].PortRange
+			portrange := rule.PortRange
 			if len(portrange) > 2 {
 				return false
 			}
@@ -223,9 +223,9 @@ func (policydel Policy) DeleteFromStore() bool {
 
 	//delete the corresponding ipsetid from ipset map
 	var f bool
-	for ipsetidx, _ := range policydel.IpSetIDXs {
-		for ruleid, _ := range policydel.IpSetIDXs[ipsetidx].Rules {
-			ipsetid := policydel.IpSetIDXs[ipsetidx].Rules[ruleid].IpSetID
+	for _, ipSetIDX := range policydel.IpSetIDXs {
+		for _, rule := range ipSetIDX.Rules {
+			ipsetid := rule.IpSetID
 			if ipsetid != "" {
 				PolicySet.PolicyLock.Lock()
 				delete(PolicySet.IpSetMap, ipsetid)

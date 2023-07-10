@@ -327,7 +327,7 @@ func DstPortRcTable(ctx context.Context, p4RtC *client.Client,
 	var ports = [][]byte{}
 
 	for i := range portrange {
-		ports = append(ports, valueToBytes16(portrange[i]))
+		ports = append(ports, ValueToBytes16(portrange[i]))
 	}
 
 	if protocol == PROTO_TCP {
