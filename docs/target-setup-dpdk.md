@@ -1,10 +1,12 @@
-# Install IPDK Networking Recipe
-IPDK infrap4d needs to be installed and run on the host natively. To install
-infrap4d and P4-SDE (components as per IPDK 23.07 release) individually, follow
-the instructions listed below. Note that, P4C is not required as this software
-includes P4C generated artifacts.
+# Target Setup for P4-DPDK
+
+## Install IPDK SDE and IPDK Networking Recipe
+IPDK infrap4d (P4 Control Plane) needs to be installed and run on the host
+natively. To install infrap4d and P4-SDE (components as per IPDK 23.07 release)
+individually, follow the instructions listed below. Note that, P4C is not
+required as this software includes P4C generated artifacts.
  
-## P4-SDE
+### P4-SDE
   To install P4-SDE, follow its README instructions at
   https://github.com/p4lang/p4-dpdk-target. Make sure to checkout the appropriate
   branch or SHA meant for IPDK 23.07 release. The main steps can be summerized as:
@@ -24,7 +26,7 @@ includes P4C generated artifacts.
   # ./build-p4sde.sh -s $SDE_INSTALL
   ```
 
-## Infrap4d
+### Infrap4d
   To install infrap4d, follow instructions at
   https://github.com/ipdk-io/networking-recipe/blob/main/docs/guides/dpdk-guide.md.
   Make sure to checkout the appropriate
