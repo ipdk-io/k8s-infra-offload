@@ -918,18 +918,18 @@ var _ = Describe("Storepolicy", func() {
 				}
 
 				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ipsetidx.Rules["rule1"] = r1
 
 				data_valid := store.Policy{
 					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					IpSetIDXs:  make(map[uint16]store.IpSetIDX),
 				}
-				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.IpSetIDXs[1] = ipsetidx
 
 				data_valid.WriteToStore()
 				ret := store.IsPolicyStoreEmpty()
@@ -1068,18 +1068,18 @@ var _ = Describe("Storepolicy", func() {
 				}
 
 				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ipsetidx.Rules["rule1"] = r1
 
 				data_valid := store.Policy{
 					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					IpSetIDXs:  make(map[uint16]store.IpSetIDX),
 				}
-				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.IpSetIDXs[1] = ipsetidx
 				data_valid.WriteToStore()
 				err := os.Mkdir(store.StorePath, 0755)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -1131,18 +1131,18 @@ var _ = Describe("Storepolicy", func() {
 				}
 
 				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ipsetidx.Rules["rule1"] = r1
 
 				data_valid := store.Policy{
 					PolicyName: "policy2",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					IpSetIDXs:  make(map[uint16]store.IpSetIDX),
 				}
-				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.IpSetIDXs[1] = ipsetidx
 				data_valid.WriteToStore()
 				err := os.Mkdir(store.StorePath, 0755)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -1213,18 +1213,18 @@ var _ = Describe("Storepolicy", func() {
 				}
 
 				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ipsetidx.Rules["rule1"] = r1
 
 				data_valid := store.Policy{
 					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					IpSetIDXs:  make(map[uint16]store.IpSetIDX),
 				}
-				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.IpSetIDXs[1] = ipsetidx
 
 				ret := data_valid.WriteToStore()
 				Expect(ret).To(Equal(true))
@@ -1240,18 +1240,18 @@ var _ = Describe("Storepolicy", func() {
 				}
 
 				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ipsetidx.Rules["rule1"] = r1
 
 				data_invalid1 := store.Policy{
 					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					IpSetIDXs:  make(map[uint16]store.IpSetIDX),
 				}
-				data_invalid1.IpSetIDx[1] = ipsetidx
+				data_invalid1.IpSetIDXs[1] = ipsetidx
 
 				ret := data_invalid1.WriteToStore()
 				Expect(ret).To(Equal(false))
@@ -1267,18 +1267,18 @@ var _ = Describe("Storepolicy", func() {
 				}
 
 				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ipsetidx.Rules["rule1"] = r1
 
 				data_invalid2 := store.Policy{
 					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					IpSetIDXs:  make(map[uint16]store.IpSetIDX),
 				}
-				data_invalid2.IpSetIDx[1] = ipsetidx
+				data_invalid2.IpSetIDXs[1] = ipsetidx
 
 				ret := data_invalid2.WriteToStore()
 				Expect(ret).To(Equal(false))
@@ -1293,18 +1293,18 @@ var _ = Describe("Storepolicy", func() {
 					IpSetID:   "ipset1",
 				}
 				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+					Index:     1,
 					Direction: "ingress",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ipsetidx.Rules["rule1"] = r1
 
 				data_valid3 := store.Policy{
 					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					IpSetIDXs:  make(map[uint16]store.IpSetIDX),
 				}
-				data_valid3.IpSetIDx[1] = ipsetidx
+				data_valid3.IpSetIDXs[1] = ipsetidx
 
 				ret := data_valid3.WriteToStore()
 				Expect(ret).To(Equal(false))
@@ -1439,18 +1439,18 @@ var _ = Describe("Storepolicy", func() {
 				}
 
 				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ipsetidx.Rules["rule1"] = r1
 
 				data_valid := store.Policy{
 					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					IpSetIDXs:  make(map[uint16]store.IpSetIDX),
 				}
-				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.IpSetIDXs[1] = ipsetidx
 				data_valid.WriteToStore()
 				ret := data_valid.DeleteFromStore()
 				Expect(ret).To(Equal(true))
@@ -1466,18 +1466,18 @@ var _ = Describe("Storepolicy", func() {
 				}
 
 				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ipsetidx.Rules["rule1"] = r1
 
 				data_invalid := store.Policy{
 					PolicyName: "policy",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					IpSetIDXs:  make(map[uint16]store.IpSetIDX),
 				}
-				data_invalid.IpSetIDx[1] = ipsetidx
+				data_invalid.IpSetIDXs[1] = ipsetidx
 				ret := data_invalid.DeleteFromStore()
 				Expect(ret).To(Equal(false))
 			})
@@ -1512,18 +1512,18 @@ var _ = Describe("Storepolicy", func() {
 					IpSetID:   "1234",
 				}
 				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ipsetidx.Rules["rule1"] = r1
 
 				data_valid1 := store.Policy{
 					PolicyName: "Policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					IpSetIDXs:  make(map[uint16]store.IpSetIDX),
 				}
-				data_valid1.IpSetIDx[1] = ipsetidx
+				data_valid1.IpSetIDXs[1] = ipsetidx
 				data_valid1.WriteToStore()
 
 				data_valid := store.IpSet{
@@ -1623,18 +1623,18 @@ var _ = Describe("Storepolicy", func() {
 				}
 
 				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ipsetidx.Rules["rule1"] = r1
 
 				data_valid := store.Policy{
 					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					IpSetIDXs:  make(map[uint16]store.IpSetIDX),
 				}
-				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.IpSetIDXs[1] = ipsetidx
 
 				data_valid.WriteToStore()
 				ret := data_valid.GetFromStore()
@@ -1651,18 +1651,18 @@ var _ = Describe("Storepolicy", func() {
 				}
 
 				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ipsetidx.Rules["rule1"] = r1
 
 				data_invalid1 := store.Policy{
 					PolicyName: "policy",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					IpSetIDXs:  make(map[uint16]store.IpSetIDX),
 				}
-				data_invalid1.IpSetIDx[1] = ipsetidx
+				data_invalid1.IpSetIDXs[1] = ipsetidx
 				ret := data_invalid1.GetFromStore()
 				Expect(ret).Should(BeNil())
 			})
@@ -1785,18 +1785,18 @@ var _ = Describe("Storepolicy", func() {
 					IpSetID:   "ipset1",
 				}
 				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ipsetidx.Rules["rule1"] = r1
 
 				data_valid := store.Policy{
 					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					IpSetIDXs:  make(map[uint16]store.IpSetIDX),
 				}
-				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.IpSetIDXs[1] = ipsetidx
 				data_valid.WriteToStore()
 
 				//Updating data
@@ -1808,18 +1808,18 @@ var _ = Describe("Storepolicy", func() {
 					IpSetID:   "ipset1",
 				}
 				ipsetidx1 := store.IpSetIDX{
-					IpSetIDx:  1,
+					Index:     1,
 					Direction: "TX",
 					Protocol:  p4.PROTO_UDP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx1.RuleID["rule1"] = r2
+				ipsetidx1.Rules["rule1"] = r2
 
 				data_valid1 := store.Policy{
 					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					IpSetIDXs:  make(map[uint16]store.IpSetIDX),
 				}
-				data_valid1.IpSetIDx[1] = ipsetidx1
+				data_valid1.IpSetIDXs[1] = ipsetidx1
 				ret := data_valid1.UpdateToStore()
 				Expect(ret).To(Equal(true))
 			})
@@ -1834,18 +1834,18 @@ var _ = Describe("Storepolicy", func() {
 				}
 
 				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ipsetidx.Rules["rule1"] = r1
 
 				data_valid1 := store.Policy{
 					PolicyName: "policy",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					IpSetIDXs:  make(map[uint16]store.IpSetIDX),
 				}
-				data_valid1.IpSetIDx[1] = ipsetidx
+				data_valid1.IpSetIDXs[1] = ipsetidx
 				ret := data_valid1.UpdateToStore()
 				Expect(ret).To(Equal(false))
 			})
@@ -1860,18 +1860,18 @@ var _ = Describe("Storepolicy", func() {
 				}
 
 				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ipsetidx.Rules["rule1"] = r1
 
 				data_valid2 := store.Policy{
 					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					IpSetIDXs:  make(map[uint16]store.IpSetIDX),
 				}
-				data_valid2.IpSetIDx[1] = ipsetidx
+				data_valid2.IpSetIDXs[1] = ipsetidx
 				data_valid2.WriteToStore()
 				//Try to update the same data which is already available in store
 				ret := data_valid2.UpdateToStore()
@@ -2022,18 +2022,18 @@ var _ = Describe("Storepolicy", func() {
 					IpSetID:   "ipset1",
 				}
 				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ipsetidx.Rules["rule1"] = r1
 
 				data_valid := store.Policy{
 					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					IpSetIDXs:  make(map[uint16]store.IpSetIDX),
 				}
-				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.IpSetIDXs[1] = ipsetidx
 				data_valid.WriteToStore()
 				err1 := os.Mkdir(store.StorePath, 0755)
 				Expect(err1).ShouldNot(HaveOccurred())
