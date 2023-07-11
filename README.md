@@ -176,14 +176,16 @@ IPU ES2K target.
    # git checkout ipdk_v23.07
    ```
 
-3. Build the P4 Kubernetes binaries:
-  ```bash
-  # make build
-  ```
-  Then build the Kubernetes container images:
-  ```bash
-  # make docker-build
-  ```
+3. Build the P4 Kubernetes binaries. Note that, by default, Makefile is
+   configured to build for ES2K target. To build for P4-DPDK target, use
+   "tagname=dpdk" argument to following make targets.
+   ```bash
+   # make build
+   ```
+   Then build the Kubernetes container images:
+   ```bash
+   # make docker-build
+   ```
 
 4. Push InfraManager and InfraAgent images into docker private repo either
    manually or through make command, using either of the following:
@@ -258,6 +260,9 @@ IPU ES2K target.
    ```bash
    export IFACE=ens801f0d4
    ```
+
+   For DPDK target, change the interfaceType in config.yaml file to "tap".
+
    The script finally runs the arp-proxy on that assigned interface, within the
    isolated namespace.
    ```bash
