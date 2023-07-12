@@ -24,9 +24,9 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-var (
-	setLinkAddressFunc = setLinkAddress
-)
+//var (
+//	setLinkAddressFunc = setLinkAddress
+//)
 
 func setHostInterfaceInPodNetns(in *pb.AddRequest, res *types.InterfaceInfo) error {
 	logger := log.WithField("func", "setHostInterfaceInPodNetns").WithField("pkg", "netconf")

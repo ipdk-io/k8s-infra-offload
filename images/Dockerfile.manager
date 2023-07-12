@@ -1,27 +1,32 @@
 # Copyright (c) 2022 Intel Corporation
 # SPDX-License-Identifier: Apache 2.0
 
-FROM golang:1.19 as builder
+ARG TAG=dpdk
+ARG ARCH=amd64
+
+FROM golang:1.20 as builder
 WORKDIR /workspace
 
+ARG TAG
+ARG ARCH
 COPY go.mod go.mod
 COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
+# TODO - Test with DOCKER_BUILDKIT=1 for TARGETPLATFORM -  linux/amd64, linux/arm/v8
+#        TARGETOS - OS component of TARGETPLATFORM, TARGETARCH, BUILDOS, BUILDARCH 
+
 RUN go mod download
 COPY inframanager inframanager
 COPY proto proto
 COPY pkg pkg
-COPY k8s_dp k8s_dp
-
-ARG tagname=dpdk
-
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -tags $tagname -o ./bin/inframanager ./inframanager/cmd/main.go
+COPY k8s_dp/${TAG} k8s_dp
+RUN echo ${TAG} ${ARCH} && CGO_ENABLED=0 GOOS=linux GOARCH=$ARCH GO111MODULE=on go build -tags $TAG -o ./bin/inframanager ./inframanager/cmd/main.go
 
 FROM alpine:3.16
 WORKDIR /
+RUN mkdir -p /etc/infra /share/infra/k8s_dp
 COPY --from=builder /workspace/bin/inframanager /inframanager
-COPY --from=builder /workspace/inframanager/config.yaml ./
-COPY --from=builder /workspace/k8s_dp /k8s_dp/
-
+COPY --from=builder /workspace/inframanager/config.yaml /etc/infra/config.yaml
+COPY --from=builder /workspace/k8s_dp /share/infra/k8s_dp/
 ENTRYPOINT ["/inframanager"]

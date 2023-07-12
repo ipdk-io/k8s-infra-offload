@@ -25,10 +25,10 @@ jobs:
     - name: "Set up Go"
       uses: actions/setup-go@v4
       with:
-        go-version: 1.19.4
+        go-version: 1.20.5
 
     - name: "Build"
-      run: make
+      run: make dpdk
 
     - name: Change Permissions
       run: |
@@ -41,8 +41,35 @@ jobs:
         #make test
         echo "skipping unit test"
 
+  lint_dockerfiles:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v3
+
+      - name: 'Run hadolint - Manager-arm64'
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: 'images/Dockerfile.manager-arm64'
+          verbose: true
+
+      - name: 'Run hadolint - Manager'
+        if: always()
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: 'images/Dockerfile.manager'
+          verbose: true
+
+      - name: 'Run hadolint - Agent'
+        if: always()
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: 'images/Dockerfile.agent'
+          verbose: true
+
   DockerBuildAndPush:
-    needs: BuildAndTest
+    needs: [BuildAndTest, lint_dockerfiles]
     timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
@@ -54,7 +81,7 @@ jobs:
     - name: "Set up Go"
       uses: actions/setup-go@v4
       with:
-        go-version: 1.19.4
+        go-version: 1.20.5
 
     - name: "Create k8s Kind Cluster"
       uses: helm/kind-action@v1.5.0
@@ -73,6 +100,7 @@ jobs:
 
     - name: "docker deploy"
       run: |
+        cp -f deploy/dpdk/infraagent-configmap.yaml deploy/.
         make deploy IMAGE_REGISTRY=ghcr.io//${{ github.repository_owner }}k8s-infra-offload/ IMAGE_VERSION=sha-${GITHUB_SHA::7}
         # getnodes using kubectl
         kubectl get nodes -o wide
