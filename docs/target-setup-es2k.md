@@ -25,48 +25,10 @@ Perform following steps before starting ipumgmtd.
   ```
 
 ### Enable CDQ Interface Creation
-  Edit the config file (/etc/dpcp/cfg/cp_init.cfg) on IMC to enable CDQ
-  interface creation on host.
-  ```cfg
-  global = {
-	...
-	max_pf_vecs = 2000;
-	...
-	alloc_lan_vect_from_diff_bank = false;
-	...
-	txsch_init = {
-		...
-		flattening = 0; // Configure for no flattening.
-		...
-		 no_flt = {
-			/* No Flattening */
-			hosts = (
-			{
-				/* Xeon Host 0 */
-				id = 0;
-				...
-				datapath_cfg = {
-					vm_layer = 2;
-					...
-				}
-				...
-			}
-			...
-		}
-		...
-	}
-	...
-	max_q_config = {
-		max_pf_per_vport_rx_q = 2;
-		max_pf_per_vport_tx_q = 2;
-		max_pf_per_vport_rx_bufq = 4;
-		max_pf_per_vport_tx_complq = 2;
-	...
-	num_max_vport = {
-		host_0_apf = 1000;
-	...
-  }
-  ```
+  Edit the config file (/etc/dpcp/cfg/cp_init.cfg) on IMC to enable CDQ.
+  For details on this file and the specific edits required, refer to the
+  FXP P4 SDE User Guide document.
+
 ### Run ipumgmtd
 Run ipumgmtd and check the status of ports
 ```bash
