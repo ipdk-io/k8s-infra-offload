@@ -35,11 +35,7 @@ func main() {
 	utils.CreateCipherMap()
 
 	config := &conf.Configuration{}
-	conf.ReadConfig(config, "./config.yaml")
-
-	if config.P4BinPath == "" || config.P4InfoPath == "" {
-		log.Fatalf("Missing .bin or P4Info")
-	}
+	conf.ReadConfig(config, "config.yaml")
 
 	ip, err := utils.GetNodeIPFromEnv()
 	if err != nil {
@@ -48,6 +44,10 @@ func main() {
 	config.NodeIP = ip
 
 	api.PutConf(config)
+
+	if config.P4BinPath == "" || config.P4InfoPath == "" {
+		log.Fatalf("Missing .bin or P4Info")
+	}
 
 	p4InfoPath, err := filepath.Abs(config.P4InfoPath)
 	if err != nil {

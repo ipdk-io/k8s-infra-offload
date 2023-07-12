@@ -1,0 +1,24 @@
+# Copyright (c) 2022 Intel Corporation
+# SPDX-License-Identifier: Apache 2.0
+
+
+FROM arm64v8/golang:alpine as builder
+WORKDIR /workspace
+
+COPY go.mod go.mod
+COPY go.sum go.sum
+
+RUN go mod download
+COPY inframanager inframanager
+COPY proto proto
+COPY pkg pkg
+COPY k8s_dp/es2k k8s_dp
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=arm64 GO111MODULE=on go build -tags es2k -o ./bin/inframanager ./inframanager/cmd/main.go
+
+FROM arm64v8/alpine:3.16
+WORKDIR /
+RUN mkdir -p /etc/infra /share/infra/k8s_dp
+COPY --from=builder /workspace/bin/inframanager /inframanager
+COPY --from=builder /workspace/inframanager/config.yaml /etc/infra/config.yaml
+COPY --from=builder /workspace/k8s_dp /share/infra/k8s_dp/
+ENTRYPOINT ["/inframanager"]

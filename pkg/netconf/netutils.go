@@ -60,6 +60,7 @@ var (
 	sendSetupHostInterfaceFunc      = sendSetupHostInterface
 	withNetNSPath                   = ns.WithNetNSPath
 	utilsGetDataDirPath             = utils.GetDataDirPath
+	setLinkAddressFunc              = setLinkAddress
 )
 
 type nsError struct{ msg string }
@@ -280,4 +281,69 @@ func movePodInterfaceToHostNetns(netNSPath, interfaceName string, ifInfo *types.
 		return err
 	}
 	return nil
+}
+
+func moveIntfToPodNetns(in *pb.AddRequest, res *types.InterfaceInfo) error {
+	logger := log.WithField("func", "moveIntfToPodNetns").WithField("pkg", "netconf")
+	logger.Infof("Configuring pod interface %s for Pod network", res.InterfaceName)
+	nn, err := getNS(in.GetNetns())
+	if err != nil {
+		logger.WithError(err).Errorf("cannot find network namespace %s", in.GetNetns())
+		return err
+	}
+
+	linkObj, err := linkByName(res.InterfaceName)
+	if err != nil {
+		return err
+	}
+
+	if err = linkSetDown(linkObj); err != nil {
+		return err
+	}
+
+	if err := linkSetMTU(linkObj, types.HostInterfaceMTU); err != nil {
+		logger.WithError(err).Errorf("not able to set MTU %v", in.GetSettings())
+		return err
+	}
+
+	if err = linkSetNsFd(linkObj, int(nn.Fd())); err != nil {
+		logger.WithError(err).Error("Cannot move to given namespace")
+		return err
+	}
+	if err = configureIntfInPodNetns(in, linkObj); err != nil {
+		return newNsError(err)
+	}
+	return nil
+}
+
+func configureIntfInPodNetns(in *pb.AddRequest, linkObj netlink.Link) error {
+	return withNetNSPath(in.Netns, func(nn ns.NetNS) error {
+		if err := linkSetName(linkObj, in.InterfaceName); err != nil {
+			return fmt.Errorf("Cannot set link name: %w", err)
+
+		}
+		// re-fetch link information
+		linkObj, err := linkByName(in.InterfaceName)
+		if err != nil {
+			return err
+		}
+
+		if err = linkSetUp(linkObj); err != nil {
+			return fmt.Errorf("Cannot set link up: %w", err)
+		}
+
+		if err := setupGwRoute(linkObj, types.DefaultRoute); err != nil {
+			return fmt.Errorf("Cannot setup routes: %w", err)
+		}
+
+		if err := setupPodRoute(linkObj, in.ContainerRoutes, types.DefaultRoute); err != nil {
+			return fmt.Errorf("Cannot setup routes: %w", err)
+		}
+
+		if err = setLinkAddressFunc(linkObj, in.ContainerIps); err != nil {
+			return fmt.Errorf("Cannot set link address: %w", err)
+		}
+
+		return nil
+	})
 }
