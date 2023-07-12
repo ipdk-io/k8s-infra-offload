@@ -176,15 +176,17 @@ IPU ES2K target.
    # git checkout ipdk_v23.07
    ```
 
-3. Build the P4 Kubernetes binaries. Note that, by default, Makefile is
-   configured to build for ES2K target.
+3. Build P4-K8s binaries and container images.
 
-   Notes: 
-   i) To build for P4-DPDK target, use "tagname=dpdk" argument to both the
-   following make targets.
-   ii) For ES2K target, get the K8s P4 artifacts from ES2K release package and
-   copy them in p4-k8s/k8s_dp folder.
+   Notes:
+   i) For ES2K target, get the K8s P4 artifacts from ES2K release package and
+      copy them into p4-k8s/k8s_dp/es2k/. This must be done before running
+      below make commands.
+   ii) By default, Makefile is configured to build for ES2K target. To build
+      for P4-DPDK target, use "tagname=dpdk" argument for both make targets
+      below.
 
+   Build Kubernetes binaries:
    ```bash
    # make build
    ```
