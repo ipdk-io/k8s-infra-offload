@@ -151,17 +151,19 @@ proceed to next step.
 
 ### Set Up Target and Dependencies
 Kubernetes Infra Offload supports two targets, viz. P4-DPDK and Intel IPU ES2K.
-For both these platforms, it depends upon the daemon infrap4d of the IPDK
-networking receipe to be runnning in the backgroung. Once infrap4d is running,
-Kubernetes can load its P4 pipeline and offload various functionalities on it
-(i.e. on the P4 data plane).
+The Intel IPU ES2K target requires proper hardware setup and initialization.
+On both these platforms, Kubernetes Infra Offload software depends upon the
+daemon InfraP4d of the IPDK networking receipe to be runnning in the background.
+Once InfraP4d is running, Kubernetes can load its P4 pipeline and offload
+various functionalities on it (i.e. on the P4 data plane).
 
 The instructions to setup the target and install infrap4d and its dependencies,
 are different for the two targets.
-See [Target Setup for P4-DPDK](docs/target-setup-dpdk.md) for instructions for
-P4-DPDK
-See [Target Setup for Intel IPU ES2K](docs/target-setup-es2k.md) for instructions
-for Intel IPU ES2K.
+See [Target Setup for P4-DPDK](docs/target-setup-dpdk.md) for instructions on
+installation of SDE and InfraP4d on P4-DPDK target.
+See [Target Setup for Intel IPU ES2K](docs/target-setup-es2k.md) for
+instructions on hardware setup and installation of SDE and InfraP4d on Intel
+IPU ES2K target.
 
 ### Set Up P4 Kubernetes
 1. Install Go package (go version go1.20.5 linux/amd64), following instruction
@@ -174,14 +176,24 @@ for Intel IPU ES2K.
    # git checkout ipdk_v23.07
    ```
 
-3. Build the P4 Kubernetes binaries:
-  ```bash
-  # make build
-  ```
-  Then build the Kubernetes container images:
-  ```bash
-  # make docker-build
-  ```
+3. Build P4-K8s binaries and container images.
+
+   Notes:
+   i) For ES2K target, get the K8s P4 artifacts from ES2K release package and
+      copy them into p4-k8s/k8s_dp/es2k/. This must be done before running
+      below make commands.
+   ii) By default, Makefile is configured to build for ES2K target. To build
+      for P4-DPDK target, use "tagname=dpdk" argument for both make targets
+      below.
+
+   Build Kubernetes binaries:
+   ```bash
+   # make build
+   ```
+   Then build the Kubernetes container images:
+   ```bash
+   # make docker-build
+   ```
 
 4. Push InfraManager and InfraAgent images into docker private repo either
    manually or through make command, using either of the following:
@@ -256,6 +268,9 @@ for Intel IPU ES2K.
    ```bash
    export IFACE=ens801f0d4
    ```
+
+   For DPDK target, change the interfaceType in config.yaml file to "tap".
+
    The script finally runs the arp-proxy on that assigned interface, within the
    isolated namespace.
    ```bash
