@@ -136,7 +136,10 @@ func (pi *cdqIntfHandler) CreatePodInterface(in *pb.AddRequest) (*types.Interfac
 
 	if err := moveIntfToPodNetnsFunc(in, intfInfo); err != nil {
 		if _, ok := err.(nsError); ok {
-			_ = movePodInterfaceToHostNetnsFunc(in.Netns, in.InterfaceName, intfInfo)
+			if err := movePodInterfaceToHostNetnsFunc(in.Netns, in.InterfaceName, intfInfo); err != nil {
+				pi.log.WithError(err).Error("failed to move pod interface to host network namespace")
+				return nil, err
+			}
 		}
 		pi.log.WithError(err).Error("failed to move interface to Pod")
 		pi.pool.Release(intfInfo.InterfaceName) // if we failed to setup the allocated interfrace then release it
