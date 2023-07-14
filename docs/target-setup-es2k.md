@@ -30,12 +30,12 @@ Perform following steps before starting ipumgmtd.
   FXP P4 SDE User Guide document.
 
 ### Run ipumgmtd
-Run ipumgmtd and check the status of ports
-```bash
-/etc/init.d/run_default_init_app
-ifconfig lo up
-/usr/bin/cli_client -q -c -V
-```
+  Run ipumgmtd and check the status of ports
+  ```bash
+  /etc/init.d/run_default_init_app
+  ifconfig lo up
+  /usr/bin/cli_client -q -c -V
+  ```
 
 ## Set up Host
 Follow the steps listed in the FXP P4 SDE User Guide document, "Running from
