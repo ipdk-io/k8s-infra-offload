@@ -105,7 +105,9 @@ func configureIpvlanNamespace(netns ns.NetNS, mv *netlink.IPVlan, in *pb.AddRequ
 		if err != nil {
 			return fmt.Errorf("failed to refetch ipvlan %q: %w", in.InterfaceName, err)
 		}
-		_, _ = sysctlFunc(fmt.Sprintf("net/ipv4/conf/%s/arp_notify", in.InterfaceName), "1")
+		if _, err = sysctlFunc(fmt.Sprintf("net/ipv4/conf/%s/arp_notify", in.InterfaceName), "1"); err != nil {
+			return fmt.Errorf("Failed to set arp_notify for interface %s, err: %w", in.InterfaceName, err)
+		}
 		if err = setLinkAddress(contIpvlan, in.GetContainerIps()); err != nil {
 			return fmt.Errorf("failed to set link address: %w", err)
 		}

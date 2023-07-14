@@ -179,7 +179,10 @@ func (pi *tapPodInterface) CreatePodInterface(in *pb.AddRequest) (*types.Interfa
 
 	if err := moveIntfToPodNetnsFunc(in, res.InterfaceInfo); err != nil {
 		if _, ok := err.(nsError); ok {
-			_ = movePodInterfaceToHostNetnsFunc(in.Netns, in.InterfaceName, res.InterfaceInfo)
+			if err := movePodInterfaceToHostNetnsFunc(in.Netns, in.InterfaceName, res.InterfaceInfo); err != nil {
+				pi.log.WithError(err).Error("failed to move pod interface to host network namespace")
+				return nil, err
+			}
 		}
 		pi.log.WithError(err).Error("failed to push interface to container")
 		pi.pool.Release(res.InterfaceInfo.InterfaceName) // if we failed to setup the allocated interface then release it
