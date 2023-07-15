@@ -27,8 +27,8 @@ This is the first release that supports both these targets.
 
 This release does not support multi-tenant or multi-node deployments. At
 present, the underlying IPDK networking recipe needs to be run on bare metal
-on host CPU cores. The entire node, used for deployment, is assumed to be an
-untrusted zone and hence, gRPC/gNMI channels for communications need to be
+on host CPU cores. The entire node, used for deployment, is assumed to be a
+trusted zone. However, gRPC/gNMI channels for communications are still
 secured using TLS. For that, the user should create the TLS keys and
 certificates and install them as per the steps given in the README.
 
