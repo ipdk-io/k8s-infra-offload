@@ -220,12 +220,18 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 
 func AclIpSetMatchTable(ctx context.Context, p4RtC *client.Client,
 	polID uint16, cidr string, mask uint8, direction string, action InterfaceType) error {
-	res := strings.Split(cidr, "/")
-	ip := res[0]
-	plen, _ := strconv.Atoi(res[1])
 	var tableName string
 	var entryAdd *p4_v1.TableEntry
 	var entryDelete *p4_v1.TableEntry
+
+	res := strings.Split(cidr, "/")
+	ip := res[0]
+	plen, err := strconv.Atoi(res[1])
+	if err != nil {
+		log.Errorf("Invalid cidr %s: err: %v", cidr, err)
+		return err
+	}
+
 	switch action {
 	case Insert:
 		if direction == "TX" {
