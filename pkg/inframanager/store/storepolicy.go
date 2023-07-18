@@ -191,11 +191,6 @@ func (ipsetadd IpSet) WriteToStore() bool {
 }
 
 func (workerepadd PolicyWorkerEndPoint) WriteToStore() bool {
-	_, _, err := net.ParseCIDR(workerepadd.WorkerEp)
-	if err != nil {
-		log.Errorf("Invalid WorkerEp = %s", workerepadd.WorkerEp)
-		return false
-	}
 	PolicySet.PolicyLock.Lock()
 	PolicySet.WorkerEpMap[workerepadd.WorkerEp] = workerepadd
 	PolicySet.PolicyLock.Unlock()

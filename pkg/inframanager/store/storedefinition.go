@@ -103,6 +103,7 @@ type IpSet struct {
 
 type PolicyWorkerEndPoint struct {
 	WorkerEp          string
+	WorkerIp          string
 	PolicyNameIngress []string
 	PolicyNameEgress  []string
 }

@@ -780,9 +780,9 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 
 	} else {
 		tbltype = p4.PolicyAdd
-		policy.IpSetIDXs = map[uint16]store.IpSetIDX{}
 		logger.Infof("Adding a new network policy %s.", policy.PolicyName)
 	}
+	policy.IpSetIDXs = map[uint16]store.IpSetIDX{}
 
 	for _, rule := range in.Policy.InboundRules {
 		// Currently supporting only cidrs
@@ -1026,10 +1026,26 @@ func (s *ApiServer) UpdateLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 		return out, nil
 	}
 
+	if len(in.Endpoint.Ipv4Nets) == 0 {
+		err := errors.New("No IP address assigned for the endpoint")
+		logger.Errorf("No IP addresses assigned for the endpoint")
+		out.Successful = false
+		return out, err
+	}
+
 	server := NewApiServer()
+
+	ipAddr := strings.Split(in.Endpoint.Ipv4Nets[0], "/")[0]
+	if net.ParseIP(ipAddr) == nil {
+		err := fmt.Errorf("Invalid IP addr : %s", ipAddr)
+		logger.Errorf("Invalid IP Addr: %s", ipAddr)
+		out.Successful = false
+		return out, err
+	}
 
 	workerEp := store.PolicyWorkerEndPoint{
 		WorkerEp: in.Id.WorkloadId,
+		WorkerIp: ipAddr,
 	}
 
 	if len(in.Endpoint.Tiers[0].IngressPolicies) == 0 && len(in.Endpoint.Tiers[0].EgressPolicies) == 0 {
@@ -1112,7 +1128,7 @@ func (s *ApiServer) RemoveLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 		return out, err
 	}
 
-	if ok := workerEp.WriteToStore(); !ok {
+	if ok := workerEp.DeleteFromStore(); !ok {
 		logger.Errorf("Failed to delete policies for endpoint %s from the store",
 			in.Id.WorkloadId)
 		err := fmt.Errorf("Failed to delete policies for endpoint %s from the store",
