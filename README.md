@@ -371,8 +371,8 @@ not required as this software includes P4C generated artifacts.
   Get the IP address assigned to one of the pods using ifconfig. Then, ping that
   address from the other pod.
   ```bash
-  # kubectl exec test-pod2 -- ifconfig eth0
-  # kubectl exec test-pod -- ping 10.244.0.6
+  # kubectl exec test-pod -- ifconfig eth0
+  # kubectl exec test-pod2 -- ping 10.244.0.6
   PING 10.244.0.6 (10.244.0.6): 56 data bytes
   64 bytes from 10.244.0.6: seq=0 ttl=64 time=0.112 ms
   64 bytes from 10.244.0.6: seq=1 ttl=64 time=0.098 ms
