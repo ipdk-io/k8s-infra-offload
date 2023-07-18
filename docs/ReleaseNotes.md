@@ -13,7 +13,7 @@
 - Support for Kubernetes Container Network Interface (CNI) to deploy pods and
   enable pod-to-pod connectivity on a P4 target using hardware device interfaces.
 - Use of internal gateway with dummy MAC to enable layer-3 connectivity on the same node.
-- Support for SRIOV and dynamic Subfunctions on ES2K.
+- Support for dynamic Subfunctions on ES2K.
   Subfunction is a lightweight function that has a parent PCI function on which it is
   deployed. It is created and deployed in a unit of 1. Unlike SRIOV VFs, a subfunction
   doesn't require its own PCI virtual function. A subfunction communicates with the
@@ -38,7 +38,7 @@
 - Automatated build & integration test on each commit
 - Felix integration and communication with Infrastructure Offload Components.
 - Addition of DB to store state information.
-- Support for Fedora33, Fedora37
+- Support for Fedora33
 - Support for Go version 1.20.5
 - Support for logging per feature in components
 - Configurable MTU using config file
