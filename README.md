@@ -9,55 +9,69 @@
 
 ## Overview
 
+This repository contains the source for Calico p4 dataplane integration.
+It is still in early phases with new offload features under development.
+
 Kubernetes* (k8s) is an open-source container orchestration system for
 automating deployment, scaling, and management of containerized applications
-Kubernetes uses a Container Network Interface (CNI) for setting up pod
-connectivity, network policies for isolating pod traffic, and KubeProxy for
-service load balancing.
+Kubernetes uses a Container Network Interface (CNI) for setting up pod-to-pod
+connectivity, network policies for enforcing pod traffic isolation, and
+KubeProxy for service load balancing.
 
-The Kubernetes Infrastructure Offload project uses CNI P4 data-plane plugin
-components that help offload the networking rules from Calico* CNI to P4
-target devices. End users can then use this k8s-infra-offload software to
-deploy their orchestration software.
+The Kubernetes Infrastructure Offload project uses P4 dataplane plugin
+that helps offload the networking rules from Calico* CNI to P4
+target devices like IPU/DPU and FPGAs.
 
 This readme describes the components of Kubernetes Infrastructure Offload
 software and how to install and set up these components.
 
 ## Motivation for Offload
+
 The Kubernetes architecture requires Kubernetes networking for connectivity
-of the pods within and outside the cluster be delegated to the CNI. For this,
-on each worker node, Kubelet works with the co-located CNI to configure and
-assign interfaces to the pods created on that worker node. In addition, the
-Kube-proxy on each worker node interacts with Kubernetes control plane to
-provide support for Services. Without any offloads, both CNI and kube-proxy
-typically depend upon Linux kernel to provide these networking and service
-support. These include routing of traffic to/from the pods, applying network
-policies (filtering) on the traffic being sent/received by the pods, load
-balancing and NAT operations on traffic flows belonging to Services, etc.
+of the pods within a cluster be delegated to a CNI. For this, on each worker node,
+Kubelet works with the co-located CNI and device plugin to assign interfaces and
+configure networking rules. These include pod-to-pod connectivity, service
+implementation and load-balancing, network policies (filtering)
+on the traffic being sent/received by the pods etc.
 
 ![Kubernetes Architecture](docs/images/Kube-Arch.png "Kubernetes
 Worker Node Architecture Without Any Offloads")
 
-Management of these configurations and all the required packet procesing,
-requires significant CPU core utilization on the worker node. That takes away
-significant amount of CPU cycles which could have been used for running the
-actual application workload.
+Management of these configurations and all the required packet processing,
+requires significant CPU core utilization on the worker node. That takes
+away significant amount of CPU cycles which could have been used for running
+the actual application workload.
 
 Additionally, this typical deployment model may not provide desired isolation
-between the service provider components and the tenent's application workload.
+between the service provider components and the tenant's application workload.
 
-The K8s-infra-offload software resolves both above deficiencies. That is, it
-provides means to offload the packet processing to P4 pipeline as well as, it
-allows the CNI and Kube-proxy configurations to be applied from outside the
-worker node CPU cores.
+The K8s-infra-offload software resolves both the above deficiencies.
+That is, it provides means to accelerate the networking of k8s clusters by
+offloading packet processing to P4 pipeline as well as, it allows the
+cluster configurations to be applied from the secure IPU/DPU Infrastructure,
+away from the worker node CPU cores where tenant pods run.
 
-For the P4 pipeline based packet processing, it defines and provides target
-specific P4 pipeline as part of the K8s-Infra-Offload package. This includes
-P4-DPDK target specific P4 pipeline.
+This integration aims to be as transparent as possible. In particular,
+the p4 dataplane does not require additional deployment changes compared to
+regular Calico or modifying any of the calico components.
+All the networking configuration is done through regular Calico means. This
+means that it is possible to have a cluster with a mix of regular Calico
+nodes (linux dataplane) and P4 enabled nodes for Network intensive
+endpoint applications.
 
-For configuration aspects, it interacts with CNI plugin and Kubernetes API
-server over secure gRPC channels. This allows the CNI configuration to be
-managed from a different CPU complex.
+The docs in this repository will only describe the p4 dataplane specific elements.
+
+For the P4 pipeline-based packet processing, p4 artifacts specific to a
+p4 target are required. This repository provides target specific
+P4 pipeline artifacts as part of the K8s-Infra-Offload package.
+This repository includes P4-DPDK specific p4 pipeline package.
+The ES2K pipeline artifacts are available as a part of ES2K software release drops.
+
+The p4 dataplane components interact with Kubelet and Kubernetes API server
+for functionality offload. The secure split grpc design between the dataplane
+components allows for secure rule configuration from the Infrastructure cores
+and a clean split between the p4 dataplane Host component and the Infrastructure
+offload component.
 
 ![Infra Offload Architecture](docs/images/K8s-Infra-Offload-Arch.png "Kubernetes
 Worker Node Architecture With P4 Dataplane Offload")
@@ -72,35 +86,40 @@ The following are the main components of Kubernetes Infrastructure Offload
 software.
 
 ### Kubernetes Infra Manager
-- The Infra Manager is deployed as a core kube-system pod along with other
-  kube-system pods.
+
+- The Infra Manager is deployed as a Daemonset with inframanager cluster role.
 - This components acts as a gRPC server for Kubernetes Infra Agent and receives
-  Kubernetes configurations from the Infra Agent over the gRPC channel.
+  Kubernetes configurations from the Infra Agent over the secure gRPC channel.
 - It acts as a client for the P4 Runtime Server (infrap4d) and updates the
-  Kubernetes Pipeline tables (Data Plane), over another gRPC channel, to apply
-  Kubernetes configurations.
+  Kubernetes Pipeline tables (p4 dataplane) to apply runtime configurations.
 
 ### Kubernetes Infra Agent
-- The Infra Agent is also deployed as a core kube-system pod along with other
-  kube-system pods.
-- It receives all CNI requests from the Calico plug-in, configures pod system
-  files, and adds interfaces to be pods. And finally, it relays these
-  configurations to the Infra Manager.
+
+- The Infra Agent is also deployed as a Daemonset with infragent cluster role.
+- It discovers and creates an interface pool of supported device interfaces based on
+  the user configuration.
+- It receives CNI requests from the Calico plug-in, adds interfaces to the
+  pods, and configures pod system files. And finally, it relays these configurations
+  to the Infra Manager for p4 pipeline rule offload.
 - It also acts as a Kubernetes client for the Kubernetes API server and receives
-  all configuration changes and passes them on to the Infra Manager component.
-- It interacts with Infra Manager over the gRPC channel to pass all the
+  notifications because of watch on Service object resources. It passes any incremental
+  changes to the Infra Manager component.
+- It interfaces with Infra Manager over the secure gRPC channel to pass all the
   configurations.
 
 ### Kubernetes ARP Proxy
+
 - This process runs standalone within a separate and isolated namespace with
-  one interface assigned to that namespace having a common gateway IP address.
+  one interface from the interface pool assigned to it. It resolves arp requests
+  for the pipeline internal gateway IP address.
 - As the name suggests, it responds to ARP requests sent by the pods, seeking
   the MAC address of the common gateway. It responds with its interface's MAC
   address.
 
 ### Kubernetes P4 Pipeline
-- The Kubernetes P4 pipeline is a prebuilt component that can be loaded on
-  the P4-DPDK pipeline (i.e., P4 data plane).
+
+- The Kubernetes P4 pipeline is a compiled p4 program that can be loaded on
+  the P4 pipeline (i.e., P4 data plane).
 - It comes along with the source P4 code for a user to understand the packet
   processing pipeline.
 - It exposes P4 tables that can be modified at runtime with packet processing
@@ -121,15 +140,15 @@ software.
   Infra Agent.
 - proto : Contains all the protobuf files for gRPC messaging and the
   corresponding Go code.
-- scripts : Contains all the setup scripts
+- scripts : Contains all the setup scripts.
 
 ### Debugging
 
 - The Kubernetes Infrastructure Offload software provides logging capabilities.
   The logs are dumped in temporary log file. Logs for Infra Manager are put in
   `/var/log/inframanager/inframanager.log` while logs for Infra Agent are put
-  in `/var/log/infraagent/infraagent.log`). You can inspect these logs using
-  kubectl.
+  in `/var/log/infraagent/infraagent.log`). You can inspect logs emitted to stdout
+  and stderr using `"kubectl logs <pod> <namespace>"`.
 
 ### Setup Scripts
 
@@ -140,20 +159,21 @@ software.
   assigns an interface to it, and then launches the ARP proxy within the
   isolated namespace.
 
-
 ## Installation, Setup, and Deployment
 
 ### Installing Kubernetes
+
 Kubernetes Infra Offload requires Kubernetes, Docker*, and containerd* to be
-installed. See [Kubernetes*, Docker*, and containerd* Installation](docs/k8s-docker-containerd-install.md) 
-for instructions. If these components are already installed on the machine, 
+installed. See [Kubernetes*, Docker*, and containerd* Installation](docs/k8s-docker-containerd-install.md)
+for instructions. If these components are already installed on the machine,
 proceed to next step.
 
 ### Set Up Target and Dependencies
+
 Kubernetes Infra Offload supports two targets, viz. P4-DPDK and Intel IPU ES2K.
 The Intel IPU ES2K target requires proper hardware setup and initialization.
 On both these platforms, Kubernetes Infra Offload software depends upon the
-daemon InfraP4d of the IPDK networking receipe to be runnning in the background.
+daemon InfraP4d of the IPDK networking recipe to be runnning in the background.
 Once InfraP4d is running, Kubernetes can load its P4 pipeline and offload
 various functionalities on it (i.e. on the P4 data plane).
 
@@ -166,10 +186,12 @@ instructions on hardware setup and installation of SDE and InfraP4d on Intel
 IPU ES2K target.
 
 ### Set Up P4 Kubernetes
+
 1. Install Go package (go version go1.20.5 linux/amd64), following instruction
    at https://go.dev/doc/install
- 
+
 2. Pull P4-K8s software from the GitHub repository:
+
    ```bash
    git clone https://github.com/ipdk-io/k8s-infra-offload.git p4-k8s
    cd p4-k8s
@@ -187,6 +209,7 @@ IPU ES2K target.
       below.
 
    Build Kubernetes binaries:
+
    ```bash
    make build
    ```
@@ -232,18 +255,17 @@ IPU ES2K target.
    make gen-certs
    ```
    Note that the above script generates the default keys and certificates and
-   uses cipher suites as specified in the `inframanager/config.yaml` file. If you 
+   uses cipher suites as specified in the `inframanager/config.yaml` file. If you
    do not wish to use these default keys, certificates, and cipher suites, then
    modify the `scripts/mev/tls/gen_certs.sh` script accordingly and modify the
    `inframanager/config.yaml` file with preferred cipher suites.
 
- 
 ### Deploy P4 Kubernetes
 
-1. Run the `create_interfaces.sh` script, which, in addition to creating the 
+1. Run the `create_interfaces.sh` script, which, in addition to creating the
    specified number of virtual interfaces (TAP type on DPDK target and IDPF
    Sub-Function type on ES2K), sets up the HugePages and starts infrap4d. The
-   script requires the following environment variables to be set: 
+   script requires the following environment variables to be set:
    `SDE_INSTALL`, `IPDK_RECIPE`, `DEPEND_INSTALL`.
 
    ```bash
@@ -288,7 +310,7 @@ IPU ES2K target.
    kubeadm init --pod-network-cidr=<pod-cidr> --service-cidr=<service-cidr>
    ```
 
-4. Once the Kubernetes control plane initialization has completed successfully, 
+4. Once the Kubernetes control plane initialization has completed successfully,
    then do either of the following: 
    - As a non-root user:
      ```bash
@@ -302,7 +324,6 @@ IPU ES2K target.
      ```
 
 5. Remove taints from the node.
-   
    For single node deployment, the node must be untainted to allow worker pods
    to share the node with control plane. The taint to remove is "control-plane"
    or "master" or both. These taints can be removed as shown:
@@ -311,7 +332,7 @@ IPU ES2K target.
    kubectl taint node <node-name> node-role.kubernetes.io/master-
    ```
 
-6. Create Kubernetes secrets from the generated certificates. The infraagent and 
+6. Create Kubernetes secrets from the generated certificates. The infraagent and
    inframanager read the certificates from the secrets.
    ```bash
    make tls-secrets
@@ -329,6 +350,7 @@ IPU ES2K target.
    ```
 
 ### Pod-to-Pod Ping
+
   To run a simple ping test from one pod to another, create two test pods. Note
   that, the yaml file in the package is to create a single test pod; you can copy
   and modify it to create pod with different name. For example, copy it as
@@ -364,8 +386,8 @@ IPU ES2K target.
    test-pod2   1/1     Running   0          9m33s  10.244.0.7       ins21   <none>           <none>
    ```
 
-2. Use `ifconfig` to get the IP address assigned to one of the pods. Then, ping that
-   address from the other pod:
+2. Use the IP address from above output or `ifconfig` to get the IP address
+   assigned to one of the pods. Then, ping that address from the other pod:
    ```bash
    kubectl exec test-pod2 -- ifconfig eth0
    kubectl exec test-pod -- ping 10.244.0.6
