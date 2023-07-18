@@ -404,10 +404,9 @@ func (s *ApiServer) CreateNetwork(ctx context.Context, in *proto.CreateNetworkRe
 	}
 
 	if in == nil || reflect.DeepEqual(*in, proto.CreateNetworkRequest{}) {
-		logger.Errorf("Empty CNI Add request")
-		err := errors.New("Empty CNI add request")
 		out.Successful = false
-		return out, err
+		logger.Errorf("Empty CNI Add request")
+		return out, errors.New("Empty CNI Add request")
 	}
 
 	logger.Infof("Incoming Add request %s", in.String())
@@ -451,12 +450,10 @@ func (s *ApiServer) DeleteNetwork(ctx context.Context, in *proto.DeleteNetworkRe
 	out := &proto.DelReply{
 		Successful: true,
 	}
-
 	if in == nil || reflect.DeepEqual(*in, proto.DeleteNetworkRequest{}) {
-		logger.Errorf("Empty CNI Del request")
-		err := errors.New("Empty CNI Del request")
 		out.Successful = false
-		return out, err
+		logger.Errorf("Empty CNI Del request")
+		return out, errors.New("Empty CNI Del request")
 	}
 
 	logger.Infof("Incoming Del request %s", in.String())
@@ -519,17 +516,19 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 
 	logger := log.WithField("func", "NatTranslationAdd")
 
-	if in == nil || in.Endpoint == nil {
-		logger.Errorf("Invalid NatTranslationAdd request")
-		err := fmt.Errorf("Invalid NatTranslationAdd request")
-		return out, err
+	if in == nil || reflect.DeepEqual(*in, proto.NatTranslation{}) {
+		out.Successful = false
+		logger.Errorf("Empty NatTranslationAdd request")
+		return out, errors.New("Empty NatTranslationAdd request")
 	}
 
-	//
-	//	If there are no backend endpoints for the service,
-	//	nothing to program the pipeline. Simply return from
-	//	the function call.
-	//
+	logger.Infof("Incoming NatTranslationAdd request %s", in.String())
+
+	/*
+		If there are no backend endpoints for the service,
+		nothing to program the pipeline. Simply return from
+		the function call.
+	*/
 	if len(in.Backends) == 0 {
 		logger.Errorf("No endpoints in the service %s:%s:%d. No rules inserted",
 			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
@@ -666,37 +665,48 @@ func (s *ApiServer) AddDelSnatPrefix(ctx context.Context, in *proto.AddDelSnatPr
 
 func (s *ApiServer) NatTranslationDelete(ctx context.Context, in *proto.NatTranslation) (*proto.Reply, error) {
 	logger := log.WithField("func", "NatTranslationDelete")
-	logger.Infof("Incoming NatTranslationDelete %+v", in)
 
 	out := &proto.Reply{
 		Successful: true,
 	}
-	/*
-		service := store.Service{
-			ClusterIp: in.Endpoint.Ipv4Addr,
-			Port:      in.Endpoint.Port,
-			Proto:     in.Proto,
-		}
 
-		server := NewApiServer()
+	/* Currently supporting services only for the dpdk target */
+	if config.InterfaceType != types.TapInterface {
+		return out, nil
+	}
 
-		if err := p4.DeleteServiceRules(ctx, server.p4RtC, service); err != nil {
-			logger.Errorf("Failed to delete the service entry %s:%s:%d from the pipeline",
-				in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
-			out.Successful = false
-			return out, err
-		}
+	if in == nil || reflect.DeepEqual(*in, proto.NatTranslation{}) {
+		out.Successful = false
+		logger.Errorf("Empty NatTranslationDelete request")
+		return out, errors.New("Empty NatTranslationDelete request")
+	}
 
-		if !service.DeleteFromStore() {
-			logger.Errorf("Failed to delete service entry %s:%s:%d from the store",
-				in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
+	logger.Infof("Incoming NatTranslationDelete %+v", in)
 
-			err := fmt.Errorf("Failed to delete service entry %s:%s:%d from the store",
-				in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
-			out.Successful = false
-			return out, err
-		}
-	*/
+	service := store.Service{
+		ClusterIp: in.Endpoint.Ipv4Addr,
+		Port:      in.Endpoint.Port,
+		Proto:     in.Proto,
+	}
+
+	server := NewApiServer()
+
+	if err := p4.DeleteServiceRules(ctx, server.p4RtC, service); err != nil {
+		logger.Errorf("Failed to delete the service entry %s:%s:%d from the pipeline",
+			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
+		out.Successful = false
+		return out, err
+	}
+
+	if !service.DeleteFromStore() {
+		logger.Errorf("Failed to delete service entry %s:%s:%d from the store",
+			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
+
+		err := fmt.Errorf("Failed to delete service entry %s:%s:%d from the store",
+			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
+		out.Successful = false
+		return out, err
+	}
 
 	return out, nil
 }
@@ -1235,12 +1245,18 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 	var err error
 
 	logger := s.log.WithField("func", "SetupHostInterface")
-	logger.Infof("Incoming SetupHostInterface request %s", in.String())
 
 	out := &proto.Reply{
 		Successful: true,
 	}
 
+	if in == nil || reflect.DeepEqual(*in, proto.SetupHostInterfaceRequest{}) {
+		out.Successful = false
+		logger.Errorf("Empty SetupHostInterface request")
+		return out, errors.New("Empty SetupHostInterface request")
+	}
+
+	logger.Infof("Incoming SetupHostInterface request %s", in.String())
 	server := NewApiServer()
 
 	ipAddr := strings.Split(in.Ipv4Addr, "/")[0]

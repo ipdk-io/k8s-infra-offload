@@ -41,8 +41,35 @@ jobs:
         #make test
         echo "skipping unit test"
 
+  lint_dockerfiles:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v3
+
+      - name: 'Run hadolint - Manager-arm64'
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: 'images/Dockerfile.manager-arm64'
+          verbose: true
+
+      - name: 'Run hadolint - Manager'
+        if: always()
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: 'images/Dockerfile.manager'
+          verbose: true
+
+      - name: 'Run hadolint - Agent'
+        if: always()
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: 'images/Dockerfile.agent'
+          verbose: true
+
   DockerBuildAndPush:
-    needs: BuildAndTest
+    needs: [BuildAndTest, lint_dockerfiles]
     timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
