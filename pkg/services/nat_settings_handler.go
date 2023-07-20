@@ -81,7 +81,10 @@ func (s *ServiceHandler) SetSnatAddress(ip string) error {
 		return err
 	}
 	defer conn.Close()
-	reply, _ := c.SetSnatAddress(context.TODO(), &pb.SetSnatAddressRequest{SnatIpv4: ip, SnatIpv6: ""})
+	reply, err := c.SetSnatAddress(context.TODO(), &pb.SetSnatAddressRequest{SnatIpv4: ip, SnatIpv6: ""})
+	if err != nil {
+		return err
+	}
 	if !reply.Successful {
 		return errors.New(reply.ErrorMessage)
 	}
@@ -95,7 +98,10 @@ func (s *ServiceHandler) AddDelSnatPrefix(ip string, isAdd bool) error {
 		return err
 	}
 	defer conn.Close()
-	reply, _ := c.AddDelSnatPrefix(context.TODO(), &pb.AddDelSnatPrefixRequest{IsAdd: isAdd, Prefix: ip})
+	reply, err := c.AddDelSnatPrefix(context.TODO(), &pb.AddDelSnatPrefixRequest{IsAdd: isAdd, Prefix: ip})
+	if err != nil {
+		return err
+	}
 	if !reply.Successful {
 		return errors.New(reply.ErrorMessage)
 	}
@@ -109,7 +115,10 @@ func (s *ServiceHandler) NatTranslationDelete(translation *pb.NatTranslation) er
 		return err
 	}
 	defer conn.Close()
-	reply, _ := c.NatTranslationDelete(context.TODO(), translation)
+	reply, err := c.NatTranslationDelete(context.TODO(), translation)
+	if err != nil {
+		return err
+	}
 	if !reply.Successful {
 		return errors.New(reply.ErrorMessage)
 	}
