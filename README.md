@@ -275,7 +275,7 @@ IPU ES2K target.
    Note that the above script generates the default keys and certificates and
    uses cipher suites as specified in the `inframanager/config.yaml` file.
 
-#### inframanager/config.yaml file update { #sec-inframanager-config-yaml-update }
+#### inframanager/config.yaml file update
 
 The config.yaml file is used to define the parameters which the inframanager will
 use for the connection establishment with infrap4d and for the interfaces created.
