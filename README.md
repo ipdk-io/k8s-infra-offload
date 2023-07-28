@@ -283,7 +283,7 @@ This is the address of the interface which is given to the arp-proxy
 namespace using the `scrips/arp_proxy.sh` script mentioned in
 the [Deploy P4 Kubernetes section](#deploy-p4-kubernetes) for ARP proxy gateway.
 
-If you do not wish to use these default keys, certificates, and cipher suites, then
+If user doesn't wish to use these default keys, certificates, and cipher suites, then
 modify the `scripts/mev/tls/gen_certs.sh` script accordingly before running
 `make gen-certs` and modify the `inframanager/config.yaml` file with preferred
 cipher suites. These changes need to be done prior to the creation of container
