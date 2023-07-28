@@ -205,8 +205,8 @@ IPU ES2K target.
    All fields have a default value in the file. Please verify if the values
    correspond to the desired values especially arp-mac.
    This should be the MAC of the interface which user intends to select in the
-   step 3
-   of the Deploy P4 Kubernetes section for ARP proxy gateway.
+   step 2
+   of the [Deploy P4 Kubernetes section](#deploy-p4-kubernetes) for ARP proxy gateway.
    Any other changes to the config.yaml file if needed needs to go before the
    next step as well.
 
