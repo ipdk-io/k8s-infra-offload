@@ -198,7 +198,13 @@ IPU ES2K target.
    git checkout ipdk_v23.07
    ```
 
-3. Build P4-K8s binaries and container images.
+3. Update `inframanager/config.yaml` file with the arp-mac of the ARP proxy
+   interface's MAC. This should be the interface which user intends to select
+   in the step 3 of the Deploy P4 Kubernetes section. Any other changes to
+   the config.yaml file if needed need to go in this section as well.
+
+
+4. Build P4-K8s binaries and container images.
 
    Notes:
    i) For ES2K target, get the K8s P4 artifacts from ES2K release package and
@@ -218,7 +224,7 @@ IPU ES2K target.
    make docker-build
    ```
 
-4. Push InfraManager and InfraAgent images into docker private repo either
+5. Push InfraManager and InfraAgent images into docker private repo either
    manually or through make command, using either of the following:
 
    ```bash
@@ -243,13 +249,13 @@ IPU ES2K target.
    ...
    ```
 
-5. Pull images for use by Kubernetes Container Runtime Interface (CRI):
+6. Pull images for use by Kubernetes Container Runtime Interface (CRI):
    ```bash
    crictl pull localhost:5000/inframanager:latest
    crictl pull localhost:5000/infraagent:latest
    ```
 
-6. Generate the certificates required for the mTLS connection between infraagent,
+7. Generate the certificates required for the mTLS connection between infraagent,
    inframanager, and infrap4d:
    ```bash
    make gen-certs
@@ -258,7 +264,8 @@ IPU ES2K target.
    uses cipher suites as specified in the `inframanager/config.yaml` file. If you
    do not wish to use these default keys, certificates, and cipher suites, then
    modify the `scripts/mev/tls/gen_certs.sh` script accordingly and modify the
-   `inframanager/config.yaml` file with preferred cipher suites.
+   `inframanager/config.yaml` file with preferred cipher suites. This change needs
+   to be done in the previous step to update config.yaml file.
 
 ### Deploy P4 Kubernetes
 
