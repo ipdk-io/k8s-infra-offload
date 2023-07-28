@@ -297,8 +297,8 @@ ciphersuites:
  If you do not wish to use these default keys, certificates, and cipher suites, then
  modify the `scripts/mev/tls/gen_certs.sh` script accordingly before running
  `make gen-certs` and modify the `inframanager/config.yaml` file with preferred
- cipher suites. This change needs to be done in step to update config.yaml file
- in the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
+ cipher suites. These changes need to be done prior to the creation of container
+ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 
 
 ### Deploy P4 Kubernetes
