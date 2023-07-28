@@ -198,8 +198,9 @@ IPU ES2K target.
    git checkout ipdk_v23.07
    ```
 
-3. Update `inframanager/config.yaml` file. { #step-update-config-file }
-   Refer to section [inframanager/config.yaml file update](#sec-inframanager-config-yaml-update)
+3. Update `inframanager/config.yaml` file.
+
+   Refer to section [inframanager/config.yaml file update](#inframanagerconfigyaml-file-update)
    for details.
    All fields have a default value in the file. Please verify if the values
    correspond to the desired values especially arp-mac.
@@ -268,7 +269,7 @@ IPU ES2K target.
    ```
    Note that the above script generates the default keys and certificates and
    uses cipher suites as specified in the `inframanager/config.yaml` file.
-   Refer to section [inframanager/config.yaml file update](#sec-inframanager-config-yaml-update)
+   Refer to section [inframanager/config.yaml file update](#inframanagerconfigyaml-file-update)
    for any custom cipher suite, key, certificate change.
 
    Note that the above script generates the default keys and certificates and
@@ -296,11 +297,11 @@ ciphersuites:
  If you do not wish to use these default keys, certificates, and cipher suites, then
  modify the `scripts/mev/tls/gen_certs.sh` script accordingly before running
  `make gen-certs` and modify the `inframanager/config.yaml` file with preferred
- cipher suites. This change needs to be done in step to [update config.yaml file]
- (#step-update-config-file).
+ cipher suites. This change needs to be done in step to update config.yaml file
+ in the [Set Up P4 Kubernetes] (#set-up-p4-kubernetes) section.
 
 
-### Deploy P4 Kubernetes { #sec-deploy-p4-kubernetes }
+### Deploy P4 Kubernetes
 
 1. Run the `create_interfaces.sh` script, which, in addition to creating the
    specified number of virtual interfaces (TAP type on DPDK target and IDPF
