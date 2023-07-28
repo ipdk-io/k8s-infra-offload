@@ -202,13 +202,6 @@ IPU ES2K target.
 
    Refer to section [inframanager/config.yaml file update](#inframanagerconfigyaml-file-update)
    for details.
-   All fields have a default value in the file. Please verify if the values
-   correspond to the desired values especially arp-mac.
-   This should be the MAC of the interface which user intends to select in the
-   step 2
-   of the [Deploy P4 Kubernetes section](#deploy-p4-kubernetes) for ARP proxy gateway.
-   Any other changes to the config.yaml file if needed needs to go before the
-   next step as well.
 
 
 4. Build P4-K8s binaries and container images.
@@ -280,25 +273,21 @@ IPU ES2K target.
 The config.yaml file is used to define the parameters which the inframanager will
 use for the connection establishment with infrap4d and for the interfaces created.
 
+All fields have a default value in the file. Please verify if the values
+correspond to the desired values especially arp-mac.
 
 InfraManager section:
 arp-mac: The arp-mac needs to be configured. This should be the
 MAC of the interface the user wants to configure as the ARP-proxy gateway.
 This is the address of the interface which is given to the arp-proxy
-namespace using the `scrips/arp_proxy.sh` script
+namespace using the `scrips/arp_proxy.sh` script mentioned in
+the [Deploy P4 Kubernetes section](#deploy-p4-kubernetes) for ARP proxy gateway.
 
-conn
-server-cert
-server-key
-ca-cert
-ciphersuites:
- Information about the above are detailed in the comments in the config.yaml file
-
- If you do not wish to use these default keys, certificates, and cipher suites, then
- modify the `scripts/mev/tls/gen_certs.sh` script accordingly before running
- `make gen-certs` and modify the `inframanager/config.yaml` file with preferred
- cipher suites. These changes need to be done prior to the creation of container
- images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
+If you do not wish to use these default keys, certificates, and cipher suites, then
+modify the `scripts/mev/tls/gen_certs.sh` script accordingly before running
+`make gen-certs` and modify the `inframanager/config.yaml` file with preferred
+cipher suites. These changes need to be done prior to the creation of container
+images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 
 
 ### Deploy P4 Kubernetes
