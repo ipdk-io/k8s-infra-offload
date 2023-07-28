@@ -298,7 +298,7 @@ ciphersuites:
  modify the `scripts/mev/tls/gen_certs.sh` script accordingly before running
  `make gen-certs` and modify the `inframanager/config.yaml` file with preferred
  cipher suites. This change needs to be done in step to update config.yaml file
- in the [Set Up P4 Kubernetes] (#set-up-p4-kubernetes) section.
+ in the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 
 
 ### Deploy P4 Kubernetes
