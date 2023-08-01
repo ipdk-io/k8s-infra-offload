@@ -120,7 +120,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 						},
 						"hdr.ipv4.protocol": &client.LpmMatch{
 							Value: valueToBytes8(0),
-							PLen:  0,
+							PLen:  1,
 						},
 					},
 					p4RtC.NewTableActionDirect("k8s_dp_control.set_status_match_ipset_only",
@@ -433,173 +433,70 @@ func IsSame(slice1 []uint16, slice2 []uint16) bool {
 	return true
 }
 
+func addPolicy(ctx context.Context, p4RtC *client.Client, policy store.Policy) error {
+	for ipSetIDXId, ipSetIDX := range policy.IpSetIDXs {
+		for _, rule := range ipSetIDX.Rules {
+			cidr := rule.Cidr
+			mask := rule.RuleMask
+
+			if err := AclIpSetMatchTable(ctx, p4RtC, ipSetIDXId, cidr, mask, ipSetIDX.Direction,
+				Insert); err != nil {
+				log.Errorf("Failed to add entry to AclIpSetMatchTable, err: %v", err)
+				return err
+			}
+		}
+		if len(ipSetIDX.DportRange) != 0 {
+			if err := DstPortRcTable(ctx, p4RtC, ipSetIDXId, ipSetIDX.DportRange, ipSetIDX.Protocol,
+				Insert); err != nil {
+				log.Errorf("Failed to add entry into DstPortRcTable, err: %v", err)
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func deletePolicy(ctx context.Context, p4RtC *client.Client, policy store.Policy) error {
+	for ipSetIDXId, ipSetIDX := range policy.IpSetIDXs {
+		for _, rule := range ipSetIDX.Rules {
+			cidr := rule.Cidr
+			if err := AclIpSetMatchTable(ctx, p4RtC, ipSetIDXId, cidr, 0, ipSetIDX.Direction,
+				Delete); err != nil {
+				log.Errorf("Failed to delete entry from AclIpSetMatchTable, err: %v", err)
+				return err
+			}
+		}
+		if len(ipSetIDX.DportRange) != 0 {
+			if err := DstPortRcTable(ctx, p4RtC, ipSetIDXId, nil, ipSetIDX.Protocol,
+				Delete); err != nil {
+				log.Errorf("Failed to delete entry from DstPortRcTable,err: %v", err)
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype OperationType, in interface{}) error {
 	switch tbltype {
 	case PolicyAdd:
-		policy := in.(store.Policy)
-		for ipSetIDXId, ipSetIDX := range policy.IpSetIDXs {
-			for _, rule := range ipSetIDX.Rules {
-				cidr := rule.Cidr
-				mask := rule.RuleMask
-
-				if err := AclIpSetMatchTable(ctx, p4RtC, ipSetIDXId, cidr, mask, ipSetIDX.Direction,
-					Insert); err != nil {
-					log.Errorf("Failed to add entry to AclIpSetMatchTable, err: %v", err)
-					return err
-				}
-			}
-			if len(ipSetIDX.DportRange) != 0 {
-				if err := DstPortRcTable(ctx, p4RtC, ipSetIDXId, ipSetIDX.DportRange, ipSetIDX.Protocol,
-					Insert); err != nil {
-					log.Errorf("Failed to add entry into DstPortRcTable, err: %v", err)
-					return err
-				}
-			}
-		}
-		return nil
+		return addPolicy(ctx, p4RtC, in.(store.Policy))
 
 	case PolicyDel:
-		policy := in.(store.Policy)
-		for ipSetIDXId, ipSetIDX := range policy.IpSetIDXs {
-			for _, rule := range ipSetIDX.Rules {
-				cidr := rule.Cidr
-				if err := AclIpSetMatchTable(ctx, p4RtC, ipSetIDXId, cidr, 0, ipSetIDX.Direction,
-					Delete); err != nil {
-					log.Errorf("Failed to delete entry from AclIpSetMatchTable, err: %v", err)
-					return err
-				}
-			}
-			if len(ipSetIDX.DportRange) != 0 {
-				if err := DstPortRcTable(ctx, p4RtC, ipSetIDXId, nil, ipSetIDX.Protocol,
-					Delete); err != nil {
-					log.Errorf("Failed to delete entry from DstPortRcTable,err: %v", err)
-					return err
-				}
-			}
-		}
-		return nil
+		return deletePolicy(ctx, p4RtC, in.(store.Policy))
 
 	case PolicyUpdate:
 		policy := in.(store.Policy)
 
-		oldRules := map[string]store.Rule{}
-		newRules := map[string]store.Rule{}
-
-		//create map of new rules
-		for _, ipSetIDX := range policy.IpSetIDXs {
-			for ruleID, rule := range ipSetIDX.Rules {
-				newRules[ruleID] = rule
-			}
-		}
-
 		policyEntry := policy.GetFromStore()
-		if policyEntry == nil {
-			log.Errorf("Policy entry %s is not present in the store", policy.PolicyName)
-			return fmt.Errorf("Policy entry %s is not present in the store", policy.PolicyName)
-		}
-
-		policyOld := policyEntry.(store.Policy)
-
-		i := 0
-
-		/*
-			Delete old stale rules.
-		*/
-		for ipSetIDXId, ipSetIDX := range policyOld.IpSetIDXs {
-			dportRng := make([]uint16, 16)
-			for ruleID, rule := range ipSetIDX.Rules {
-
-				/*
-					If the rule is not present in the policy update request,
-					delete the rule.
-				*/
-				if _, ok := newRules[ruleID]; !ok {
-					dportRng[i], i = 0, i+1
-					dportRng[i], i = 0, i+1
-
-					cidr := rule.Cidr
-
-					if err := AclIpSetMatchTable(ctx, p4RtC, ipSetIDXId, cidr, 0, ipSetIDX.Direction,
-						Delete); err != nil {
-						log.Errorf("Failed to delete entry from AclIpSetMatchTable, err: %v", err)
-						return err
-					}
-
-				} else { // same rule exists in the policy update request
-					oldRules[ruleID] = rule
-					if len(rule.PortRange) != 0 {
-						dportRng[i], i = rule.PortRange[0], i+1
-						dportRng[i], i = rule.PortRange[1], i+1
-					}
-				}
-			}
-			log.Infof("port range is: %v", dportRng)
-			if len(dportRng) == 0 {
-				if err := DstPortRcTable(ctx, p4RtC, ipSetIDXId, nil, ipSetIDX.Protocol,
-					Delete); err != nil {
-					log.Errorf("Failed to delete entry from DstPortRcTable, err %v", err)
-					return err
-				}
-			} else {
-				if err := DstPortRcTable(ctx, p4RtC, ipSetIDXId, dportRng, ipSetIDX.Protocol,
-					Update); err != nil {
-					log.Errorf("Failed to update entry in DstPortRcTable, err: %v", err)
-					return err
-				}
+		if policyEntry != nil {
+			oldPolicy := policyEntry.(store.Policy)
+			if err := deletePolicy(ctx, p4RtC, oldPolicy); err != nil {
+				log.Errorf("Failed to delete old entries of the policy, err: %v", err)
+				return err
 			}
 		}
-
-		i = 0
-		for ipSetIDXId, ipSetIDX := range policy.IpSetIDXs {
-			dportRng := make([]uint16, 16)
-			for ruleID, rule := range ipSetIDX.Rules {
-				// add new rules to the pipeline
-				if _, ok := oldRules[ruleID]; !ok {
-					dportRng[i], i = rule.PortRange[0], i+1
-					dportRng[i], i = rule.PortRange[1], i+1
-
-					cidr := rule.Cidr
-					mask := rule.RuleMask
-
-					if err := AclIpSetMatchTable(ctx, p4RtC, ipSetIDXId, cidr, mask, ipSetIDX.Direction,
-						Insert); err != nil {
-						log.Errorf("Failed to add entry to AclIpSetMatchTable, err: %v", err)
-						return err
-					}
-				} else { // same rule exists in the policy update request
-					if len(rule.PortRange) != 0 {
-						dportRng[i], i = rule.PortRange[0], i+1
-						dportRng[i], i = rule.PortRange[1], i+1
-					}
-				}
-			}
-			log.Infof("port range is: %v", dportRng)
-
-			/*
-				If new rule has port range and previously we have not added any port range for same ipsetidx,
-				then insert port range for that ipsetidx
-			*/
-			if len(policyOld.IpSetIDXs[ipSetIDXId].DportRange) == 0 {
-				if err := DstPortRcTable(ctx, p4RtC, ipSetIDXId, dportRng, ipSetIDX.Protocol,
-					Insert); err != nil {
-					log.Errorf("Failed to add entry to DstPortRcTable, err: %v", err)
-					return err
-				}
-			} else {
-				/*
-					If old port range and new port range for a ipsetidx are different
-				*/
-				if !IsSame(dportRng, policyOld.IpSetIDXs[ipSetIDXId].DportRange) {
-					if err := DstPortRcTable(ctx, p4RtC, ipSetIDXId, dportRng, ipSetIDX.Protocol,
-						Update); err != nil {
-						log.Errorf("Failed to update entry in DstPortRcTable, err: %v", err)
-						return err
-					}
-				}
-			}
-		}
-
-		return nil
+		return addPolicy(ctx, p4RtC, policy)
 
 	case WorkloadAdd:
 		workloadep := in.(store.PolicyWorkerEndPoint)

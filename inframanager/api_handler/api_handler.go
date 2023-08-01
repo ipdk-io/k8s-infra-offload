@@ -44,6 +44,14 @@ import (
 var config *conf.Configuration
 var hostInterfaceMac string
 
+type Protocol int
+
+const (
+	noproto Protocol = iota
+	tcp
+	udp
+)
+
 func PutConf(c *conf.Configuration) {
 	config = c
 }
@@ -712,7 +720,7 @@ func (s *ApiServer) NatTranslationDelete(ctx context.Context, in *proto.NatTrans
 }
 
 func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePolicyUpdate) (*proto.Reply, error) {
-	var inTcpSet, inUdpSet, outTcpSet, outUdpSet ProtoIpSetIDX
+	var ingress, egress [3]ProtoIpSetIDX
 	var tbltype p4.OperationType
 
 	out := &proto.Reply{
@@ -732,20 +740,17 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 
 	server := NewApiServer()
 
-	inTcpSet.IpSetIDX.Direction = "RX"
-	inUdpSet.IpSetIDX.Direction = "RX"
-	outTcpSet.IpSetIDX.Direction = "TX"
-	outUdpSet.IpSetIDX.Direction = "TX"
+	ingress[tcp].IpSetIDX.Protocol = p4.PROTO_TCP
+	egress[tcp].IpSetIDX.Protocol = p4.PROTO_TCP
+	ingress[udp].IpSetIDX.Protocol = p4.PROTO_UDP
+	egress[udp].IpSetIDX.Protocol = p4.PROTO_UDP
 
-	inTcpSet.IpSetIDX.Protocol = p4.PROTO_TCP
-	inUdpSet.IpSetIDX.Protocol = p4.PROTO_UDP
-	outTcpSet.IpSetIDX.Protocol = p4.PROTO_TCP
-	outUdpSet.IpSetIDX.Protocol = p4.PROTO_UDP
-
-	inTcpSet.IpSetIDX.Rules = map[string]store.Rule{}
-	outTcpSet.IpSetIDX.Rules = map[string]store.Rule{}
-	inUdpSet.IpSetIDX.Rules = map[string]store.Rule{}
-	outUdpSet.IpSetIDX.Rules = map[string]store.Rule{}
+	for i := 0; i < 3; i++ {
+		ingress[i].IpSetIDX.Rules = map[string]store.Rule{}
+		egress[i].IpSetIDX.Rules = map[string]store.Rule{}
+		ingress[i].IpSetIDX.Direction = "RX"
+		egress[i].IpSetIDX.Direction = "TX"
+	}
 
 	policy := store.Policy{
 		PolicyName: in.Id.Name,
@@ -756,38 +761,9 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 	*/
 	entry := policy.GetFromStore()
 	if entry != nil {
-		storePolicy := entry.(store.Policy)
-		logger.Infof("Network policy %s exists. Updating the policy",
-			storePolicy.PolicyName)
 		tbltype = p4.PolicyUpdate
-
-		/*
-			Check the existing policy's ipset indexes.
-			If exists, use the same ipset index.
-		*/
-		for _, ipSetIDX := range storePolicy.IpSetIDXs {
-			switch ipSetIDX.Direction {
-			case "RX":
-				switch ipSetIDX.Protocol {
-				case p4.PROTO_UDP:
-					inUdpSet.IpSetIDX.Index = ipSetIDX.Index
-					inUdpSet.exists = true
-				default:
-					inTcpSet.IpSetIDX.Index = ipSetIDX.Index
-					inTcpSet.exists = true
-				}
-			case "TX":
-				switch ipSetIDX.Protocol {
-				case p4.PROTO_UDP:
-					outUdpSet.IpSetIDX.Index = ipSetIDX.Index
-					outUdpSet.exists = true
-				default:
-					outTcpSet.IpSetIDX.Index = ipSetIDX.Index
-					outTcpSet.exists = true
-				}
-			}
-		}
-
+		logger.Infof("Network policy %s exists. Updating the policy",
+			policy.PolicyName)
 	} else {
 		tbltype = p4.PolicyAdd
 		logger.Infof("Adding a new network policy %s.", policy.PolicyName)
@@ -799,45 +775,66 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 		if len(rule.SrcNet) == 0 || len(rule.SrcNet[0]) == 0 {
 			continue
 		}
-		r := store.Rule{
-			RuleID: rule.RuleId,
-			PortRange: []uint16{
-				uint16(rule.DstPorts[0].First),
-				uint16(rule.DstPorts[0].Last),
-			},
-			Cidr: rule.SrcNet[0],
-		}
 
 		switch rule.Protocol.GetName() {
 		case "udp":
-			if !inUdpSet.exists {
-				inUdpSet.IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
-				inUdpSet.exists = true
+			if !ingress[udp].exists {
+				ingress[udp].IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
+				ingress[udp].exists = true
 			}
-			r.RuleMask = p4.GenerateMask(inUdpSet.ruleMaskId)
-			inUdpSet.ruleMaskId++
-			inUdpSet.IpSetIDX.Rules[rule.RuleId] = r
-			inUdpSet.exists = true
+			r := store.Rule{
+				RuleID: rule.RuleId,
+				PortRange: []uint16{
+					uint16(rule.DstPorts[0].First),
+					uint16(rule.DstPorts[0].Last),
+				},
+				RuleMask: p4.GenerateMask(ingress[udp].ruleMaskId),
+				Cidr:     rule.SrcNet[0],
+			}
 
-			inUdpSet.IpSetIDX.DportRange = append(inUdpSet.IpSetIDX.DportRange,
+			ingress[udp].ruleMaskId++
+			ingress[udp].IpSetIDX.Rules[rule.RuleId] = r
+			ingress[udp].exists = true
+
+			ingress[udp].IpSetIDX.DportRange = append(ingress[udp].IpSetIDX.DportRange,
 				uint16(rule.DstPorts[0].First))
-			inUdpSet.IpSetIDX.DportRange = append(inUdpSet.IpSetIDX.DportRange,
+			ingress[udp].IpSetIDX.DportRange = append(ingress[udp].IpSetIDX.DportRange,
+				uint16(rule.DstPorts[0].Last))
+		case "tcp":
+			if !ingress[tcp].exists {
+				ingress[tcp].IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
+				ingress[tcp].exists = true
+			}
+			r := store.Rule{
+				RuleID: rule.RuleId,
+				PortRange: []uint16{
+					uint16(rule.DstPorts[0].First),
+					uint16(rule.DstPorts[0].Last),
+				},
+				RuleMask: p4.GenerateMask(ingress[tcp].ruleMaskId),
+				Cidr:     rule.SrcNet[0],
+			}
+			ingress[tcp].ruleMaskId++
+			ingress[tcp].IpSetIDX.Rules[rule.RuleId] = r
+			ingress[tcp].exists = true
+
+			ingress[tcp].IpSetIDX.DportRange = append(ingress[tcp].IpSetIDX.DportRange,
+				uint16(rule.DstPorts[0].First))
+			ingress[tcp].IpSetIDX.DportRange = append(ingress[tcp].IpSetIDX.DportRange,
 				uint16(rule.DstPorts[0].Last))
 		default:
-			if !inTcpSet.exists {
-				inTcpSet.IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
-				inTcpSet.exists = true
+			if !ingress[noproto].exists {
+				ingress[noproto].IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
+				ingress[noproto].exists = true
 			}
-			r.RuleMask = p4.GenerateMask(inTcpSet.ruleMaskId)
-			inTcpSet.ruleMaskId++
-			inTcpSet.IpSetIDX.Rules[rule.RuleId] = r
-			inTcpSet.exists = true
-
-			inTcpSet.IpSetIDX.DportRange = append(inTcpSet.IpSetIDX.DportRange,
-				uint16(rule.DstPorts[0].First))
-			inTcpSet.IpSetIDX.DportRange = append(inTcpSet.IpSetIDX.DportRange,
-				uint16(rule.DstPorts[0].Last))
-
+			r := store.Rule{
+				RuleID:   rule.RuleId,
+				RuleMask: p4.GenerateMask(ingress[noproto].ruleMaskId),
+				Cidr:     rule.SrcNet[0],
+			}
+			ingress[noproto].ruleMaskId++
+			ingress[noproto].IpSetIDX.Rules[rule.RuleId] = r
+			ingress[noproto].exists = true
 		}
 	}
 
@@ -846,55 +843,75 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 		if len(rule.DstNet) == 0 || len(rule.DstNet[0]) == 0 {
 			continue
 		}
-		r := store.Rule{
-			RuleID: rule.RuleId,
-			PortRange: []uint16{
-				uint16(rule.DstPorts[0].First),
-				uint16(rule.DstPorts[0].Last),
-			},
-			Cidr: rule.DstNet[0],
-		}
 
 		switch rule.Protocol.GetName() {
 		case "udp":
-			if !outUdpSet.exists {
-				outUdpSet.IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
-				outUdpSet.exists = true
+			if !egress[udp].exists {
+				egress[udp].IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
+				egress[udp].exists = true
 			}
-			r.RuleMask = p4.GenerateMask(outUdpSet.ruleMaskId)
-			outUdpSet.ruleMaskId++
-			outUdpSet.IpSetIDX.Rules[rule.RuleId] = r
+			r := store.Rule{
+				RuleID: rule.RuleId,
+				PortRange: []uint16{
+					uint16(rule.DstPorts[0].First),
+					uint16(rule.DstPorts[0].Last),
+				},
+				RuleMask: p4.GenerateMask(egress[udp].ruleMaskId),
+				Cidr:     rule.DstNet[0],
+			}
 
-			outUdpSet.IpSetIDX.DportRange = append(outUdpSet.IpSetIDX.DportRange,
+			egress[udp].ruleMaskId++
+			egress[udp].IpSetIDX.Rules[rule.RuleId] = r
+			egress[udp].exists = true
+
+			egress[udp].IpSetIDX.DportRange = append(egress[udp].IpSetIDX.DportRange,
 				uint16(rule.DstPorts[0].First))
-			outUdpSet.IpSetIDX.DportRange = append(outUdpSet.IpSetIDX.DportRange,
+			egress[udp].IpSetIDX.DportRange = append(egress[udp].IpSetIDX.DportRange,
+				uint16(rule.DstPorts[0].Last))
+		case "tcp":
+			if !egress[tcp].exists {
+				egress[tcp].IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
+				egress[tcp].exists = true
+			}
+			r := store.Rule{
+				RuleID: rule.RuleId,
+				PortRange: []uint16{
+					uint16(rule.DstPorts[0].First),
+					uint16(rule.DstPorts[0].Last),
+				},
+				RuleMask: p4.GenerateMask(egress[tcp].ruleMaskId),
+				Cidr:     rule.DstNet[0],
+			}
+			egress[tcp].ruleMaskId++
+			egress[tcp].IpSetIDX.Rules[rule.RuleId] = r
+			egress[tcp].exists = true
+
+			egress[tcp].IpSetIDX.DportRange = append(egress[tcp].IpSetIDX.DportRange,
+				uint16(rule.DstPorts[0].First))
+			egress[tcp].IpSetIDX.DportRange = append(egress[tcp].IpSetIDX.DportRange,
 				uint16(rule.DstPorts[0].Last))
 		default:
-			if !outTcpSet.exists {
-				outTcpSet.IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
-				outTcpSet.exists = true
+			if !egress[noproto].exists {
+				egress[noproto].IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
+				egress[noproto].exists = true
 			}
-			r.RuleMask = p4.GenerateMask(outTcpSet.ruleMaskId)
-			outTcpSet.ruleMaskId++
-			outTcpSet.IpSetIDX.Rules[rule.RuleId] = r
-
-			outTcpSet.IpSetIDX.DportRange = append(outTcpSet.IpSetIDX.DportRange,
-				uint16(rule.DstPorts[0].First))
-			outTcpSet.IpSetIDX.DportRange = append(outTcpSet.IpSetIDX.DportRange,
-				uint16(rule.DstPorts[0].Last))
+			r := store.Rule{
+				RuleID:   rule.RuleId,
+				RuleMask: p4.GenerateMask(egress[noproto].ruleMaskId),
+				Cidr:     rule.DstNet[0],
+			}
+			egress[noproto].ruleMaskId++
+			egress[noproto].IpSetIDX.Rules[rule.RuleId] = r
+			egress[noproto].exists = true
 		}
 
-		if inTcpSet.exists {
-			policy.IpSetIDXs[inTcpSet.IpSetIDX.Index] = inTcpSet.IpSetIDX
+	}
+	for i := 0; i < 3; i++ {
+		if ingress[i].exists {
+			policy.IpSetIDXs[ingress[i].IpSetIDX.Index] = ingress[i].IpSetIDX
 		}
-		if outTcpSet.exists {
-			policy.IpSetIDXs[outTcpSet.IpSetIDX.Index] = outTcpSet.IpSetIDX
-		}
-		if inUdpSet.exists {
-			policy.IpSetIDXs[inUdpSet.IpSetIDX.Index] = inUdpSet.IpSetIDX
-		}
-		if outUdpSet.exists {
-			policy.IpSetIDXs[outUdpSet.IpSetIDX.Index] = outUdpSet.IpSetIDX
+		if egress[i].exists {
+			policy.IpSetIDXs[egress[i].IpSetIDX.Index] = egress[i].IpSetIDX
 		}
 	}
 
@@ -1032,6 +1049,7 @@ func (s *ApiServer) UpdateLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 	logger.Infof("Incoming UpdateLocalEndpoint Request %+v", in)
 
 	if len(in.Endpoint.Tiers) == 0 {
+		logger.Infof("No policies, exiting")
 		out.Successful = true
 		return out, nil
 	}
