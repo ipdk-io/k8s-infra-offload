@@ -171,7 +171,10 @@ func (pi *sriovPodInterface) CreatePodInterface(in *pb.AddRequest) (*types.Inter
 	if err := doSriovNetworkFunc(in, res.InterfaceInfo); err != nil {
 		// if error occured after interface was already moved into containers netns move it back
 		if _, ok := err.(nsError); ok {
-			_ = movePodInterfaceToHostNetnsFunc(in.Netns, in.InterfaceName, res.InterfaceInfo)
+			if err := movePodInterfaceToHostNetnsFunc(in.Netns, in.InterfaceName, res.InterfaceInfo); err != nil {
+				pi.log.WithError(err).Error("failed to move pod interface to host network namespace")
+				return nil, err
+			}
 		}
 		pi.log.WithError(err).Error("failed to push interface to container")
 		pi.pool.Release(res.InterfaceInfo.InterfaceName) // if we failed to setup the allocated interfrace then release it

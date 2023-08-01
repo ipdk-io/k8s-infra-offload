@@ -349,7 +349,6 @@ func (ipsetmod IpSet) UpdateToStore() bool {
 		return false
 	}
 
-	ipsetEntry.IpAddr = nil
 	ipsetEntry.IpAddr = ipsetmod.IpAddr
 	return ipsetEntry.WriteToStore()
 }

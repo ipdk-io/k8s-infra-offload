@@ -52,6 +52,10 @@ LINTER = $(go env GOPATH)/bin/golangci-lint
 lint: golangci-lint
 	$(LINTER) run
 
+# Temporary target until SDK is upgraded to use the default or correct target
+.PHONY: mev
+mev: es2k
+
 es2k:
 	@echo "Building project for es2k"
 	$(MAKE) tagname=es2k build
