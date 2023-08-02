@@ -59,7 +59,7 @@ func PutConf(c *conf.Configuration) {
 type ProtoIpSetIDX struct {
 	ruleMaskId int
 	exists     bool
-	IpSetIDX   store.IpSetIDX
+	RuleGroup  store.RuleGroup
 }
 
 type ApiServer struct {
@@ -740,16 +740,16 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 
 	server := NewApiServer()
 
-	ingress[tcp].IpSetIDX.Protocol = p4.PROTO_TCP
-	egress[tcp].IpSetIDX.Protocol = p4.PROTO_TCP
-	ingress[udp].IpSetIDX.Protocol = p4.PROTO_UDP
-	egress[udp].IpSetIDX.Protocol = p4.PROTO_UDP
+	ingress[tcp].RuleGroup.Protocol = p4.PROTO_TCP
+	egress[tcp].RuleGroup.Protocol = p4.PROTO_TCP
+	ingress[udp].RuleGroup.Protocol = p4.PROTO_UDP
+	egress[udp].RuleGroup.Protocol = p4.PROTO_UDP
 
 	for i := 0; i < 3; i++ {
-		ingress[i].IpSetIDX.Rules = map[string]store.Rule{}
-		egress[i].IpSetIDX.Rules = map[string]store.Rule{}
-		ingress[i].IpSetIDX.Direction = "RX"
-		egress[i].IpSetIDX.Direction = "TX"
+		ingress[i].RuleGroup.Rules = map[string]store.Rule{}
+		egress[i].RuleGroup.Rules = map[string]store.Rule{}
+		ingress[i].RuleGroup.Direction = "RX"
+		egress[i].RuleGroup.Direction = "TX"
 	}
 
 	policy := store.Policy{
@@ -768,7 +768,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 		tbltype = p4.PolicyAdd
 		logger.Infof("Adding a new network policy %s.", policy.PolicyName)
 	}
-	policy.IpSetIDXs = map[uint16]store.IpSetIDX{}
+	policy.RuleGroups = map[uint16]store.RuleGroup{}
 
 	for _, rule := range in.Policy.InboundRules {
 		// Currently supporting only cidrs
@@ -779,7 +779,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 		switch rule.Protocol.GetName() {
 		case "udp":
 			if !ingress[udp].exists {
-				ingress[udp].IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
+				ingress[udp].RuleGroup.Index = uint16(store.GetNewPolicyIpsetIDX())
 				ingress[udp].exists = true
 			}
 			r := store.Rule{
@@ -793,16 +793,16 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 			}
 
 			ingress[udp].ruleMaskId++
-			ingress[udp].IpSetIDX.Rules[rule.RuleId] = r
+			ingress[udp].RuleGroup.Rules[rule.RuleId] = r
 			ingress[udp].exists = true
 
-			ingress[udp].IpSetIDX.DportRange = append(ingress[udp].IpSetIDX.DportRange,
+			ingress[udp].RuleGroup.DportRange = append(ingress[udp].RuleGroup.DportRange,
 				uint16(rule.DstPorts[0].First))
-			ingress[udp].IpSetIDX.DportRange = append(ingress[udp].IpSetIDX.DportRange,
+			ingress[udp].RuleGroup.DportRange = append(ingress[udp].RuleGroup.DportRange,
 				uint16(rule.DstPorts[0].Last))
 		case "tcp":
 			if !ingress[tcp].exists {
-				ingress[tcp].IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
+				ingress[tcp].RuleGroup.Index = uint16(store.GetNewPolicyIpsetIDX())
 				ingress[tcp].exists = true
 			}
 			r := store.Rule{
@@ -815,16 +815,16 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 				Cidr:     rule.SrcNet[0],
 			}
 			ingress[tcp].ruleMaskId++
-			ingress[tcp].IpSetIDX.Rules[rule.RuleId] = r
+			ingress[tcp].RuleGroup.Rules[rule.RuleId] = r
 			ingress[tcp].exists = true
 
-			ingress[tcp].IpSetIDX.DportRange = append(ingress[tcp].IpSetIDX.DportRange,
+			ingress[tcp].RuleGroup.DportRange = append(ingress[tcp].RuleGroup.DportRange,
 				uint16(rule.DstPorts[0].First))
-			ingress[tcp].IpSetIDX.DportRange = append(ingress[tcp].IpSetIDX.DportRange,
+			ingress[tcp].RuleGroup.DportRange = append(ingress[tcp].RuleGroup.DportRange,
 				uint16(rule.DstPorts[0].Last))
 		default:
 			if !ingress[noproto].exists {
-				ingress[noproto].IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
+				ingress[noproto].RuleGroup.Index = uint16(store.GetNewPolicyIpsetIDX())
 				ingress[noproto].exists = true
 			}
 			r := store.Rule{
@@ -833,7 +833,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 				Cidr:     rule.SrcNet[0],
 			}
 			ingress[noproto].ruleMaskId++
-			ingress[noproto].IpSetIDX.Rules[rule.RuleId] = r
+			ingress[noproto].RuleGroup.Rules[rule.RuleId] = r
 			ingress[noproto].exists = true
 		}
 	}
@@ -847,7 +847,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 		switch rule.Protocol.GetName() {
 		case "udp":
 			if !egress[udp].exists {
-				egress[udp].IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
+				egress[udp].RuleGroup.Index = uint16(store.GetNewPolicyIpsetIDX())
 				egress[udp].exists = true
 			}
 			r := store.Rule{
@@ -861,16 +861,16 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 			}
 
 			egress[udp].ruleMaskId++
-			egress[udp].IpSetIDX.Rules[rule.RuleId] = r
+			egress[udp].RuleGroup.Rules[rule.RuleId] = r
 			egress[udp].exists = true
 
-			egress[udp].IpSetIDX.DportRange = append(egress[udp].IpSetIDX.DportRange,
+			egress[udp].RuleGroup.DportRange = append(egress[udp].RuleGroup.DportRange,
 				uint16(rule.DstPorts[0].First))
-			egress[udp].IpSetIDX.DportRange = append(egress[udp].IpSetIDX.DportRange,
+			egress[udp].RuleGroup.DportRange = append(egress[udp].RuleGroup.DportRange,
 				uint16(rule.DstPorts[0].Last))
 		case "tcp":
 			if !egress[tcp].exists {
-				egress[tcp].IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
+				egress[tcp].RuleGroup.Index = uint16(store.GetNewPolicyIpsetIDX())
 				egress[tcp].exists = true
 			}
 			r := store.Rule{
@@ -883,16 +883,16 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 				Cidr:     rule.DstNet[0],
 			}
 			egress[tcp].ruleMaskId++
-			egress[tcp].IpSetIDX.Rules[rule.RuleId] = r
+			egress[tcp].RuleGroup.Rules[rule.RuleId] = r
 			egress[tcp].exists = true
 
-			egress[tcp].IpSetIDX.DportRange = append(egress[tcp].IpSetIDX.DportRange,
+			egress[tcp].RuleGroup.DportRange = append(egress[tcp].RuleGroup.DportRange,
 				uint16(rule.DstPorts[0].First))
-			egress[tcp].IpSetIDX.DportRange = append(egress[tcp].IpSetIDX.DportRange,
+			egress[tcp].RuleGroup.DportRange = append(egress[tcp].RuleGroup.DportRange,
 				uint16(rule.DstPorts[0].Last))
 		default:
 			if !egress[noproto].exists {
-				egress[noproto].IpSetIDX.Index = uint16(store.GetNewPolicyIpsetIDX())
+				egress[noproto].RuleGroup.Index = uint16(store.GetNewPolicyIpsetIDX())
 				egress[noproto].exists = true
 			}
 			r := store.Rule{
@@ -901,17 +901,17 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 				Cidr:     rule.DstNet[0],
 			}
 			egress[noproto].ruleMaskId++
-			egress[noproto].IpSetIDX.Rules[rule.RuleId] = r
+			egress[noproto].RuleGroup.Rules[rule.RuleId] = r
 			egress[noproto].exists = true
 		}
 
 	}
 	for i := 0; i < 3; i++ {
 		if ingress[i].exists {
-			policy.IpSetIDXs[ingress[i].IpSetIDX.Index] = ingress[i].IpSetIDX
+			policy.RuleGroups[ingress[i].RuleGroup.Index] = ingress[i].RuleGroup
 		}
 		if egress[i].exists {
-			policy.IpSetIDXs[egress[i].IpSetIDX.Index] = egress[i].IpSetIDX
+			policy.RuleGroups[egress[i].RuleGroup.Index] = egress[i].RuleGroup
 		}
 	}
 
@@ -984,6 +984,8 @@ func (s *ApiServer) ActivePolicyRemove(ctx context.Context, in *proto.ActivePoli
 		out.Successful = false
 		return out, err
 	}
+
+	logger.Infof("Successfully deleted policy %v to the store", policy)
 
 	return out, nil
 }

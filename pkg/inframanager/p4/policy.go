@@ -80,7 +80,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 						},
 						"hdr.ipv4.protocol": &client.LpmMatch{
 							Value: valueToBytes8(0),
-							PLen:  0,
+							PLen:  1,
 						},
 					},
 					p4RtC.NewTableActionDirect("k8s_dp_control.set_status_match_ipset_only",
@@ -161,7 +161,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 						},
 						"hdr.ipv4.protocol": &client.LpmMatch{
 							Value: valueToBytes8(0),
-							PLen:  0,
+							PLen:  1,
 						},
 					},
 					nil,
@@ -198,7 +198,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 						},
 						"hdr.ipv4.protocol": &client.LpmMatch{
 							Value: valueToBytes8(0),
-							PLen:  0,
+							PLen:  1,
 						},
 					},
 					nil,
@@ -440,19 +440,19 @@ func IsSame(slice1 []uint16, slice2 []uint16) bool {
 }
 
 func addPolicy(ctx context.Context, p4RtC *client.Client, policy store.Policy) error {
-	for ipSetIDXId, ipSetIDX := range policy.IpSetIDXs {
-		for _, rule := range ipSetIDX.Rules {
+	for id, RuleGroup := range policy.RuleGroups {
+		for _, rule := range RuleGroup.Rules {
 			cidr := rule.Cidr
 			mask := rule.RuleMask
 
-			if err := AclIpSetMatchTable(ctx, p4RtC, ipSetIDXId, cidr, mask, ipSetIDX.Direction,
+			if err := AclIpSetMatchTable(ctx, p4RtC, id, cidr, mask, RuleGroup.Direction,
 				Insert); err != nil {
 				log.Errorf("Failed to add entry to AclIpSetMatchTable, err: %v", err)
 				return err
 			}
 		}
-		if len(ipSetIDX.DportRange) != 0 {
-			if err := DstPortRcTable(ctx, p4RtC, ipSetIDXId, ipSetIDX.DportRange, ipSetIDX.Protocol,
+		if len(RuleGroup.DportRange) != 0 {
+			if err := DstPortRcTable(ctx, p4RtC, id, RuleGroup.DportRange, RuleGroup.Protocol,
 				Insert); err != nil {
 				log.Errorf("Failed to add entry into DstPortRcTable, err: %v", err)
 				return err
@@ -463,17 +463,17 @@ func addPolicy(ctx context.Context, p4RtC *client.Client, policy store.Policy) e
 }
 
 func deletePolicy(ctx context.Context, p4RtC *client.Client, policy store.Policy) error {
-	for ipSetIDXId, ipSetIDX := range policy.IpSetIDXs {
-		for _, rule := range ipSetIDX.Rules {
+	for id, RuleGroup := range policy.RuleGroups {
+		for _, rule := range RuleGroup.Rules {
 			cidr := rule.Cidr
-			if err := AclIpSetMatchTable(ctx, p4RtC, ipSetIDXId, cidr, 0, ipSetIDX.Direction,
+			if err := AclIpSetMatchTable(ctx, p4RtC, id, cidr, 0, RuleGroup.Direction,
 				Delete); err != nil {
 				log.Errorf("Failed to delete entry from AclIpSetMatchTable, err: %v", err)
 				return err
 			}
 		}
-		if len(ipSetIDX.DportRange) != 0 {
-			if err := DstPortRcTable(ctx, p4RtC, ipSetIDXId, nil, ipSetIDX.Protocol,
+		if len(RuleGroup.DportRange) != 0 {
+			if err := DstPortRcTable(ctx, p4RtC, id, nil, RuleGroup.Protocol,
 				Delete); err != nil {
 				log.Errorf("Failed to delete entry from DstPortRcTable,err: %v", err)
 				return err
@@ -508,10 +508,10 @@ func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype Opera
 		workloadep := in.(store.PolicyWorkerEndPoint)
 		for _, policyname := range workloadep.PolicyNameIngress {
 			policy := store.PolicySet.PolicyMap[policyname]
-			for ipsetidx, IpSetIDX := range policy.IpSetIDXs {
-				if IpSetIDX.Direction == "RX" {
-					if err := AclPodIpProtoTable(ctx, p4RtC, IpSetIDX.Protocol, workloadep.WorkerIp,
-						ipsetidx, ipsetidx, "RX", Insert); err != nil {
+			for id, RuleGroup := range policy.RuleGroups {
+				if RuleGroup.Direction == "RX" {
+					if err := AclPodIpProtoTable(ctx, p4RtC, RuleGroup.Protocol, workloadep.WorkerIp,
+						id, id, "RX", Insert); err != nil {
 						log.Errorf("Failed to add entry to AclPodIpProtoTable, err: %v", err)
 						return err
 					}
@@ -521,10 +521,10 @@ func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype Opera
 
 		for _, policyname := range workloadep.PolicyNameEgress {
 			policy := store.PolicySet.PolicyMap[policyname]
-			for ipsetidx, IpSetIDX := range policy.IpSetIDXs {
-				if IpSetIDX.Direction == "TX" {
-					if err := AclPodIpProtoTable(ctx, p4RtC, IpSetIDX.Protocol, workloadep.WorkerIp,
-						ipsetidx, ipsetidx, "TX", Insert); err != nil {
+			for id, RuleGroup := range policy.RuleGroups {
+				if RuleGroup.Direction == "TX" {
+					if err := AclPodIpProtoTable(ctx, p4RtC, RuleGroup.Protocol, workloadep.WorkerIp,
+						id, id, "TX", Insert); err != nil {
 						log.Errorf("Failed to add entry to AclPodIpProtoTable, err: %v", err)
 						return err
 					}
@@ -537,10 +537,10 @@ func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype Opera
 		workloadep := in.(store.PolicyWorkerEndPoint)
 		for _, policyname := range workloadep.PolicyNameIngress {
 			policy := store.PolicySet.PolicyMap[policyname]
-			for ipsetidx, IpSetIDX := range policy.IpSetIDXs {
-				if IpSetIDX.Direction == "RX" {
-					if err := AclPodIpProtoTable(ctx, p4RtC, IpSetIDX.Protocol, workloadep.WorkerIp,
-						ipsetidx, ipsetidx, "RX", Delete); err != nil {
+			for id, RuleGroup := range policy.RuleGroups {
+				if RuleGroup.Direction == "RX" {
+					if err := AclPodIpProtoTable(ctx, p4RtC, RuleGroup.Protocol, workloadep.WorkerIp,
+						id, id, "RX", Delete); err != nil {
 						log.Errorf("Failed to delete entry from AclPodIpProtoTable, err: %v", err)
 						return err
 					}
@@ -550,10 +550,10 @@ func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype Opera
 
 		for _, policyname := range workloadep.PolicyNameEgress {
 			policy := store.PolicySet.PolicyMap[policyname]
-			for ipsetidx, IpSetIDX := range policy.IpSetIDXs {
-				if IpSetIDX.Direction == "TX" {
-					if err := AclPodIpProtoTable(ctx, p4RtC, IpSetIDX.Protocol, workloadep.WorkerIp,
-						ipsetidx, ipsetidx, "TX", Delete); err != nil {
+			for id, RuleGroup := range policy.RuleGroups {
+				if RuleGroup.Direction == "TX" {
+					if err := AclPodIpProtoTable(ctx, p4RtC, RuleGroup.Protocol, workloadep.WorkerIp,
+						id, id, "TX", Delete); err != nil {
 						log.Errorf("Failed to delete entry from AclPodIpProtoTable, err: %v", err)
 						return err
 					}
@@ -571,9 +571,9 @@ func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype Opera
 			//if policyname from old store entry is not present in new entry, then delete
 			if !IsNamePresent(policyname, workloadep.PolicyNameIngress) {
 				policydel := store.PolicySet.PolicyMap[policyname]
-				for _, IpSetIDX := range policydel.IpSetIDXs {
-					if IpSetIDX.Direction == "RX" {
-						if err := AclPodIpProtoTable(ctx, p4RtC, IpSetIDX.Protocol,
+				for _, RuleGroup := range policydel.RuleGroups {
+					if RuleGroup.Direction == "RX" {
+						if err := AclPodIpProtoTable(ctx, p4RtC, RuleGroup.Protocol,
 							workloadep.WorkerIp, 0, 0, "RX", Delete); err != nil {
 							log.Errorf("Failed to delete entry from AclPodIpProtoTable, err: %v", err)
 							return err
@@ -586,10 +586,10 @@ func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype Opera
 		for _, policyname := range workloadep.PolicyNameIngress {
 			if !IsNamePresent(policyname, workloadepold.PolicyNameIngress) {
 				policyadd := store.PolicySet.PolicyMap[policyname]
-				for ipsetidx, IpSetIDX := range policyadd.IpSetIDXs {
-					if IpSetIDX.Direction == "RX" {
-						if err := AclPodIpProtoTable(ctx, p4RtC, IpSetIDX.Protocol,
-							workloadep.WorkerIp, ipsetidx, ipsetidx, "RX", Insert); err != nil {
+				for id, RuleGroup := range policyadd.RuleGroups {
+					if RuleGroup.Direction == "RX" {
+						if err := AclPodIpProtoTable(ctx, p4RtC, RuleGroup.Protocol,
+							workloadep.WorkerIp, id, id, "RX", Insert); err != nil {
 							log.Errorf("Failed to insert entry to AclPodIpProtoTable, err: %v", err)
 							return err
 						}
@@ -604,9 +604,9 @@ func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype Opera
 			//if policyname from old store entry is not present in new entry, then delete
 			if !IsNamePresent(policyname, workloadep.PolicyNameEgress) {
 				policydel := store.PolicySet.PolicyMap[policyname]
-				for _, IpSetIDX := range policydel.IpSetIDXs {
-					if IpSetIDX.Direction == "TX" {
-						if err := AclPodIpProtoTable(ctx, p4RtC, IpSetIDX.Protocol, workloadep.WorkerIp,
+				for _, RuleGroup := range policydel.RuleGroups {
+					if RuleGroup.Direction == "TX" {
+						if err := AclPodIpProtoTable(ctx, p4RtC, RuleGroup.Protocol, workloadep.WorkerIp,
 							0, 0, "TX", Delete); err != nil {
 							log.Errorf("Failed to delete entry from AclPodIpProtoTable, err: %v", err)
 							return err
@@ -619,10 +619,10 @@ func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype Opera
 		for _, policyname := range workloadep.PolicyNameEgress {
 			if !IsNamePresent(policyname, workloadepold.PolicyNameEgress) {
 				policyadd := store.PolicySet.PolicyMap[policyname]
-				for ipsetidx, IpSetIDX := range policyadd.IpSetIDXs {
-					if IpSetIDX.Direction == "TX" {
-						if err := AclPodIpProtoTable(ctx, p4RtC, IpSetIDX.Protocol, workloadep.WorkerIp,
-							ipsetidx, ipsetidx, "TX", Insert); err != nil {
+				for id, RuleGroup := range policyadd.RuleGroups {
+					if RuleGroup.Direction == "TX" {
+						if err := AclPodIpProtoTable(ctx, p4RtC, RuleGroup.Protocol, workloadep.WorkerIp,
+							id, id, "TX", Insert); err != nil {
 							log.Errorf("Failed to insert entry to AclPodIpProtoTable, err: %v", err)
 							return err
 						}

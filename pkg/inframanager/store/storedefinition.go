@@ -71,10 +71,10 @@ type ServiceCollection struct {
 
 type Policy struct {
 	PolicyName string
-	IpSetIDXs  map[uint16]IpSetIDX
+	RuleGroups map[uint16]RuleGroup
 }
 
-type IpSetIDX struct {
+type RuleGroup struct {
 	Index      uint16
 	Direction  string
 	Protocol   uint8
