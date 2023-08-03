@@ -8,9 +8,9 @@ Infrap4dGrpcServer:
 #      client-key: "key_path"
 #      ca-cert: "ca_path"
 #    If not specified, the default values are
-#      client-cert: "/tmp/inframanager/client/tls.crt"
-#      client-key: "/tmp/inframanager/client/tls.key"
-#      ca-cert: "/tmp/inframanager/client/ca.crt"
+#      client-cert: "/etc/pki/inframanager/client/tls.crt"
+#      client-key: "/etc/pki/inframanager/client/tls.key"
+#      ca-cert: "/etc/pki/inframanager/client/ca.crt"
   conn: mtls
 
 Infrap4dGnmiServer:
@@ -23,12 +23,13 @@ Infrap4dGnmiServer:
 #      client-key: "key_path"
 #      ca-cert: "ca_path"
 #    If not specified, the default values are
-#      client-cert: "/tmp/inframanager/client/tls.crt"
-#      client-key: "/tmp/inframanager/client/tls.key"
-#      ca-cert: "/tmp/inframanager/client/ca.crt"
+#      client-cert: "/etc/pki/inframanager/client/tls.crt"
+#      client-key: "/etc/pki/inframanager/client/tls.key"
+#      ca-cert: "/etc/pki/inframanager/client/ca.crt"
   conn: mtls
 
 InfraManager: 
+  addr: 127.0.0.1:50002
 #  - arp-mac
 #    This is the mac address of the interface given to
 #    arp-proxy namespace using the arp_proxy.sh script
@@ -39,16 +40,16 @@ InfraManager:
 #    For tls, also provide the ca-cert
 #      ca-cert: "ca_path"
 #    If not specified, the default value is
-#      ca-cert: "/tmp/inframanager/server/ca.crt"
+#      ca-cert: "/etc/pki/inframanager/server/ca.crt"
 #  - mtls
 #    For mtls, also provide the below fields
 #      client-cert: "cert_path"
 #      client-key: "key_path"
 #      ca-cert: "ca_path"
 #        If not specified, the default values are
-#          server-cert: "/tmp/inframanager/server/tls.crt"
-#          server-key: "/tmp/inframanager/server/tls.key"
-#          ca-cert: "/tmp/inframanager/server/ca.crt"
+#          server-cert: "/etc/pki/inframanager/server/tls.crt"
+#          server-key: "/etc/pki/inframanager/server/tls.key"
+#          ca-cert: "/etc/pki/inframanager/server/ca.crt"
 #      ciphersuites: []
 #        If not specified, the default values are
 #        [
@@ -62,9 +63,9 @@ InfraManager:
   arp-mac: "00:09:00:04:03:14"
 
   conn: mtls
-  server-cert: "/tmp/inframanager/cert/server/tls.crt"
-  server-key: "/tmp/inframanager/cert/server/tls.key"
-  ca-cert: "/tmp/inframanager/cert/server/ca.crt"
+  server-cert: "/etc/pki/inframanager/cert/server/tls.crt"
+  server-key: "/etc/pki/inframanager/cert/server/tls.key"
+  ca-cert: "/etc/pki/inframanager/cert/server/ca.crt"
   ciphersuites : [
           "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
           "TLS_AES_256_GCM_SHA384",

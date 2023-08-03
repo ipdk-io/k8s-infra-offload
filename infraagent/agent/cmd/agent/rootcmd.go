@@ -43,13 +43,13 @@ var config struct {
 	caCert        string
 }
 
-var supporteIntfTypes = []string{
+var supportedIntfTypes = []string{
 	types.SriovPodInterface,
 	types.IpvlanPodInterface,
 	types.TapInterface,
 	types.CDQInterface,
 }
-var defaultIntfType = types.SriovPodInterface
+var defaultIntfType = types.CDQInterface
 
 var rootCmd = &cobra.Command{
 	Use:   types.InfraAgentCLIName,
@@ -65,6 +65,8 @@ It off-loads K8s dataplane to Infrastructure components.
 		interfaceType := viper.GetString("interfaceType")
 		ifName := viper.GetString("interface")
 		types.HostInterfaceMTU = viper.GetInt("hostIfaceMTU")
+		types.InfraManagerAddr = viper.GetString("managerAddr")
+		types.InfraManagerPort = viper.GetString("managerPort")
 		config, err := utils.GetK8sConfig()
 		if err != nil {
 			exitWithError(err, 2)
@@ -96,8 +98,8 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	intfTypeOpts := newFlagOpts([]string{types.SriovPodInterface, types.IpvlanPodInterface, types.TapInterface}, types.SriovPodInterface)
-	rootCmd.PersistentFlags().Var(intfTypeOpts, "interfaceType", "Pod Interface type (sriov|ipvlan|tap)")
+	intfTypeOpts := newFlagOpts(supportedIntfTypes, defaultIntfType)
+	rootCmd.PersistentFlags().Var(intfTypeOpts, "interfaceType", "Pod Interface type (cdq|sriov|ipvlan|tap)")
 	rootCmd.PersistentFlags().Int("hostIfaceMTU", 1500, "Host Interface MTU size")
 	rootCmd.PersistentFlags().StringVar(&config.interfaceName, "interface", "", intfFlagHelpMsg)
 	rootCmd.PersistentFlags().StringVar(&config.cfgFile, "config", "/etc/infra/infraagent.yaml", "config file")
@@ -107,6 +109,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&config.clientCert, "client-cert", types.AgentDefaultClientCert, "TLS Client cert file for mTLS")
 	rootCmd.PersistentFlags().StringVar(&config.clientKey, "client-key", types.AgentDefaultClientKey, "TLS Client key file for mTLS")
 	rootCmd.PersistentFlags().StringVar(&config.caCert, "ca-cert", types.AgentDefaultCACert, "TLS Client CA Cert file")
+	rootCmd.PersistentFlags().StringVar(&types.InfraManagerAddr, "managerAddr", types.DefaultInfraManagerAddr, "Inframanager IP Address")
+	rootCmd.PersistentFlags().StringVar(&types.InfraManagerPort, "managerPort", types.DefaultInfraManagerPort, "Inframanager Port")
 
 	if err := viper.BindPFlag("hostIfaceMTU", rootCmd.PersistentFlags().Lookup("hostIfaceMTU")); err != nil {
 		fmt.Fprintf(os.Stderr, "There was an error while binding flags '%s'", err)
@@ -143,6 +147,14 @@ func init() {
 	}
 	if err := viper.BindPFlag("ca-cert", rootCmd.PersistentFlags().Lookup("ca-cert")); err != nil {
 		fmt.Fprintf(os.Stderr, "There was an error while binding ca-cert flag '%s'", err)
+		os.Exit(1)
+	}
+	if err := viper.BindPFlag("managerAddr", rootCmd.PersistentFlags().Lookup("managerAddr")); err != nil {
+		fmt.Fprintf(os.Stderr, "There was an error while binding managerAddr flag '%s'", err)
+		os.Exit(1)
+	}
+	if err := viper.BindPFlag("managerPort", rootCmd.PersistentFlags().Lookup("managerPort")); err != nil {
+		fmt.Fprintf(os.Stderr, "There was an error while binding managerPort flag '%s'", err)
 		os.Exit(1)
 	}
 }
@@ -190,7 +202,7 @@ func validateConfigs() error {
 	var err error
 	// validate interface type
 	interfaceType := viper.GetString("interfaceType")
-	if newErr := newFlagOpts(supporteIntfTypes, defaultIntfType).Set(interfaceType); newErr != nil {
+	if newErr := newFlagOpts(supportedIntfTypes, defaultIntfType).Set(interfaceType); newErr != nil {
 		err = fmt.Errorf("error validating interfaceType: %w", newErr)
 
 	}
