@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build es2k
+//go:build dpdk
 
 package p4
 
@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
 	log "github.com/sirupsen/logrus"
 	"strconv"
@@ -80,7 +81,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 						},
 						"hdr.ipv4.protocol": &client.LpmMatch{
 							Value: valueToBytes8(0),
-							PLen:  0,
+							PLen:  1,
 						},
 					},
 					p4RtC.NewTableActionDirect("k8s_dp_control.set_status_match_ipset_only",
@@ -120,7 +121,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 						},
 						"hdr.ipv4.protocol": &client.LpmMatch{
 							Value: valueToBytes8(0),
-							PLen:  0,
+							PLen:  1,
 						},
 					},
 					p4RtC.NewTableActionDirect("k8s_dp_control.set_status_match_ipset_only",
@@ -161,7 +162,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 						},
 						"hdr.ipv4.protocol": &client.LpmMatch{
 							Value: valueToBytes8(0),
-							PLen:  0,
+							PLen:  1,
 						},
 					},
 					nil,
@@ -198,7 +199,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 						},
 						"hdr.ipv4.protocol": &client.LpmMatch{
 							Value: valueToBytes8(0),
-							PLen:  0,
+							PLen:  1,
 						},
 					},
 					nil,
@@ -221,12 +222,18 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 
 func AclIpSetMatchTable(ctx context.Context, p4RtC *client.Client,
 	polID uint16, cidr string, mask uint8, direction string, action InterfaceType) error {
-	res := strings.Split(cidr, "/")
-	ip := res[0]
-	plen, _ := strconv.Atoi(res[1])
 	var tableName string
 	var entryAdd *p4_v1.TableEntry
 	var entryDelete *p4_v1.TableEntry
+
+	res := strings.Split(cidr, "/")
+	ip := res[0]
+	plen, err := strconv.Atoi(res[1])
+	if err != nil {
+		log.Errorf("Invalid cidr %s: err: %v", cidr, err)
+		return err
+	}
+
 	switch action {
 	case Insert:
 		if direction == "TX" {
@@ -410,17 +417,10 @@ func DstPortRcTable(ctx context.Context, p4RtC *client.Client,
 	return nil
 }
 
-func IsNamePresent(substr string, strslice []string) bool {
-	for _, str := range strslice {
-		if strings.Contains(str, substr) {
-			return true
-		}
-	}
-	log.Infof("name %s is not present in given slice", substr)
-	return false
-}
-
 func IsSame(slice1 []uint16, slice2 []uint16) bool {
+	if len(slice1) != len(slice2) {
+		return false
+	}
 	for i := range slice1 {
 		if slice1[i] != slice2[i] {
 			log.Infof("%d and %d are not same", slice1[i], slice2[i])
@@ -430,280 +430,193 @@ func IsSame(slice1 []uint16, slice2 []uint16) bool {
 	return true
 }
 
+func updatePolicy(ctx context.Context, p4RtC *client.Client,
+	policy store.Policy, action InterfaceType) error {
+	for id, RuleGroup := range policy.RuleGroups {
+		for _, rule := range RuleGroup.Rules {
+			cidr := rule.Cidr
+			mask := rule.RuleMask
+
+			if err := AclIpSetMatchTable(ctx, p4RtC, id, cidr, mask, RuleGroup.Direction,
+				action); err != nil {
+				log.Errorf("Failed to add entry to AclIpSetMatchTable, err: %v", err)
+				return err
+			}
+		}
+		if len(RuleGroup.DportRange) != 0 {
+			if err := DstPortRcTable(ctx, p4RtC, id, RuleGroup.DportRange, RuleGroup.Protocol,
+				action); err != nil {
+				log.Errorf("Failed to add entry into DstPortRcTable, err: %v", err)
+				return err
+			}
+		}
+		if action == Delete {
+			for _, epName := range policy.WorkerEps {
+				if epEntry := store.GetWorkerEp(epName); epEntry != nil {
+					ep := epEntry.(store.PolicyWorkerEndPoint)
+					if err := updateWorkload(ctx, p4RtC, ep, Delete); err != nil {
+						return err
+					}
+					policy.DeleteWorkerEp(epName)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func updateWorkloadRules(ctx context.Context, p4RtC *client.Client, ip string,
+	direction string, ruleGroups map[uint16]store.RuleGroup, action InterfaceType) error {
+	for id, ruleGroup := range ruleGroups {
+		if ruleGroup.Direction == direction {
+			if err := AclPodIpProtoTable(ctx, p4RtC, ruleGroup.Protocol, ip,
+				id, id, ruleGroup.Direction, action); err != nil {
+				log.Errorf("Failed to %s entry from AclPodIpProtoTable, err: %v", GetStr(action), err)
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func updateWorkloadPolicies(ctx context.Context, p4RtC *client.Client,
+	policies []string, ip, ep, direction string, action InterfaceType) error {
+	for _, pName := range policies {
+		if pEntry := store.GetPolicy(pName); pEntry != nil {
+			policy := pEntry.(store.Policy)
+			if err := updateWorkloadRules(ctx, p4RtC, ip, direction,
+				policy.RuleGroups, action); err != nil {
+				return err
+			}
+			switch action {
+			case Insert:
+				policy.AddWorkerEp(ep)
+			case Delete:
+				policy.DeleteWorkerEp(ep)
+			default:
+				log.Errorf("Invalid action type: %v", action)
+				return fmt.Errorf("Invalid action type: %v", action)
+			}
+		}
+	}
+	return nil
+}
+
+func updateWorkload(ctx context.Context, p4RtC *client.Client,
+	ep store.PolicyWorkerEndPoint, action InterfaceType) error {
+	if err := updateWorkloadPolicies(ctx, p4RtC, ep.PolicyNameIngress,
+		ep.WorkerIp, ep.WorkerEp, "RX", action); err != nil {
+		return err
+	}
+	if err := updateWorkloadPolicies(ctx, p4RtC, ep.PolicyNameEgress,
+		ep.WorkerIp, ep.WorkerEp, "TX", action); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func addWorkload(ctx context.Context, p4RtC *client.Client,
+	ep store.PolicyWorkerEndPoint) error {
+	for _, policyname := range ep.PolicyNameIngress {
+		policy := store.PolicySet.PolicyMap[policyname]
+		for id, RuleGroup := range policy.RuleGroups {
+			if RuleGroup.Direction == "RX" {
+				if err := AclPodIpProtoTable(ctx, p4RtC, RuleGroup.Protocol, ep.WorkerIp,
+					id, id, "RX", Insert); err != nil {
+					log.Errorf("Failed to add entry to AclPodIpProtoTable, err: %v", err)
+					return err
+				}
+			}
+		}
+	}
+
+	for _, policyname := range ep.PolicyNameEgress {
+		policy := store.PolicySet.PolicyMap[policyname]
+		for id, RuleGroup := range policy.RuleGroups {
+			if RuleGroup.Direction == "TX" {
+				if err := AclPodIpProtoTable(ctx, p4RtC, RuleGroup.Protocol, ep.WorkerIp,
+					id, id, "TX", Insert); err != nil {
+					log.Errorf("Failed to add entry to AclPodIpProtoTable, err: %v", err)
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype OperationType, in interface{}) error {
 	switch tbltype {
 	case PolicyAdd:
 		policy := in.(store.Policy)
-		for ipSetIDXId, ipSetIDX := range policy.IpSetIDXs {
-			for _, rule := range ipSetIDX.Rules {
-				cidr := rule.Cidr
-				mask := rule.RuleMask
-
-				if err := AclIpSetMatchTable(ctx, p4RtC, ipSetIDXId, cidr, mask, ipSetIDX.Direction,
-					Insert); err != nil {
-					log.Errorf("Failed to add entry to AclIpSetMatchTable, err: %v", err)
-					return err
-				}
-			}
-			if len(ipSetIDX.DportRange) != 0 {
-				if err := DstPortRcTable(ctx, p4RtC, ipSetIDXId, ipSetIDX.DportRange, ipSetIDX.Protocol,
-					Insert); err != nil {
-					log.Errorf("Failed to add entry into DstPortRcTable, err: %v", err)
-					return err
-				}
-			}
-		}
-		return nil
-
-	case PolicyDel:
-		policy := in.(store.Policy)
-		for ipSetIDXId, ipSetIDX := range policy.IpSetIDXs {
-			for _, rule := range ipSetIDX.Rules {
-				cidr := rule.Cidr
-				if err := AclIpSetMatchTable(ctx, p4RtC, ipSetIDXId, cidr, 0, ipSetIDX.Direction,
-					Delete); err != nil {
-					log.Errorf("Failed to delete entry from AclIpSetMatchTable, err: %v", err)
-					return err
-				}
-			}
-			if len(ipSetIDX.DportRange) != 0 {
-				if err := DstPortRcTable(ctx, p4RtC, ipSetIDXId, nil, ipSetIDX.Protocol,
-					Delete); err != nil {
-					log.Errorf("Failed to delete entry from DstPortRcTable,err: %v", err)
-					return err
-				}
-			}
-		}
-		return nil
-
-	case PolicyUpdate:
-		policy := in.(store.Policy)
-
-		oldRules := map[string]store.Rule{}
-		newRules := map[string]store.Rule{}
-
-		//create map of new rules
-		for _, ipSetIDX := range policy.IpSetIDXs {
-			for ruleID, rule := range ipSetIDX.Rules {
-				newRules[ruleID] = rule
-			}
-		}
-
-		policyEntry := policy.GetFromStore()
-		policyOld := policyEntry.(store.Policy)
-
-		i := 0
 
 		/*
-			Delete old stale rules.
+			If exists, delete policy
 		*/
-		for ipSetIDXId, ipSetIDX := range policyOld.IpSetIDXs {
-			dportRng := make([]uint16, 16)
-			for ruleID, rule := range ipSetIDX.Rules {
-				oldRules[ruleID] = rule
-
-				/*
-					If the rule is not present in the policy update request,
-					delete the rule.
-				*/
-				if _, ok := newRules[ruleID]; !ok {
-					dportRng[i], i = 0, i+1
-					dportRng[i], i = 0, i+1
-
-					cidr := rule.Cidr
-
-					if err := AclIpSetMatchTable(ctx, p4RtC, ipSetIDXId, cidr, 0, ipSetIDX.Direction,
-						Delete); err != nil {
-						log.Errorf("Failed to delete entry from AclIpSetMatchTable, err: %v", err)
-						return err
-					}
-
-				} else { // same rule exists in the policy update request
-					if len(rule.PortRange) != 0 {
-						dportRng[i], i = rule.PortRange[0], i+1
-						dportRng[i], i = rule.PortRange[1], i+1
-					}
-				}
-			}
-			log.Infof("port range is: %v", dportRng)
-			if len(dportRng) == 0 {
-				if err := DstPortRcTable(ctx, p4RtC, ipSetIDXId, nil, ipSetIDX.Protocol,
-					Delete); err != nil {
-					log.Errorf("Failed to delete entry from DstPortRcTable, err %v", err)
-					return err
-				}
-			} else {
-				if err := DstPortRcTable(ctx, p4RtC, ipSetIDXId, dportRng, ipSetIDX.Protocol,
-					Update); err != nil {
-					log.Errorf("Failed to update entry in DstPortRcTable, err: %v", err)
-					return err
-				}
+		if pEntry := policy.GetFromStore(); pEntry != nil {
+			oldPolicy := pEntry.(store.Policy)
+			if err := updatePolicy(ctx, p4RtC, oldPolicy, Delete); err != nil {
+				log.Errorf("Failed to delete old entries of the policy %v, err: %v", oldPolicy, err)
+				return err
 			}
 		}
+		return updatePolicy(ctx, p4RtC, policy, Insert)
 
-		i = 0
-		for ipSetIDXId, ipSetIDX := range policy.IpSetIDXs {
-			dportRng := make([]uint16, 16)
-			for ruleID, rule := range ipSetIDX.Rules {
-				// add new rules to the pipeline
-				if _, ok := oldRules[ruleID]; !ok {
-					dportRng[i], i = rule.PortRange[0], i+1
-					dportRng[i], i = rule.PortRange[1], i+1
-
-					cidr := rule.Cidr
-					mask := rule.RuleMask
-
-					if err := AclIpSetMatchTable(ctx, p4RtC, ipSetIDXId, cidr, mask, ipSetIDX.Direction,
-						Insert); err != nil {
-						log.Errorf("Failed to add entry to AclIpSetMatchTable, err: %v", err)
-						return err
-					}
-				} else { // same rule exists in the policy update request
-					if len(rule.PortRange) != 0 {
-						dportRng[i], i = rule.PortRange[0], i+1
-						dportRng[i], i = rule.PortRange[1], i+1
-					}
-				}
-			}
-			log.Infof("port range is: %v", dportRng)
-
-			/*
-				If new rule has port range and previously we have not added any port range for same ipsetidx,
-				then insert port range for that ipsetidx
-			*/
-			if len(policyOld.IpSetIDXs[ipSetIDXId].DportRange) == 0 {
-				if err := DstPortRcTable(ctx, p4RtC, ipSetIDXId, dportRng, ipSetIDX.Protocol,
-					Insert); err != nil {
-					log.Errorf("Failed to add entry to DstPortRcTable, err: %v", err)
-					return err
-				}
-			} else {
-				/*
-					If old port range and new port range for a ipsetidx are different
-				*/
-				if !IsSame(dportRng, policyOld.IpSetIDXs[ipSetIDXId].DportRange) {
-					if err := DstPortRcTable(ctx, p4RtC, ipSetIDXId, dportRng, ipSetIDX.Protocol,
-						Update); err != nil {
-						log.Errorf("Failed to update entry in DstPortRcTable, err: %v", err)
-						return err
-					}
-				}
-			}
-		}
-
-		return nil
+	case PolicyDel:
+		return updatePolicy(ctx, p4RtC, in.(store.Policy), Delete)
 
 	case WorkloadAdd:
-		workloadep := in.(store.PolicyWorkerEndPoint)
-		for _, policyname := range workloadep.PolicyNameIngress {
-			policy := store.PolicySet.PolicyMap[policyname]
-			for ipsetidx, _ := range policy.IpSetIDXs {
-				if err := AclPodIpProtoTable(ctx, p4RtC, policy.IpSetIDXs[ipsetidx].Protocol, workloadep.WorkerEp,
-					ipsetidx, ipsetidx, "RX", Insert); err != nil {
-					log.Errorf("Failed to add entry to AclPodIpProtoTable, err: %v", err)
-					return err
-				}
-			}
-		}
+		ep := in.(store.PolicyWorkerEndPoint)
 
-		for _, policyname := range workloadep.PolicyNameEgress {
-			policy := store.PolicySet.PolicyMap[policyname]
-			for ipsetidx, _ := range policy.IpSetIDXs {
-				if err := AclPodIpProtoTable(ctx, p4RtC, policy.IpSetIDXs[ipsetidx].Protocol, workloadep.WorkerEp,
-					ipsetidx, ipsetidx, "TX", Insert); err != nil {
-					log.Errorf("Failed to add entry to AclPodIpProtoTable, err: %v", err)
-					return err
-				}
+		ctx = context.Background()
+		/*
+			Check if the policies are already applied to the worker endpoint.
+			If true, skip them.
+		*/
+		if oldEntry := ep.GetFromStore(); oldEntry != nil {
+			oldEp := oldEntry.(store.PolicyWorkerEndPoint)
+
+			/*
+				Delete any stale policies
+			*/
+			staleIngress := utils.StrDiff(oldEp.PolicyNameIngress, ep.PolicyNameIngress)
+			staleEgress := utils.StrDiff(oldEp.PolicyNameEgress, ep.PolicyNameEgress)
+			if len(staleIngress) > 0 || len(staleEgress) > 0 {
+				oldEp.PolicyNameIngress = staleIngress
+				oldEp.PolicyNameEgress = staleEgress
+				updateWorkload(ctx, p4RtC, oldEp, Delete)
 			}
+
+			/*
+				Apply new policies
+			*/
+			newIngress := utils.StrDiff(ep.PolicyNameIngress, oldEp.PolicyNameIngress)
+			newEgress := utils.StrDiff(ep.PolicyNameEgress, oldEp.PolicyNameEgress)
+			if len(newIngress) > 0 || len(newEgress) > 0 {
+				ep.PolicyNameIngress = newIngress
+				ep.PolicyNameEgress = newEgress
+				return updateWorkload(ctx, p4RtC, ep, Insert)
+			} else {
+				/*
+					No updates required. Return success
+				*/
+				return nil
+			}
+
+		} else {
+			/*
+				No old policies applied. Apply all policies to the
+				worker endpoint.
+			*/
+			return updateWorkload(ctx, p4RtC, ep, Insert)
 		}
-		return nil
 
 	case WorkloadDel:
-		workloadep := in.(store.PolicyWorkerEndPoint)
-		for _, policyname := range workloadep.PolicyNameIngress {
-			policy := store.PolicySet.PolicyMap[policyname]
-			for ipsetidx, _ := range policy.IpSetIDXs {
-				if err := AclPodIpProtoTable(ctx, p4RtC, policy.IpSetIDXs[ipsetidx].Protocol, workloadep.WorkerEp,
-					ipsetidx, ipsetidx, "RX", Delete); err != nil {
-					log.Errorf("Failed to delete entry from AclPodIpProtoTable, err: %v", err)
-					return err
-				}
-			}
-		}
+		ep := in.(store.PolicyWorkerEndPoint)
+		return updateWorkload(ctx, p4RtC, ep, Delete)
 
-		for _, policyname := range workloadep.PolicyNameEgress {
-			policy := store.PolicySet.PolicyMap[policyname]
-			for ipsetidx, _ := range policy.IpSetIDXs {
-				if err := AclPodIpProtoTable(ctx, p4RtC, policy.IpSetIDXs[ipsetidx].Protocol, workloadep.WorkerEp,
-					ipsetidx, ipsetidx, "TX", Delete); err != nil {
-					log.Errorf("Failed to delete entry from AclPodIpProtoTable, err: %v", err)
-					return err
-				}
-			}
-		}
-		return nil
-
-	case WorkloadUpdate:
-		workloadep := in.(store.PolicyWorkerEndPoint)
-		workloadepold := store.PolicySet.WorkerEpMap[workloadep.WorkerEp]
-		//ingress policy names
-		//delete from policy tables for removed policies
-		for _, policyname := range workloadepold.PolicyNameIngress {
-			//if policyname from old store entry is not present in new entry, then delete
-			if !IsNamePresent(policyname, workloadep.PolicyNameIngress) {
-				policydel := store.PolicySet.PolicyMap[policyname]
-				for ipsetidx, _ := range policydel.IpSetIDXs {
-					if err := AclPodIpProtoTable(ctx, p4RtC, policydel.IpSetIDXs[ipsetidx].Protocol,
-						workloadep.WorkerEp, 0, 0, "RX", Delete); err != nil {
-						log.Errorf("Failed to delete entry from AclPodIpProtoTable, err: %v", err)
-						return err
-					}
-				}
-			}
-		}
-		//insert to policy tables the new policies
-		for _, policyname := range workloadep.PolicyNameIngress {
-			if !IsNamePresent(policyname, workloadepold.PolicyNameIngress) {
-				policyadd := store.PolicySet.PolicyMap[policyname]
-				for ipsetidx, _ := range policyadd.IpSetIDXs {
-					if err := AclPodIpProtoTable(ctx, p4RtC, policyadd.IpSetIDXs[ipsetidx].Protocol,
-						workloadep.WorkerEp, ipsetidx, ipsetidx, "RX", Insert); err != nil {
-						log.Errorf("Failed to insert entry to AclPodIpProtoTable, err: %v", err)
-						return err
-					}
-				}
-			}
-		}
-
-		//egress policy names
-		//delete from policy tables for removed policies
-		for _, policyname := range workloadepold.PolicyNameEgress {
-			//if policyname from old store entry is not present in new entry, then delete
-			if !IsNamePresent(policyname, workloadep.PolicyNameEgress) {
-				policydel := store.PolicySet.PolicyMap[policyname]
-				for ipsetidx, _ := range policydel.IpSetIDXs {
-					if err := AclPodIpProtoTable(ctx, p4RtC, policydel.IpSetIDXs[ipsetidx].Protocol, workloadep.WorkerEp,
-						0, 0, "TX", Delete); err != nil {
-						log.Errorf("Failed to delete entry from AclPodIpProtoTable, err: %v", err)
-						return err
-					}
-				}
-			}
-		}
-		//insert to policy tables the new policies
-		for _, policyname := range workloadep.PolicyNameEgress {
-			if !IsNamePresent(policyname, workloadepold.PolicyNameEgress) {
-				policyadd := store.PolicySet.PolicyMap[policyname]
-				for ipsetidx, _ := range policyadd.IpSetIDXs {
-					if err := AclPodIpProtoTable(ctx, p4RtC, policyadd.IpSetIDXs[ipsetidx].Protocol, workloadep.WorkerEp,
-						ipsetidx, ipsetidx, "TX", Insert); err != nil {
-						log.Errorf("Failed to insert entry to AclPodIpProtoTable, err: %v", err)
-						return err
-					}
-				}
-			}
-		}
-		return nil
 	default:
 		return errors.New("Invalid operation type")
 	}
