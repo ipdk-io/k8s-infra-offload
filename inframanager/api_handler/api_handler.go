@@ -249,7 +249,7 @@ func CreateServer(log *log.Entry) *ApiServer {
 	})
 
 	if err != nil {
-		logger.Fatalf("Failed to start inframanager grpc server")
+		logger.Fatalf("Failed to start inframanager grpc server, err: %v", err)
 	}
 
 	server.listener = listen

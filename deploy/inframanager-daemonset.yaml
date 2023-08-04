@@ -39,9 +39,9 @@ spec:
         - name: db
           mountPath: /var/lib/cni/inframanager
         - name: client-certs
-          mountPath: /tmp/inframanager/cert/client
+          mountPath: /etc/pki/inframanager/cert/client
         - name: server-certs
-          mountPath: /tmp/inframanager/cert/server
+          mountPath: /etc/pki/inframanager/cert/server
         command:
         - /inframanager
         env:

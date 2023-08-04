@@ -47,6 +47,7 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 	viper.SetDefault("Infrap4dGnmiServer.client-key", types.ManagerDefaultClientKey)
 	viper.SetDefault("Infrap4dGnmiServer.ca-cert", types.ManagerDefaultCACert)
 
+	viper.SetDefault("InfraManager.Addr", "localhost:50002")
 	viper.SetDefault("InfraManager.conn", "mtls")
 	viper.SetDefault("InfraManager.server-cert", types.ManagerDefaultServerCert)
 	viper.SetDefault("InfraManager.server-key", types.ManagerDefaultServerKey)
@@ -69,6 +70,7 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 	fmt.Println("Infrap4d GRPC Server Con:\t", viper.GetString("Infrap4dGrpcServer.Conn"))
 	fmt.Println("Infrap4dGNMI Server Addr:\t", viper.GetString("Infrap4dGnmiServer.Addr"))
 	fmt.Println("Infrap4dGNMI Server Con:\t", viper.GetString("Infrap4dGnmiServer.Conn"))
+	fmt.Println("InfraManager Addr:\t", viper.GetString("InfraManager.Addr"))
 	fmt.Println("InfraManager Con:\t", viper.GetString("InfraManager.Conn"))
 	fmt.Println("Log Level is set to :\t", viper.GetString("LogLevel"))
 }

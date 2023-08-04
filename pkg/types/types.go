@@ -25,8 +25,8 @@ const (
 	ServerNetProto              = "tcp"
 	InfraAgentAddr              = "127.0.0.1"
 	InfraAgentPort              = "50001"
-	InfraManagerAddr            = "127.0.0.1"
-	InfraManagerPort            = "50002"
+	DefaultInfraManagerAddr     = "127.0.0.1"
+	DefaultInfraManagerPort     = "50002"
 	ConnectionSocket            = "/var/run/calico/connection.sock"
 	FelixDataplaneSocket        = "/var/run/calico/felix-dataplane.sock"
 	DataDir                     = "/var/lib/cni/infraagent"
@@ -51,14 +51,14 @@ const (
 	DefaultRoute                = "169.254.1.1/32"
 	HostInterfaceAddr           = "200.1.1.2/32"
 	ArpProxyDefaultPort         = 0
-	AgentDefaultClientCert      = "/tmp/infraagent/cert/client/tls.crt"
-	AgentDefaultClientKey       = "/tmp/infraagent/cert/client/tls.key"
-	AgentDefaultCACert          = "/tmp/infraagent/cert/client/ca.crt"
-	ManagerDefaultClientCert    = "/tmp/inframanager/cert/client/tls.crt"
-	ManagerDefaultClientKey     = "/tmp/inframanager/cert/client/tls.key"
-	ManagerDefaultServerCert    = "/tmp/inframanager/cert/server/tls.crt"
-	ManagerDefaultServerKey     = "/tmp/inframanager/cert/server/tls.key"
-	ManagerDefaultCACert        = "/tmp/inframanager/cert/client/ca.crt"
+	AgentDefaultClientCert      = "/etc/pki/infraagent/cert/client/tls.crt"
+	AgentDefaultClientKey       = "/etc/pki/infraagent/cert/client/tls.key"
+	AgentDefaultCACert          = "/etc/pki/infraagent/cert/client/ca.crt"
+	ManagerDefaultClientCert    = "/etc/pki/inframanager/cert/client/tls.crt"
+	ManagerDefaultClientKey     = "/etc/pki/inframanager/cert/client/tls.key"
+	ManagerDefaultServerCert    = "/etc/pki/inframanager/cert/server/tls.crt"
+	ManagerDefaultServerKey     = "/etc/pki/inframanager/cert/server/tls.key"
+	ManagerDefaultCACert        = "/etc/pki/inframanager/cert/client/ca.crt"
 	IfTtype                     = "cdq"
 )
 
@@ -72,6 +72,8 @@ var (
 	ServiceServerStatus        = ""
 	CNIServerStatus            = ""
 	InfraManagerServerStatus   = ""
+	InfraManagerAddr           = ""
+	InfraManagerPort           = ""
 )
 
 var HostInterfaceMTU int
