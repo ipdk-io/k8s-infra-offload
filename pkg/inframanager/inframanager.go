@@ -19,10 +19,13 @@ import (
 	"io"
 	"os"
 	"path"
+	"strings"
 
 	api "github.com/ipdk-io/k8s-infra-offload/inframanager/api_handler"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
+	"github.com/spf13/viper"
 	"gopkg.in/tomb.v2"
 
 	log "github.com/sirupsen/logrus"
@@ -96,6 +99,10 @@ func NewManager() {
 	manager = &Manager{
 		log: log.WithField("pkg", "inframanager"),
 	}
+	mgrAddr := viper.GetString("InfraManager.Addr")
+	values := strings.Split(mgrAddr, ":")
+	types.InfraManagerAddr = values[0]
+	types.InfraManagerPort = values[1]
 }
 
 func (m *Manager) createAndStartServer() {
