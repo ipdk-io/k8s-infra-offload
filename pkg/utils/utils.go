@@ -707,3 +707,27 @@ func IsIn(str string, s []string) bool {
 
 	return false
 }
+
+func RemoveStr(str string, s []string) []string {
+	for i, v := range s {
+		if v == str {
+			return append(s[:i], s[i+1:]...)
+		}
+	}
+
+	return s
+}
+
+func StrDiff(str1, str2 []string) []string {
+	var diff []string
+	str2map := make(map[string]struct{}, len(str2))
+	for _, x := range str2 {
+		str2map[x] = struct{}{}
+	}
+	for _, x := range str1 {
+		if _, found := str2map[x]; !found {
+			diff = append(diff, x)
+		}
+	}
+	return diff
+}

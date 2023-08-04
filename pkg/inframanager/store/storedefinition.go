@@ -70,8 +70,9 @@ type ServiceCollection struct {
 }
 
 type Policy struct {
-	PolicyName string
+	Name       string
 	RuleGroups map[uint16]RuleGroup
+	WorkerEps  []string
 }
 
 type RuleGroup struct {
@@ -83,7 +84,7 @@ type RuleGroup struct {
 }
 
 type Rule struct {
-	RuleID    string
+	Id        string
 	PortRange []uint16
 	// Represents the mask with bit set for the rule
 	RuleMask uint8 //hex

@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 
+	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -142,9 +143,9 @@ func InitPolicyStore(setFwdPipe bool) bool {
 
 }
 
-func (policyadd Policy) WriteToStore() bool {
+func (policy Policy) WriteToStore() bool {
 
-	for _, RuleGroup := range policyadd.RuleGroups {
+	for _, RuleGroup := range policy.RuleGroups {
 		//Direction
 		direction := RuleGroup.Direction
 		if direction != "TX" && direction != "RX" {
@@ -168,7 +169,7 @@ func (policyadd Policy) WriteToStore() bool {
 	}
 
 	PolicySet.PolicyLock.Lock()
-	PolicySet.PolicyMap[policyadd.PolicyName] = policyadd
+	PolicySet.PolicyMap[policy.Name] = policy
 	PolicySet.PolicyLock.Unlock()
 	return true
 }
@@ -209,16 +210,15 @@ func remove(s []string, r string) ([]string, bool) {
 	return s, ret
 }
 
-func (policydel Policy) DeleteFromStore() bool {
+func (policy Policy) DeleteFromStore() bool {
 
-	policyEntry := PolicySet.PolicyMap[policydel.PolicyName]
-	if reflect.DeepEqual(policyEntry, Policy{}) {
+	if pEntry := policy.GetFromStore(); pEntry == nil {
 		return false
 	}
 
 	//delete the corresponding ipsetid from ipset map
 	var f bool
-	for _, RuleGroup := range policydel.RuleGroups {
+	for _, RuleGroup := range policy.RuleGroups {
 		for _, rule := range RuleGroup.Rules {
 			ipsetid := rule.IpSetID
 			if ipsetid != "" {
@@ -229,16 +229,16 @@ func (policydel Policy) DeleteFromStore() bool {
 		}
 	}
 	PolicySet.PolicyLock.Lock()
-	delete(PolicySet.PolicyMap, policydel.PolicyName)
+	delete(PolicySet.PolicyMap, policy.Name)
 	PolicySet.PolicyLock.Unlock()
 
 	//delete corresponding policy name from worker ep map as well
 	for ep, val := range PolicySet.WorkerEpMap {
-		val.PolicyNameIngress, f = remove(val.PolicyNameIngress, policydel.PolicyName)
+		val.PolicyNameIngress, f = remove(val.PolicyNameIngress, policy.Name)
 		if f {
 			PolicySet.WorkerEpMap[ep] = val
 		}
-		val.PolicyNameEgress, f = remove(val.PolicyNameEgress, policydel.PolicyName)
+		val.PolicyNameEgress, f = remove(val.PolicyNameEgress, policy.Name)
 		if f {
 			PolicySet.WorkerEpMap[ep] = val
 		}
@@ -292,14 +292,72 @@ func (workerepdel PolicyWorkerEndPoint) DeleteFromStore() bool {
 	return true
 }
 
-func (policyget Policy) GetFromStore() store {
-	res := PolicySet.PolicyMap[policyget.PolicyName]
+func GetPolicy(pName string) store {
+	res := PolicySet.PolicyMap[pName]
 
 	if reflect.DeepEqual(res, Policy{}) {
 		return nil
 	} else {
 		return res
 	}
+
+}
+
+func GetWorkerEp(epName string) store {
+	res := PolicySet.WorkerEpMap[epName]
+	if reflect.DeepEqual(res, PolicyWorkerEndPoint{}) {
+		return nil
+	} else {
+		return res
+	}
+}
+
+func (policy Policy) GetFromStore() store {
+	res := PolicySet.PolicyMap[policy.Name]
+
+	if reflect.DeepEqual(res, Policy{}) {
+		return nil
+	} else {
+		return res
+	}
+}
+
+func (policy Policy) DeleteWorkerEp(workerEp string) bool {
+	pEntry := policy.GetFromStore()
+
+	if pEntry == nil {
+		return false
+	}
+	p := pEntry.(Policy)
+
+	if utils.IsIn(workerEp, p.WorkerEps) {
+		p.WorkerEps = utils.RemoveStr(workerEp, p.WorkerEps)
+		PolicySet.PolicyLock.Lock()
+		PolicySet.PolicyMap[policy.Name] = p
+		PolicySet.PolicyLock.Unlock()
+		return true
+	}
+
+	return false
+}
+
+func (policy Policy) AddWorkerEp(workerEp string) bool {
+	pEntry := policy.GetFromStore()
+
+	if pEntry == nil {
+		return false
+	}
+	p := pEntry.(Policy)
+
+	if !utils.IsIn(workerEp, p.WorkerEps) {
+		p.WorkerEps = append(p.WorkerEps, workerEp)
+		PolicySet.PolicyLock.Lock()
+		PolicySet.PolicyMap[policy.Name] = p
+		PolicySet.PolicyLock.Unlock()
+		return true
+	}
+
+	return false
 }
 
 func (ipsetget IpSet) GetFromStore() store {
@@ -323,7 +381,7 @@ func (workerepget PolicyWorkerEndPoint) GetFromStore() store {
 // update to store for policy struct, should invoke delete first and then invoke
 // write call, modify later
 func (policymod Policy) UpdateToStore() bool {
-	policyEntry := PolicySet.PolicyMap[policymod.PolicyName]
+	policyEntry := PolicySet.PolicyMap[policymod.Name]
 	if reflect.DeepEqual(policyEntry, Policy{}) {
 		return false
 	}

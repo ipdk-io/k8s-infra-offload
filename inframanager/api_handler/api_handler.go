@@ -721,7 +721,6 @@ func (s *ApiServer) NatTranslationDelete(ctx context.Context, in *proto.NatTrans
 
 func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePolicyUpdate) (*proto.Reply, error) {
 	var ingress, egress [3]ProtoIpSetIDX
-	var tbltype p4.OperationType
 
 	out := &proto.Reply{
 		Successful: true,
@@ -753,21 +752,9 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 	}
 
 	policy := store.Policy{
-		PolicyName: in.Id.Name,
+		Name: in.Id.Name,
 	}
 
-	/*
-		Check if the policy exists.
-	*/
-	entry := policy.GetFromStore()
-	if entry != nil {
-		tbltype = p4.PolicyUpdate
-		logger.Infof("Network policy %s exists. Updating the policy",
-			policy.PolicyName)
-	} else {
-		tbltype = p4.PolicyAdd
-		logger.Infof("Adding a new network policy %s.", policy.PolicyName)
-	}
 	policy.RuleGroups = map[uint16]store.RuleGroup{}
 
 	for _, rule := range in.Policy.InboundRules {
@@ -783,7 +770,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 				ingress[udp].exists = true
 			}
 			r := store.Rule{
-				RuleID: rule.RuleId,
+				Id: rule.RuleId,
 				PortRange: []uint16{
 					uint16(rule.DstPorts[0].First),
 					uint16(rule.DstPorts[0].Last),
@@ -806,7 +793,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 				ingress[tcp].exists = true
 			}
 			r := store.Rule{
-				RuleID: rule.RuleId,
+				Id: rule.RuleId,
 				PortRange: []uint16{
 					uint16(rule.DstPorts[0].First),
 					uint16(rule.DstPorts[0].Last),
@@ -828,7 +815,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 				ingress[noproto].exists = true
 			}
 			r := store.Rule{
-				RuleID:   rule.RuleId,
+				Id:       rule.RuleId,
 				RuleMask: p4.GenerateMask(ingress[noproto].ruleMaskId),
 				Cidr:     rule.SrcNet[0],
 			}
@@ -851,7 +838,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 				egress[udp].exists = true
 			}
 			r := store.Rule{
-				RuleID: rule.RuleId,
+				Id: rule.RuleId,
 				PortRange: []uint16{
 					uint16(rule.DstPorts[0].First),
 					uint16(rule.DstPorts[0].Last),
@@ -874,7 +861,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 				egress[tcp].exists = true
 			}
 			r := store.Rule{
-				RuleID: rule.RuleId,
+				Id: rule.RuleId,
 				PortRange: []uint16{
 					uint16(rule.DstPorts[0].First),
 					uint16(rule.DstPorts[0].Last),
@@ -896,7 +883,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 				egress[noproto].exists = true
 			}
 			r := store.Rule{
-				RuleID:   rule.RuleId,
+				Id:       rule.RuleId,
 				RuleMask: p4.GenerateMask(egress[noproto].ruleMaskId),
 				Cidr:     rule.DstNet[0],
 			}
@@ -915,7 +902,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 		}
 	}
 
-	err := p4.PolicyTableEntries(ctx, server.p4RtC, tbltype, policy)
+	err := p4.PolicyTableEntries(ctx, server.p4RtC, p4.PolicyAdd, policy)
 	if err != nil {
 		logger.Errorf("Failed to add/update policy to the pipeline")
 		err := fmt.Errorf("Failed to add/update policy to the pipeline")
@@ -954,7 +941,7 @@ func (s *ApiServer) ActivePolicyRemove(ctx context.Context, in *proto.ActivePoli
 	server := NewApiServer()
 
 	policy := store.Policy{
-		PolicyName: in.Id.Name,
+		Name: in.Id.Name,
 	}
 
 	/*
@@ -1033,8 +1020,6 @@ func (s *ApiServer) RemoveHostEndpoint(ctx context.Context, in *proto.HostEndpoi
 }
 
 func (s *ApiServer) UpdateLocalEndpoint(ctx context.Context, in *proto.WorkloadEndpointUpdate) (*proto.Reply, error) {
-	var tbltype p4.OperationType
-
 	logger := log.WithField("func", "UpdateLocalEndpoint")
 
 	out := &proto.Reply{
@@ -1090,14 +1075,7 @@ func (s *ApiServer) UpdateLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 		workerEp.PolicyNameEgress = in.Endpoint.Tiers[0].EgressPolicies
 	}
 
-	entry := workerEp.GetFromStore()
-	if entry == nil {
-		tbltype = p4.WorkloadAdd
-	} else {
-		tbltype = p4.WorkloadUpdate
-	}
-
-	err := p4.PolicyTableEntries(ctx, server.p4RtC, tbltype, workerEp)
+	err := p4.PolicyTableEntries(ctx, server.p4RtC, p4.WorkloadAdd, workerEp)
 	if err != nil {
 		logger.Errorf("Failed to update policies for endpoint %s in the pipeline",
 			in.Id.WorkloadId)

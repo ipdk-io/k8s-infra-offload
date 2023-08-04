@@ -49,6 +49,19 @@ type UUIDGenerator struct {
 	internalChan chan uint32
 }
 
+func GetStr(action InterfaceType) string {
+	switch action {
+	case Insert:
+		return "insert"
+	case Delete:
+		return "delete"
+	case Update:
+		return "update"
+	default:
+		return ""
+	}
+}
+
 func newUUIDGenerator() *UUIDGenerator {
 	gen := &UUIDGenerator{
 		idGen:        0,
