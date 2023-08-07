@@ -910,26 +910,26 @@ var _ = Describe("Storepolicy", func() {
 
 			It("returns false when map is valid and not empty", func() {
 				r1 := store.Rule{
-					RuleID:    "rule1",
+					Id:        "rule1",
 					PortRange: []uint16{80, 443},
 					RuleMask:  0xff,
 					Cidr:      "192.168.1.0/24",
 					IpSetID:   "ipset1",
 				}
 
-				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+				ruleGroup := store.RuleGroup{
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ruleGroup.Rules["rule1"] = r1
 
 				data_valid := store.Policy{
-					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					Name:       "policy1",
+					RuleGroups: make(map[uint16]store.RuleGroup),
 				}
-				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.RuleGroups[1] = ruleGroup
 
 				data_valid.WriteToStore()
 				ret := store.IsPolicyStoreEmpty()
@@ -1060,26 +1060,26 @@ var _ = Describe("Storepolicy", func() {
 
 				//Policy
 				r1 := store.Rule{
-					RuleID:    "rule1",
+					Id:        "rule1",
 					PortRange: []uint16{80, 443},
 					RuleMask:  0xff,
 					Cidr:      "192.168.1.0/24",
 					IpSetID:   "ipset1",
 				}
 
-				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+				ruleGroup := store.RuleGroup{
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ruleGroup.Rules["rule1"] = r1
 
 				data_valid := store.Policy{
-					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					Name:       "policy1",
+					RuleGroups: make(map[uint16]store.RuleGroup),
 				}
-				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.RuleGroups[1] = ruleGroup
 				data_valid.WriteToStore()
 				err := os.Mkdir(store.StorePath, 0755)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -1123,26 +1123,26 @@ var _ = Describe("Storepolicy", func() {
 
 				//Policy
 				r1 := store.Rule{
-					RuleID:    "rule1",
+					Id:        "rule1",
 					PortRange: []uint16{80, 443},
 					RuleMask:  0xff,
 					Cidr:      "192.168.1.0/24",
 					IpSetID:   "ipset1",
 				}
 
-				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+				ruleGroup := store.RuleGroup{
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ruleGroup.Rules["rule1"] = r1
 
 				data_valid := store.Policy{
-					PolicyName: "policy2",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					Name:       "policy2",
+					RuleGroups: make(map[uint16]store.RuleGroup),
 				}
-				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.RuleGroups[1] = ruleGroup
 				data_valid.WriteToStore()
 				err := os.Mkdir(store.StorePath, 0755)
 				Expect(err).ShouldNot(HaveOccurred())
@@ -1205,26 +1205,26 @@ var _ = Describe("Storepolicy", func() {
 			It("writes the data to the store if data is valid and returns true", func() {
 
 				r1 := store.Rule{
-					RuleID:    "rule1",
+					Id:        "rule1",
 					PortRange: []uint16{80, 443},
 					RuleMask:  0xff,
 					Cidr:      "192.168.1.0/24",
 					IpSetID:   "ipset1",
 				}
 
-				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+				ruleGroup := store.RuleGroup{
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ruleGroup.Rules["rule1"] = r1
 
 				data_valid := store.Policy{
-					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					Name:       "policy1",
+					RuleGroups: make(map[uint16]store.RuleGroup),
 				}
-				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.RuleGroups[1] = ruleGroup
 
 				ret := data_valid.WriteToStore()
 				Expect(ret).To(Equal(true))
@@ -1232,26 +1232,26 @@ var _ = Describe("Storepolicy", func() {
 			//Invalid case 1
 			It("returns error if Cidr ip is invalid", func() {
 				r1 := store.Rule{
-					RuleID:    "rule1",
+					Id:        "rule1",
 					PortRange: []uint16{80, 443},
 					RuleMask:  0xff,
 					Cidr:      "10.10.10.ff/44",
 					IpSetID:   "ipset1",
 				}
 
-				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+				ruleGroup := store.RuleGroup{
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ruleGroup.Rules["rule1"] = r1
 
 				data_invalid1 := store.Policy{
-					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					Name:       "policy1",
+					RuleGroups: make(map[uint16]store.RuleGroup),
 				}
-				data_invalid1.IpSetIDx[1] = ipsetidx
+				data_invalid1.RuleGroups[1] = ruleGroup
 
 				ret := data_invalid1.WriteToStore()
 				Expect(ret).To(Equal(false))
@@ -1259,26 +1259,26 @@ var _ = Describe("Storepolicy", func() {
 			//Invalid case 2
 			It("returns error if port range len is invalid", func() {
 				r1 := store.Rule{
-					RuleID:    "rule1",
+					Id:        "rule1",
 					PortRange: []uint16{80, 202, 430},
 					RuleMask:  0xff,
 					Cidr:      "192.168.ab.cd/24",
 					IpSetID:   "ipset1",
 				}
 
-				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+				ruleGroup := store.RuleGroup{
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ruleGroup.Rules["rule1"] = r1
 
 				data_invalid2 := store.Policy{
-					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					Name:       "policy1",
+					RuleGroups: make(map[uint16]store.RuleGroup),
 				}
-				data_invalid2.IpSetIDx[1] = ipsetidx
+				data_invalid2.RuleGroups[1] = ruleGroup
 
 				ret := data_invalid2.WriteToStore()
 				Expect(ret).To(Equal(false))
@@ -1286,25 +1286,25 @@ var _ = Describe("Storepolicy", func() {
 			//Invalid case 3
 			It("Returns error if Direction is invalid", func() {
 				r1 := store.Rule{
-					RuleID:    "rule1",
+					Id:        "rule1",
 					PortRange: []uint16{80, 443},
 					RuleMask:  0xff,
 					Cidr:      "192.168.1.0/24",
 					IpSetID:   "ipset1",
 				}
-				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+				ruleGroup := store.RuleGroup{
+					Index:     1,
 					Direction: "ingress",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ruleGroup.Rules["rule1"] = r1
 
 				data_valid3 := store.Policy{
-					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					Name:       "policy1",
+					RuleGroups: make(map[uint16]store.RuleGroup),
 				}
-				data_valid3.IpSetIDx[1] = ipsetidx
+				data_valid3.RuleGroups[1] = ruleGroup
 
 				ret := data_valid3.WriteToStore()
 				Expect(ret).To(Equal(false))
@@ -1431,26 +1431,26 @@ var _ = Describe("Storepolicy", func() {
 			//Valid case 1
 			It("Deletes the policy data from the store and returns true if data is present in the store", func() {
 				r1 := store.Rule{
-					RuleID:    "rule1",
+					Id:        "rule1",
 					PortRange: []uint16{80, 443},
 					RuleMask:  0xff,
 					Cidr:      "192.168.1.0/24",
 					IpSetID:   "ipset1",
 				}
 
-				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+				ruleGroup := store.RuleGroup{
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ruleGroup.Rules["rule1"] = r1
 
 				data_valid := store.Policy{
-					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					Name:       "policy1",
+					RuleGroups: make(map[uint16]store.RuleGroup),
 				}
-				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.RuleGroups[1] = ruleGroup
 				data_valid.WriteToStore()
 				ret := data_valid.DeleteFromStore()
 				Expect(ret).To(Equal(true))
@@ -1458,26 +1458,26 @@ var _ = Describe("Storepolicy", func() {
 			//Invalid case 1
 			It("returns error when data is not present in store", func() {
 				r1 := store.Rule{
-					RuleID:    "rule1",
+					Id:        "rule1",
 					PortRange: []uint16{80, 443},
 					RuleMask:  0xff,
 					Cidr:      "192.168.ab.cd/24",
 					IpSetID:   "ipset1",
 				}
 
-				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+				ruleGroup := store.RuleGroup{
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ruleGroup.Rules["rule1"] = r1
 
 				data_invalid := store.Policy{
-					PolicyName: "policy",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					Name:       "policy",
+					RuleGroups: make(map[uint16]store.RuleGroup),
 				}
-				data_invalid.IpSetIDx[1] = ipsetidx
+				data_invalid.RuleGroups[1] = ruleGroup
 				ret := data_invalid.DeleteFromStore()
 				Expect(ret).To(Equal(false))
 			})
@@ -1505,25 +1505,25 @@ var _ = Describe("Storepolicy", func() {
 			//Valid case 1
 			It("Deletes the data from the store and returns true if data is present in the store", func() {
 				r1 := store.Rule{
-					RuleID:    "rule1",
+					Id:        "rule1",
 					PortRange: []uint16{80, 443},
 					RuleMask:  0xff,
 					Cidr:      "192.168.1.0/24",
 					IpSetID:   "1234",
 				}
-				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+				ruleGroup := store.RuleGroup{
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ruleGroup.Rules["rule1"] = r1
 
 				data_valid1 := store.Policy{
-					PolicyName: "Policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					Name:       "Policy1",
+					RuleGroups: make(map[uint16]store.RuleGroup),
 				}
-				data_valid1.IpSetIDx[1] = ipsetidx
+				data_valid1.RuleGroups[1] = ruleGroup
 				data_valid1.WriteToStore()
 
 				data_valid := store.IpSet{
@@ -1615,26 +1615,26 @@ var _ = Describe("Storepolicy", func() {
 			//Valid case 1
 			It("Gets the data from the store and returns true when data is present", func() {
 				r1 := store.Rule{
-					RuleID:    "rule1",
+					Id:        "rule1",
 					PortRange: []uint16{80, 443},
 					RuleMask:  0xff,
 					Cidr:      "192.168.1.0/24",
 					IpSetID:   "ipset1",
 				}
 
-				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+				ruleGroup := store.RuleGroup{
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ruleGroup.Rules["rule1"] = r1
 
 				data_valid := store.Policy{
-					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					Name:       "policy1",
+					RuleGroups: make(map[uint16]store.RuleGroup),
 				}
-				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.RuleGroups[1] = ruleGroup
 
 				data_valid.WriteToStore()
 				ret := data_valid.GetFromStore()
@@ -1643,26 +1643,26 @@ var _ = Describe("Storepolicy", func() {
 			//Invalid case 1
 			It("returns nil when data is not present", func() {
 				r1 := store.Rule{
-					RuleID:    "rule1",
+					Id:        "rule1",
 					PortRange: []uint16{80, 443},
 					RuleMask:  0xff,
 					Cidr:      "192.168.1.0/24",
 					IpSetID:   "ipset1",
 				}
 
-				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+				ruleGroup := store.RuleGroup{
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ruleGroup.Rules["rule1"] = r1
 
 				data_invalid1 := store.Policy{
-					PolicyName: "policy",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					Name:       "policy",
+					RuleGroups: make(map[uint16]store.RuleGroup),
 				}
-				data_invalid1.IpSetIDx[1] = ipsetidx
+				data_invalid1.RuleGroups[1] = ruleGroup
 				ret := data_invalid1.GetFromStore()
 				Expect(ret).Should(BeNil())
 			})
@@ -1778,100 +1778,100 @@ var _ = Describe("Storepolicy", func() {
 			//Valid case 1
 			It("returns true if data is valid and update to store succeeds", func() {
 				r1 := store.Rule{
-					RuleID:    "rule1",
+					Id:        "rule1",
 					PortRange: []uint16{80, 443},
 					RuleMask:  0xff,
 					Cidr:      "192.168.1.0/24",
 					IpSetID:   "ipset1",
 				}
-				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+				ruleGroup := store.RuleGroup{
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ruleGroup.Rules["rule1"] = r1
 
 				data_valid := store.Policy{
-					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					Name:       "policy1",
+					RuleGroups: make(map[uint16]store.RuleGroup),
 				}
-				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.RuleGroups[1] = ruleGroup
 				data_valid.WriteToStore()
 
 				//Updating data
 				r2 := store.Rule{
-					RuleID:    "rule1",
+					Id:        "rule1",
 					PortRange: []uint16{80, 443},
 					RuleMask:  0xff,
 					Cidr:      "192.168.1.0/24",
 					IpSetID:   "ipset1",
 				}
-				ipsetidx1 := store.IpSetIDX{
-					IpSetIDx:  1,
+				ruleGroup1 := store.RuleGroup{
+					Index:     1,
 					Direction: "TX",
 					Protocol:  p4.PROTO_UDP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx1.RuleID["rule1"] = r2
+				ruleGroup1.Rules["rule1"] = r2
 
 				data_valid1 := store.Policy{
-					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					Name:       "policy1",
+					RuleGroups: make(map[uint16]store.RuleGroup),
 				}
-				data_valid1.IpSetIDx[1] = ipsetidx1
+				data_valid1.RuleGroups[1] = ruleGroup1
 				ret := data_valid1.UpdateToStore()
 				Expect(ret).To(Equal(true))
 			})
 			//Invalid case 1
 			It("returns false if data doesn't exits in store", func() {
 				r1 := store.Rule{
-					RuleID:    "rule1",
+					Id:        "rule1",
 					PortRange: []uint16{80, 443},
 					RuleMask:  0xff,
 					Cidr:      "192.168.1.0/24",
 					IpSetID:   "ipset1",
 				}
 
-				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+				ruleGroup := store.RuleGroup{
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ruleGroup.Rules["rule1"] = r1
 
 				data_valid1 := store.Policy{
-					PolicyName: "policy",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					Name:       "policy",
+					RuleGroups: make(map[uint16]store.RuleGroup),
 				}
-				data_valid1.IpSetIDx[1] = ipsetidx
+				data_valid1.RuleGroups[1] = ruleGroup
 				ret := data_valid1.UpdateToStore()
 				Expect(ret).To(Equal(false))
 			})
 			//Invalid case 2
 			It("returns false if data already exits in store", func() {
 				r1 := store.Rule{
-					RuleID:    "rule1",
+					Id:        "rule1",
 					PortRange: []uint16{80, 443},
 					RuleMask:  0xff,
 					Cidr:      "192.168.1.0/24",
 					IpSetID:   "ipset1",
 				}
 
-				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+				ruleGroup := store.RuleGroup{
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ruleGroup.Rules["rule1"] = r1
 
 				data_valid2 := store.Policy{
-					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					Name:       "policy1",
+					RuleGroups: make(map[uint16]store.RuleGroup),
 				}
-				data_valid2.IpSetIDx[1] = ipsetidx
+				data_valid2.RuleGroups[1] = ruleGroup
 				data_valid2.WriteToStore()
 				//Try to update the same data which is already available in store
 				ret := data_valid2.UpdateToStore()
@@ -2015,25 +2015,25 @@ var _ = Describe("Storepolicy", func() {
 				store.StorePath = tempDir + "/inframanager/"
 				store.PolicyFile = store.StorePath + "policy_db.json"
 				r1 := store.Rule{
-					RuleID:    "rule1",
+					Id:        "rule1",
 					PortRange: []uint16{80, 443},
 					RuleMask:  0xff,
 					Cidr:      "192.168.1.0/24",
 					IpSetID:   "ipset1",
 				}
-				ipsetidx := store.IpSetIDX{
-					IpSetIDx:  1,
+				ruleGroup := store.RuleGroup{
+					Index:     1,
 					Direction: "RX",
 					Protocol:  p4.PROTO_TCP,
-					RuleID:    make(map[string]store.Rule),
+					Rules:     make(map[string]store.Rule),
 				}
-				ipsetidx.RuleID["rule1"] = r1
+				ruleGroup.Rules["rule1"] = r1
 
 				data_valid := store.Policy{
-					PolicyName: "policy1",
-					IpSetIDx:   make(map[uint16]store.IpSetIDX),
+					Name:       "policy1",
+					RuleGroups: make(map[uint16]store.RuleGroup),
 				}
-				data_valid.IpSetIDx[1] = ipsetidx
+				data_valid.RuleGroups[1] = ruleGroup
 				data_valid.WriteToStore()
 				err1 := os.Mkdir(store.StorePath, 0755)
 				Expect(err1).ShouldNot(HaveOccurred())

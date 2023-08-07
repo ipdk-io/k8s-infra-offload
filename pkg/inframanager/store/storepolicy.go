@@ -7,6 +7,7 @@ import (
 	"os"
 	"reflect"
 
+	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -23,6 +24,14 @@ var (
 	IpsetFile    = StorePath + "ipset_db.json"
 	WorkerepFile = StorePath + "workerep_db.json"
 )
+
+func GetNewRuleGroupId() int {
+	return PolicySet.RuleGroupIdStack.Pop()
+}
+
+func ReleaseRuleGroupId(val int) {
+	PolicySet.RuleGroupIdStack.Push(val)
+}
 
 func IsPolicyStoreEmpty() bool {
 	if len(PolicySet.PolicyMap) == 0 {
@@ -134,25 +143,29 @@ func InitPolicyStore(setFwdPipe bool) bool {
 
 }
 
-func (policyadd Policy) WriteToStore() bool {
+func (policy Policy) WriteToStore() bool {
 
-	for key, _ := range policyadd.IpSetIDx {
+	if reflect.DeepEqual(policy, Policy{}) {
+		return false
+	}
+
+	for _, RuleGroup := range policy.RuleGroups {
 		//Direction
-		direction := policyadd.IpSetIDx[key].Direction
+		direction := RuleGroup.Direction
 		if direction != "TX" && direction != "RX" {
 			return false
 		}
 
-		for key1, _ := range policyadd.IpSetIDx[key].RuleID {
+		for _, rule := range RuleGroup.Rules {
 			//Cidr
-			cidr := policyadd.IpSetIDx[key].RuleID[key1].Cidr
+			cidr := rule.Cidr
 			ip, ipset, err := net.ParseCIDR(cidr)
 			if err != nil {
 				log.Errorf("Invalid Cidr = %s, ip=%s, ipset=%s", cidr, ip, ipset)
 				return false
 			}
 			//PortRange
-			portrange := policyadd.IpSetIDx[key].RuleID[key1].PortRange
+			portrange := rule.PortRange
 			if len(portrange) > 2 {
 				return false
 			}
@@ -160,12 +173,17 @@ func (policyadd Policy) WriteToStore() bool {
 	}
 
 	PolicySet.PolicyLock.Lock()
-	PolicySet.PolicyMap[policyadd.PolicyName] = policyadd
+	PolicySet.PolicyMap[policy.Name] = policy
 	PolicySet.PolicyLock.Unlock()
 	return true
 }
 
 func (ipsetadd IpSet) WriteToStore() bool {
+
+	if reflect.DeepEqual(ipsetadd, IpSet{}) {
+		return false
+	}
+
 	if ipsetadd.IpSetIDx < 0 || ipsetadd.IpSetIDx > 255 {
 		return false
 	}
@@ -182,14 +200,13 @@ func (ipsetadd IpSet) WriteToStore() bool {
 	return true
 }
 
-func (workerepadd PolicyWorkerEndPoint) WriteToStore() bool {
-	_, _, err := net.ParseCIDR(workerepadd.WorkerEp)
-	if err != nil {
-		log.Errorf("Invalid WorkerEp = %s", workerepadd.WorkerEp)
+func (ep PolicyWorkerEndPoint) WriteToStore() bool {
+
+	if reflect.DeepEqual(ep, PolicyWorkerEndPoint{}) {
 		return false
 	}
 	PolicySet.PolicyLock.Lock()
-	PolicySet.WorkerEpMap[workerepadd.WorkerEp] = workerepadd
+	PolicySet.WorkerEpMap[ep.WorkerEp] = ep
 	PolicySet.PolicyLock.Unlock()
 	return true
 }
@@ -206,18 +223,17 @@ func remove(s []string, r string) ([]string, bool) {
 	return s, ret
 }
 
-func (policydel Policy) DeleteFromStore() bool {
+func (policy Policy) DeleteFromStore() bool {
 
-	policyEntry := PolicySet.PolicyMap[policydel.PolicyName]
-	if reflect.DeepEqual(policyEntry, Policy{}) {
+	if pEntry := policy.GetFromStore(); pEntry == nil {
 		return false
 	}
 
 	//delete the corresponding ipsetid from ipset map
 	var f bool
-	for ipsetidx, _ := range policydel.IpSetIDx {
-		for ruleid, _ := range policydel.IpSetIDx[ipsetidx].RuleID {
-			ipsetid := policydel.IpSetIDx[ipsetidx].RuleID[ruleid].IpSetID
+	for _, RuleGroup := range policy.RuleGroups {
+		for _, rule := range RuleGroup.Rules {
+			ipsetid := rule.IpSetID
 			if ipsetid != "" {
 				PolicySet.PolicyLock.Lock()
 				delete(PolicySet.IpSetMap, ipsetid)
@@ -226,16 +242,16 @@ func (policydel Policy) DeleteFromStore() bool {
 		}
 	}
 	PolicySet.PolicyLock.Lock()
-	delete(PolicySet.PolicyMap, policydel.PolicyName)
+	delete(PolicySet.PolicyMap, policy.Name)
 	PolicySet.PolicyLock.Unlock()
 
 	//delete corresponding policy name from worker ep map as well
 	for ep, val := range PolicySet.WorkerEpMap {
-		val.PolicyNameIngress, f = remove(val.PolicyNameIngress, policydel.PolicyName)
+		val.PolicyNameIngress, f = remove(val.PolicyNameIngress, policy.Name)
 		if f {
 			PolicySet.WorkerEpMap[ep] = val
 		}
-		val.PolicyNameEgress, f = remove(val.PolicyNameEgress, policydel.PolicyName)
+		val.PolicyNameEgress, f = remove(val.PolicyNameEgress, policy.Name)
 		if f {
 			PolicySet.WorkerEpMap[ep] = val
 		}
@@ -259,12 +275,12 @@ func (ipsetdel IpSet) DeleteFromStore() bool {
 		return false
 	} else {
 		PolicySet.PolicyLock.Lock()
-		if p, ok1 := res.IpSetIDx[ipsetidx]; ok1 {
-			if r, ok2 := p.RuleID[ruleid]; ok2 {
+		if p, ok1 := res.RuleGroups[ipsetidx]; ok1 {
+			if r, ok2 := p.Rules[ruleid]; ok2 {
 				r.IpSetID = ""
-				p.RuleID[ruleid] = r
+				p.Rules[ruleid] = r
 			}
-			res.IpSetIDx[ipsetidx] = p
+			res.RuleGroups[ipsetidx] = p
 		}
 		PolicySet.PolicyLock.Unlock()
 	}
@@ -289,14 +305,72 @@ func (workerepdel PolicyWorkerEndPoint) DeleteFromStore() bool {
 	return true
 }
 
-func (policyget Policy) GetFromStore() store {
-	res := PolicySet.PolicyMap[policyget.PolicyName]
+func GetPolicy(pName string) store {
+	res := PolicySet.PolicyMap[pName]
 
 	if reflect.DeepEqual(res, Policy{}) {
 		return nil
 	} else {
 		return res
 	}
+
+}
+
+func GetWorkerEp(epName string) store {
+	res := PolicySet.WorkerEpMap[epName]
+	if reflect.DeepEqual(res, PolicyWorkerEndPoint{}) {
+		return nil
+	} else {
+		return res
+	}
+}
+
+func (policy Policy) GetFromStore() store {
+	res := PolicySet.PolicyMap[policy.Name]
+
+	if reflect.DeepEqual(res, Policy{}) {
+		return nil
+	} else {
+		return res
+	}
+}
+
+func (policy Policy) DeleteWorkerEp(workerEp string) bool {
+	pEntry := policy.GetFromStore()
+
+	if pEntry == nil {
+		return false
+	}
+	p := pEntry.(Policy)
+
+	if utils.IsIn(workerEp, p.WorkerEps) {
+		p.WorkerEps = utils.RemoveStr(workerEp, p.WorkerEps)
+		PolicySet.PolicyLock.Lock()
+		PolicySet.PolicyMap[policy.Name] = p
+		PolicySet.PolicyLock.Unlock()
+		return true
+	}
+
+	return false
+}
+
+func (policy Policy) AddWorkerEp(workerEp string) bool {
+	pEntry := policy.GetFromStore()
+
+	if pEntry == nil {
+		return false
+	}
+	p := pEntry.(Policy)
+
+	if !utils.IsIn(workerEp, p.WorkerEps) {
+		p.WorkerEps = append(p.WorkerEps, workerEp)
+		PolicySet.PolicyLock.Lock()
+		PolicySet.PolicyMap[policy.Name] = p
+		PolicySet.PolicyLock.Unlock()
+		return true
+	}
+
+	return false
 }
 
 func (ipsetget IpSet) GetFromStore() store {
@@ -319,22 +393,27 @@ func (workerepget PolicyWorkerEndPoint) GetFromStore() store {
 
 // update to store for policy struct, should invoke delete first and then invoke
 // write call, modify later
-func (policymod Policy) UpdateToStore() bool {
-	policyEntry := PolicySet.PolicyMap[policymod.PolicyName]
-	if reflect.DeepEqual(policyEntry, Policy{}) {
-		return false
+func (policy Policy) UpdateToStore() bool {
+	/*
+		Check if entry exists
+	*/
+	if entry := policy.GetFromStore(); entry != nil {
+		storePolicy := entry.(Policy)
+
+		/*
+			store has the same data. No need to update.
+		*/
+		if reflect.DeepEqual(policy, storePolicy) {
+			return true
+		}
+
+		// Delete not required as WriteToStore overwrites the same entry
+		//If ret := policy.DeleteFromStore(); !ret {
+		//	return false
+		//}
 	}
 
-	if reflect.DeepEqual(policyEntry, policymod) {
-		return false
-	}
-
-	ret := policyEntry.DeleteFromStore()
-	if !ret {
-		return false
-	}
-
-	return policymod.WriteToStore()
+	return policy.WriteToStore()
 }
 
 func (ipsetmod IpSet) UpdateToStore() bool {
@@ -350,18 +429,27 @@ func (ipsetmod IpSet) UpdateToStore() bool {
 	return ipsetEntry.WriteToStore()
 }
 
-func (workerepmod PolicyWorkerEndPoint) UpdateToStore() bool {
-	workerepEntry := PolicySet.WorkerEpMap[workerepmod.WorkerEp]
-	if reflect.DeepEqual(workerepEntry, PolicyWorkerEndPoint{}) {
-		return false
+func (ep PolicyWorkerEndPoint) UpdateToStore() bool {
+	/*
+		Check if entry exists
+	*/
+	if entry := ep.GetFromStore(); entry != nil {
+		storeEp := entry.(PolicyWorkerEndPoint)
+
+		/*
+			store has the same data. No need to update.
+		*/
+		if reflect.DeepEqual(ep, storeEp) {
+			return true
+		}
+
+		// Delete not required as WriteToStore overwrites the same entry
+		//If ret := ep.DeleteFromStore(); !ret {
+		//	return false
+		//}
 	}
 
-	if reflect.DeepEqual(workerepEntry, workerepmod) {
-		return false
-	}
-	workerepEntry.PolicyNameIngress = workerepmod.PolicyNameIngress
-	workerepEntry.PolicyNameEgress = workerepmod.PolicyNameEgress
-	return workerepEntry.WriteToStore()
+	return ep.WriteToStore()
 }
 
 func RunSyncPolicyInfo() bool {

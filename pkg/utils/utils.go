@@ -28,6 +28,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	cniTypes "github.com/containernetworking/cni/pkg/types"
 	cniv1 "github.com/containernetworking/cni/pkg/types/100"
@@ -68,6 +69,67 @@ var (
 		"CNI_CONTAINERID": types.InfraHostDummyContainerId,
 	}
 )
+
+var oncest sync.Once
+
+type IdStack struct {
+	data []int
+	top  int
+}
+
+func NewIdStack() *IdStack {
+	var idStack *IdStack
+	oncest.Do(func() {
+		idStack = &IdStack{
+			data: make([]int, 256),
+			top:  -1,
+		}
+		idStack.InitIdStack()
+	})
+
+	return idStack
+}
+
+func (st *IdStack) Push(value int) bool {
+	if st.IsStackFull() {
+		return false
+	}
+
+	st.top++
+	st.data[st.top] = value
+	return true
+}
+
+func (st *IdStack) Pop() int {
+	if st.IsStackEmpty() {
+		return 0
+	}
+	value := st.data[st.top]
+	st.data[st.top] = 0
+	st.top--
+	return value
+}
+
+func (st *IdStack) IsStackFull() bool {
+	if st.top == 255 {
+		return true
+	} else {
+		return false
+	}
+}
+func (st *IdStack) IsStackEmpty() bool {
+	if st.top == -1 {
+		return true
+	} else {
+		return false
+	}
+}
+
+func (st *IdStack) InitIdStack() {
+	for i := 1; i < 256; i++ {
+		st.Push(i)
+	}
+}
 
 func SaveInterfaceConf(dataDir, refid, podIface string, conf *types.InterfaceInfo) error {
 	confBytes, err := json.Marshal(conf)
@@ -656,4 +718,28 @@ func IsIn(str string, s []string) bool {
 	}
 
 	return false
+}
+
+func RemoveStr(str string, s []string) []string {
+	for i, v := range s {
+		if v == str {
+			return append(s[:i], s[i+1:]...)
+		}
+	}
+
+	return s
+}
+
+func StrDiff(str1, str2 []string) []string {
+	var diff []string
+	str2map := make(map[string]struct{}, len(str2))
+	for _, x := range str2 {
+		str2map[x] = struct{}{}
+	}
+	for _, x := range str1 {
+		if _, found := str2map[x]; !found {
+			diff = append(diff, x)
+		}
+	}
+	return diff
 }

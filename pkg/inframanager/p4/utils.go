@@ -20,17 +20,9 @@ import (
 	"fmt"
 	"math/big"
 	"net"
-	"sync"
 )
 
 type InterfaceType int
-
-type IpsetidxStack struct {
-	data []int
-	top  int
-}
-
-var oncest sync.Once
 
 const (
 	HOST InterfaceType = iota
@@ -55,6 +47,19 @@ const (
 type UUIDGenerator struct {
 	idGen        uint32
 	internalChan chan uint32
+}
+
+func GetStr(action InterfaceType) string {
+	switch action {
+	case Insert:
+		return "insert"
+	case Delete:
+		return "delete"
+	case Update:
+		return "update"
+	default:
+		return ""
+	}
 }
 
 func newUUIDGenerator() *UUIDGenerator {
@@ -148,50 +153,10 @@ func Pack32BinaryIP4(ip4Address string) []byte {
 	return buf.Bytes()
 }
 
-func NewIpsetidxStack() *IpsetidxStack {
-	var IpsetidxSt *IpsetidxStack
-	oncest.Do(func() {
-		IpsetidxSt = &IpsetidxStack{
-			data: make([]int, 256),
-			top:  -1,
-		}
-	})
-	return IpsetidxSt
-}
-
-func (st *IpsetidxStack) Push(value int) {
-	st.top++
-	st.data[st.top] = value
-}
-
-func (st *IpsetidxStack) Pop() int {
-	if st.IsStackEmpty() {
-		return 0
-	}
-	value := st.data[st.top]
-	st.data[st.top] = 0
-	st.top--
-	return value
-}
-
-func (st *IpsetidxStack) IsStackEmpty() bool {
-	if st.top == -1 {
-		return true
-	} else {
-		return false
-	}
-}
-
-func (st *IpsetidxStack) InitIpsetidxStack() {
-	for i := 0; i < 256; i++ {
-		st.Push(i + 1)
-	}
-}
+var Mask = []uint8{1, 2, 4, 8, 16, 32, 64, 128}
 
 // this function to generate rulemask or ipsetmask for each rule under each
 // ipsetidx
-var Mask = []uint8{1, 2, 4, 8, 16, 32, 64, 128}
-
 func GenerateMask(index int) uint8 {
 	return Mask[index]
 }
