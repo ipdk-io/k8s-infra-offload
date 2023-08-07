@@ -72,30 +72,35 @@ var (
 
 var oncest sync.Once
 
-type IpsetidxStack struct {
+type IdStack struct {
 	data []int
 	top  int
 }
 
-func NewIpsetidxStack() *IpsetidxStack {
-	var IpsetidxSt *IpsetidxStack
+func NewIdStack() *IdStack {
+	var idStack *IdStack
 	oncest.Do(func() {
-		IpsetidxSt = &IpsetidxStack{
+		idStack = &IdStack{
 			data: make([]int, 256),
 			top:  -1,
 		}
-		IpsetidxSt.InitIpsetidxStack()
+		idStack.InitIdStack()
 	})
 
-	return IpsetidxSt
+	return idStack
 }
 
-func (st *IpsetidxStack) Push(value int) {
+func (st *IdStack) Push(value int) bool {
+	if st.IsStackFull() {
+		return false
+	}
+
 	st.top++
 	st.data[st.top] = value
+	return true
 }
 
-func (st *IpsetidxStack) Pop() int {
+func (st *IdStack) Pop() int {
 	if st.IsStackEmpty() {
 		return 0
 	}
@@ -105,7 +110,14 @@ func (st *IpsetidxStack) Pop() int {
 	return value
 }
 
-func (st *IpsetidxStack) IsStackEmpty() bool {
+func (st *IdStack) IsStackFull() bool {
+	if st.top == 255 {
+		return true
+	} else {
+		return false
+	}
+}
+func (st *IdStack) IsStackEmpty() bool {
 	if st.top == -1 {
 		return true
 	} else {
@@ -113,9 +125,9 @@ func (st *IpsetidxStack) IsStackEmpty() bool {
 	}
 }
 
-func (st *IpsetidxStack) InitIpsetidxStack() {
-	for i := 0; i < 256; i++ {
-		st.Push(i + 1)
+func (st *IdStack) InitIdStack() {
+	for i := 1; i < 256; i++ {
+		st.Push(i)
 	}
 }
 

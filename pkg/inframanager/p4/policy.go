@@ -432,35 +432,42 @@ func IsSame(slice1 []uint16, slice2 []uint16) bool {
 
 func updatePolicy(ctx context.Context, p4RtC *client.Client,
 	policy store.Policy, action InterfaceType) error {
-	for id, RuleGroup := range policy.RuleGroups {
-		for _, rule := range RuleGroup.Rules {
+	for id, ruleGroup := range policy.RuleGroups {
+		for _, rule := range ruleGroup.Rules {
 			cidr := rule.Cidr
 			mask := rule.RuleMask
 
-			if err := AclIpSetMatchTable(ctx, p4RtC, id, cidr, mask, RuleGroup.Direction,
+			if err := AclIpSetMatchTable(ctx, p4RtC, id, cidr, mask, ruleGroup.Direction,
 				action); err != nil {
 				log.Errorf("Failed to add entry to AclIpSetMatchTable, err: %v", err)
 				return err
 			}
 		}
-		if len(RuleGroup.DportRange) != 0 {
-			if err := DstPortRcTable(ctx, p4RtC, id, RuleGroup.DportRange, RuleGroup.Protocol,
+		if len(ruleGroup.DportRange) != 0 {
+			if err := DstPortRcTable(ctx, p4RtC, id, ruleGroup.DportRange, ruleGroup.Protocol,
 				action); err != nil {
 				log.Errorf("Failed to add entry into DstPortRcTable, err: %v", err)
 				return err
 			}
 		}
+		//if action == Delete {
+		//	for _, epName := range policy.WorkerEps {
+		//		if epEntry := store.GetWorkerEp(epName); epEntry != nil {
+		//			ep := epEntry.(store.PolicyWorkerEndPoint)
+		//			if err := updateWorkload(ctx, p4RtC, ep, Delete); err != nil {
+		//				return err
+		//			}
+		//			policy.DeleteWorkerEp(epName)
+		//		}
+		//	}
+		//}
+		/*
+			Release rule group index back to stack.
+		*/
 		if action == Delete {
-			for _, epName := range policy.WorkerEps {
-				if epEntry := store.GetWorkerEp(epName); epEntry != nil {
-					ep := epEntry.(store.PolicyWorkerEndPoint)
-					if err := updateWorkload(ctx, p4RtC, ep, Delete); err != nil {
-						return err
-					}
-					policy.DeleteWorkerEp(epName)
-				}
-			}
+			store.ReleaseRuleGroupId(int(ruleGroup.Index))
 		}
+
 	}
 	return nil
 }
@@ -571,15 +578,11 @@ func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype Opera
 		ep := in.(store.PolicyWorkerEndPoint)
 
 		ctx = context.Background()
-		/*
-			Check if the policies are already applied to the worker endpoint.
-			If true, skip them.
-		*/
 		if oldEntry := ep.GetFromStore(); oldEntry != nil {
 			oldEp := oldEntry.(store.PolicyWorkerEndPoint)
 
 			/*
-				Delete any stale policies
+				Delete any stale policies and retain the existing policies
 			*/
 			staleIngress := utils.StrDiff(oldEp.PolicyNameIngress, ep.PolicyNameIngress)
 			staleEgress := utils.StrDiff(oldEp.PolicyNameEgress, ep.PolicyNameEgress)

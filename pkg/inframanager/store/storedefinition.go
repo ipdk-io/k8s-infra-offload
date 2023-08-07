@@ -110,11 +110,11 @@ type PolicyWorkerEndPoint struct {
 }
 
 type PolicyCollection struct {
-	PolicyMap     map[string]Policy
-	IpSetMap      map[string]IpSet
-	WorkerEpMap   map[string]PolicyWorkerEndPoint
-	PolicyLock    *sync.Mutex
-	IpsetidxStack *utils.IpsetidxStack
+	PolicyMap        map[string]Policy
+	IpSetMap         map[string]IpSet
+	WorkerEpMap      map[string]PolicyWorkerEndPoint
+	PolicyLock       *sync.Mutex
+	RuleGroupIdStack *utils.IdStack
 }
 
 var ServiceSet *ServiceCollection
@@ -151,10 +151,10 @@ func NewService() {
 func NewPolicy() {
 	oncePolicy.Do(func() {
 		PolicySet = &PolicyCollection{PolicyMap: make(map[string]Policy),
-			IpSetMap:      make(map[string]IpSet),
-			WorkerEpMap:   make(map[string]PolicyWorkerEndPoint),
-			PolicyLock:    &sync.Mutex{},
-			IpsetidxStack: utils.NewIpsetidxStack()}
+			IpSetMap:         make(map[string]IpSet),
+			WorkerEpMap:      make(map[string]PolicyWorkerEndPoint),
+			PolicyLock:       &sync.Mutex{},
+			RuleGroupIdStack: utils.NewIdStack()}
 	})
 }
 

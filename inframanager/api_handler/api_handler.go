@@ -56,7 +56,7 @@ func PutConf(c *conf.Configuration) {
 	config = c
 }
 
-type ProtoIpSetIDX struct {
+type RuleGroupIDX struct {
 	ruleMaskId int
 	exists     bool
 	RuleGroup  store.RuleGroup
@@ -720,7 +720,7 @@ func (s *ApiServer) NatTranslationDelete(ctx context.Context, in *proto.NatTrans
 }
 
 func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePolicyUpdate) (*proto.Reply, error) {
-	var ingress, egress [3]ProtoIpSetIDX
+	var ingress, egress [3]RuleGroupIDX
 
 	out := &proto.Reply{
 		Successful: true,
@@ -766,7 +766,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 		switch rule.Protocol.GetName() {
 		case "udp":
 			if !ingress[udp].exists {
-				ingress[udp].RuleGroup.Index = uint16(store.GetNewPolicyIpsetIDX())
+				ingress[udp].RuleGroup.Index = uint16(store.GetNewRuleGroupId())
 				ingress[udp].exists = true
 			}
 			r := store.Rule{
@@ -789,7 +789,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 				uint16(rule.DstPorts[0].Last))
 		case "tcp":
 			if !ingress[tcp].exists {
-				ingress[tcp].RuleGroup.Index = uint16(store.GetNewPolicyIpsetIDX())
+				ingress[tcp].RuleGroup.Index = uint16(store.GetNewRuleGroupId())
 				ingress[tcp].exists = true
 			}
 			r := store.Rule{
@@ -811,7 +811,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 				uint16(rule.DstPorts[0].Last))
 		default:
 			if !ingress[noproto].exists {
-				ingress[noproto].RuleGroup.Index = uint16(store.GetNewPolicyIpsetIDX())
+				ingress[noproto].RuleGroup.Index = uint16(store.GetNewRuleGroupId())
 				ingress[noproto].exists = true
 			}
 			r := store.Rule{
@@ -834,7 +834,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 		switch rule.Protocol.GetName() {
 		case "udp":
 			if !egress[udp].exists {
-				egress[udp].RuleGroup.Index = uint16(store.GetNewPolicyIpsetIDX())
+				egress[udp].RuleGroup.Index = uint16(store.GetNewRuleGroupId())
 				egress[udp].exists = true
 			}
 			r := store.Rule{
@@ -857,7 +857,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 				uint16(rule.DstPorts[0].Last))
 		case "tcp":
 			if !egress[tcp].exists {
-				egress[tcp].RuleGroup.Index = uint16(store.GetNewPolicyIpsetIDX())
+				egress[tcp].RuleGroup.Index = uint16(store.GetNewRuleGroupId())
 				egress[tcp].exists = true
 			}
 			r := store.Rule{
@@ -879,7 +879,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 				uint16(rule.DstPorts[0].Last))
 		default:
 			if !egress[noproto].exists {
-				egress[noproto].RuleGroup.Index = uint16(store.GetNewPolicyIpsetIDX())
+				egress[noproto].RuleGroup.Index = uint16(store.GetNewRuleGroupId())
 				egress[noproto].exists = true
 			}
 			r := store.Rule{
@@ -911,7 +911,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 	}
 	logger.Infof("Successfully added/updated policy %v to the pipeline", policy)
 
-	if ok := policy.WriteToStore(); !ok {
+	if ok := policy.UpdateToStore(); !ok {
 		logger.Errorf("Failed to add/update policy to the store")
 		err := fmt.Errorf("Failed to add/update policy to the store")
 		out.Successful = false
@@ -1035,12 +1035,6 @@ func (s *ApiServer) UpdateLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 
 	logger.Infof("Incoming UpdateLocalEndpoint Request %+v", in)
 
-	if len(in.Endpoint.Tiers) == 0 {
-		logger.Infof("No policies, exiting")
-		out.Successful = true
-		return out, nil
-	}
-
 	if len(in.Endpoint.Ipv4Nets) == 0 {
 		err := errors.New("No IP address assigned for the endpoint")
 		logger.Errorf("No IP addresses assigned for the endpoint")
@@ -1063,16 +1057,13 @@ func (s *ApiServer) UpdateLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 		WorkerIp: ipAddr,
 	}
 
-	if len(in.Endpoint.Tiers[0].IngressPolicies) == 0 && len(in.Endpoint.Tiers[0].EgressPolicies) == 0 {
-		out.Successful = true
-		return out, nil
-	}
-
-	if len(in.Endpoint.Tiers[0].IngressPolicies) > 0 {
-		workerEp.PolicyNameIngress = in.Endpoint.Tiers[0].IngressPolicies
-	}
-	if len(in.Endpoint.Tiers[0].EgressPolicies) > 0 {
-		workerEp.PolicyNameEgress = in.Endpoint.Tiers[0].EgressPolicies
+	if len(in.Endpoint.Tiers) > 0 {
+		if len(in.Endpoint.Tiers[0].IngressPolicies) > 0 {
+			workerEp.PolicyNameIngress = in.Endpoint.Tiers[0].IngressPolicies
+		}
+		if len(in.Endpoint.Tiers[0].EgressPolicies) > 0 {
+			workerEp.PolicyNameEgress = in.Endpoint.Tiers[0].EgressPolicies
+		}
 	}
 
 	err := p4.PolicyTableEntries(ctx, server.p4RtC, p4.WorkloadAdd, workerEp)
@@ -1085,7 +1076,7 @@ func (s *ApiServer) UpdateLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 		return out, err
 	}
 
-	if ok := workerEp.WriteToStore(); !ok {
+	if ok := workerEp.UpdateToStore(); !ok {
 		logger.Errorf("Failed to update policies for endpoint %s in the store",
 			in.Id.WorkloadId)
 		err := fmt.Errorf("Failed to update policies for endpoint %s in the store",

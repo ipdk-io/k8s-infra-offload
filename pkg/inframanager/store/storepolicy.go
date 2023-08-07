@@ -25,12 +25,12 @@ var (
 	WorkerepFile = StorePath + "workerep_db.json"
 )
 
-func GetNewPolicyIpsetIDX() int {
-	return PolicySet.IpsetidxStack.Pop()
+func GetNewRuleGroupId() int {
+	return PolicySet.RuleGroupIdStack.Pop()
 }
 
-func ReleasePolicyIpsetIDX(val int) {
-	PolicySet.IpsetidxStack.Push(val)
+func ReleaseRuleGroupId(val int) {
+	PolicySet.RuleGroupIdStack.Push(val)
 }
 
 func IsPolicyStoreEmpty() bool {
@@ -145,6 +145,10 @@ func InitPolicyStore(setFwdPipe bool) bool {
 
 func (policy Policy) WriteToStore() bool {
 
+	if reflect.DeepEqual(policy, Policy{}) {
+		return false
+	}
+
 	for _, RuleGroup := range policy.RuleGroups {
 		//Direction
 		direction := RuleGroup.Direction
@@ -175,6 +179,11 @@ func (policy Policy) WriteToStore() bool {
 }
 
 func (ipsetadd IpSet) WriteToStore() bool {
+
+	if reflect.DeepEqual(ipsetadd, IpSet{}) {
+		return false
+	}
+
 	if ipsetadd.IpSetIDx < 0 || ipsetadd.IpSetIDx > 255 {
 		return false
 	}
@@ -191,9 +200,13 @@ func (ipsetadd IpSet) WriteToStore() bool {
 	return true
 }
 
-func (workerepadd PolicyWorkerEndPoint) WriteToStore() bool {
+func (ep PolicyWorkerEndPoint) WriteToStore() bool {
+
+	if reflect.DeepEqual(ep, PolicyWorkerEndPoint{}) {
+		return false
+	}
 	PolicySet.PolicyLock.Lock()
-	PolicySet.WorkerEpMap[workerepadd.WorkerEp] = workerepadd
+	PolicySet.WorkerEpMap[ep.WorkerEp] = ep
 	PolicySet.PolicyLock.Unlock()
 	return true
 }
@@ -380,22 +393,27 @@ func (workerepget PolicyWorkerEndPoint) GetFromStore() store {
 
 // update to store for policy struct, should invoke delete first and then invoke
 // write call, modify later
-func (policymod Policy) UpdateToStore() bool {
-	policyEntry := PolicySet.PolicyMap[policymod.Name]
-	if reflect.DeepEqual(policyEntry, Policy{}) {
-		return false
+func (policy Policy) UpdateToStore() bool {
+	/*
+		Check if entry exists
+	*/
+	if entry := policy.GetFromStore(); entry != nil {
+		storePolicy := entry.(Policy)
+
+		/*
+			store has the same data. No need to update.
+		*/
+		if reflect.DeepEqual(policy, storePolicy) {
+			return true
+		}
+
+		// Delete not required as WriteToStore overwrites the same entry
+		//If ret := policy.DeleteFromStore(); !ret {
+		//	return false
+		//}
 	}
 
-	if reflect.DeepEqual(policyEntry, policymod) {
-		return false
-	}
-
-	ret := policyEntry.DeleteFromStore()
-	if !ret {
-		return false
-	}
-
-	return policymod.WriteToStore()
+	return policy.WriteToStore()
 }
 
 func (ipsetmod IpSet) UpdateToStore() bool {
@@ -411,18 +429,27 @@ func (ipsetmod IpSet) UpdateToStore() bool {
 	return ipsetEntry.WriteToStore()
 }
 
-func (workerepmod PolicyWorkerEndPoint) UpdateToStore() bool {
-	workerepEntry := PolicySet.WorkerEpMap[workerepmod.WorkerEp]
-	if reflect.DeepEqual(workerepEntry, PolicyWorkerEndPoint{}) {
-		return false
+func (ep PolicyWorkerEndPoint) UpdateToStore() bool {
+	/*
+		Check if entry exists
+	*/
+	if entry := ep.GetFromStore(); entry != nil {
+		storeEp := entry.(PolicyWorkerEndPoint)
+
+		/*
+			store has the same data. No need to update.
+		*/
+		if reflect.DeepEqual(ep, storeEp) {
+			return true
+		}
+
+		// Delete not required as WriteToStore overwrites the same entry
+		//If ret := ep.DeleteFromStore(); !ret {
+		//	return false
+		//}
 	}
 
-	if reflect.DeepEqual(workerepEntry, workerepmod) {
-		return false
-	}
-	workerepEntry.PolicyNameIngress = workerepmod.PolicyNameIngress
-	workerepEntry.PolicyNameEgress = workerepmod.PolicyNameEgress
-	return workerepEntry.WriteToStore()
+	return ep.WriteToStore()
 }
 
 func RunSyncPolicyInfo() bool {

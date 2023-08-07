@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build dpdk
+//go:build es2k
 
 package p4
 
@@ -23,7 +23,7 @@ import (
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
-	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
+	//p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
 	log "github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
@@ -48,172 +48,62 @@ const (
 func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 	protocol uint8, workerep string, polID uint16, rangeID uint16, direction string,
 	action InterfaceType) error {
-	var tableName string
-	var entryAdd *p4_v1.TableEntry
-	var entryDelete *p4_v1.TableEntry
+	var tableName, matchAction, addrKey string
+	var PLen int32
+
+	ctx = context.Background()
+
+	switch direction {
+	case "RX":
+		tableName = "k8s_dp_control.acl_pod_ip_proto_table_ingress"
+		addrKey = "hdr.ipv4.dst_addr"
+	case "TX":
+		tableName = "k8s_dp_control.acl_pod_ip_proto_table_egress"
+		addrKey = "hdr.ipv4.src_addr"
+	default:
+		log.Errorf("Invalid direction %v", action)
+		return fmt.Errorf("Invalid direction")
+	}
+
+	if protocol != 0 {
+		PLen = 8
+		matchAction = "k8s_dp_control.set_range_check_ref"
+	} else {
+		PLen = 1
+		matchAction = "k8s_dp_control.set_status_match_ipset_only"
+	}
+	entry := p4RtC.NewTableEntry(
+		tableName,
+		map[string]client.MatchInterface{
+			addrKey: &client.ExactMatch{
+				Value: Pack32BinaryIP4(workerep),
+			},
+			"hdr.ipv4.protocol": &client.LpmMatch{
+				Value: valueToBytes8(protocol),
+				PLen:  PLen,
+			},
+		},
+		p4RtC.NewTableActionDirect(matchAction,
+			[][]byte{ValueToBytes16(polID),
+				ValueToBytes16(rangeID)}),
+		nil,
+	)
+
 	switch action {
 	case Insert:
-		if direction == "TX" {
-			tableName = "k8s_dp_control.acl_pod_ip_proto_table_egress"
-			if protocol != 0 {
-				entryAdd = p4RtC.NewTableEntry(
-					"k8s_dp_control.acl_pod_ip_proto_table_egress",
-					map[string]client.MatchInterface{
-						"hdr.ipv4.src_addr": &client.ExactMatch{
-							Value: Pack32BinaryIP4(workerep),
-						},
-						"hdr.ipv4.protocol": &client.LpmMatch{
-							Value: valueToBytes8(protocol),
-							PLen:  8,
-						},
-					},
-					p4RtC.NewTableActionDirect("k8s_dp_control.set_range_check_ref",
-						[][]byte{ValueToBytes16(polID),
-							ValueToBytes16(rangeID)}),
-					nil,
-				)
-			} else {
-				entryAdd = p4RtC.NewTableEntry(
-					"k8s_dp_control.acl_pod_ip_proto_table_egress",
-					map[string]client.MatchInterface{
-						"hdr.ipv4.src_addr": &client.ExactMatch{
-							Value: Pack32BinaryIP4(workerep),
-						},
-						"hdr.ipv4.protocol": &client.LpmMatch{
-							Value: valueToBytes8(0),
-							PLen:  1,
-						},
-					},
-					p4RtC.NewTableActionDirect("k8s_dp_control.set_status_match_ipset_only",
-						[][]byte{ValueToBytes16(polID)}),
-					nil,
-				)
-			}
-			if err := p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
-				log.Errorf("Cannot insert entry into %s: %v", tableName, err)
-				return err
-			}
-		} else {
-			tableName = "k8s_dp_control.acl_pod_ip_proto_table_ingress"
-			if protocol != 0 {
-				entryAdd = p4RtC.NewTableEntry(
-					"k8s_dp_control.acl_pod_ip_proto_table_ingress",
-					map[string]client.MatchInterface{
-						"hdr.ipv4.dst_addr": &client.ExactMatch{
-							Value: Pack32BinaryIP4(workerep),
-						},
-						"hdr.ipv4.protocol": &client.LpmMatch{
-							Value: valueToBytes8(protocol),
-							PLen:  8,
-						},
-					},
-					p4RtC.NewTableActionDirect("k8s_dp_control.set_range_check_ref",
-						[][]byte{ValueToBytes16(polID),
-							ValueToBytes16(rangeID)}),
-					nil,
-				)
-			} else {
-				entryAdd = p4RtC.NewTableEntry(
-					"k8s_dp_control.acl_pod_ip_proto_table_ingress",
-					map[string]client.MatchInterface{
-						"hdr.ipv4.dst_addr": &client.ExactMatch{
-							Value: Pack32BinaryIP4(workerep),
-						},
-						"hdr.ipv4.protocol": &client.LpmMatch{
-							Value: valueToBytes8(0),
-							PLen:  1,
-						},
-					},
-					p4RtC.NewTableActionDirect("k8s_dp_control.set_status_match_ipset_only",
-						[][]byte{ValueToBytes16(polID)}),
-					nil,
-				)
-			}
-			if err := p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
-				log.Errorf("Cannot insert entry into %s: %v", tableName, err)
-				return err
-			}
+		if err := p4RtC.InsertTableEntry(ctx, entry); err != nil {
+			log.Errorf("Cannot insert entry into %s: %v", tableName, err)
+			return err
 		}
-
 	case Delete:
-		if direction == "TX" {
-			tableName = "k8s_dp_control.acl_pod_ip_proto_table_egress"
-			if protocol != 0 {
-				entryDelete = p4RtC.NewTableEntry(
-					"k8s_dp_control.acl_pod_ip_proto_table_egress",
-					map[string]client.MatchInterface{
-						"hdr.ipv4.src_addr": &client.ExactMatch{
-							Value: Pack32BinaryIP4(workerep),
-						},
-						"hdr.ipv4.protocol": &client.LpmMatch{
-							Value: valueToBytes8(protocol),
-							PLen:  8,
-						},
-					},
-					nil,
-					nil,
-				)
-			} else {
-				entryDelete = p4RtC.NewTableEntry(
-					"k8s_dp_control.acl_pod_ip_proto_table_egress",
-					map[string]client.MatchInterface{
-						"hdr.ipv4.src_addr": &client.ExactMatch{
-							Value: Pack32BinaryIP4(workerep),
-						},
-						"hdr.ipv4.protocol": &client.LpmMatch{
-							Value: valueToBytes8(0),
-							PLen:  1,
-						},
-					},
-					nil,
-					nil,
-				)
-			}
-			if err := p4RtC.DeleteTableEntry(ctx, entryDelete); err != nil {
-				log.Errorf("Cannot delete entry from %s: %v", tableName, err)
-				return err
-			}
-		} else {
-			tableName = "k8s_dp_control.acl_pod_ip_proto_table_ingress"
-			if protocol != 0 {
-				entryDelete = p4RtC.NewTableEntry(
-					"k8s_dp_control.acl_pod_ip_proto_table_ingress",
-					map[string]client.MatchInterface{
-						"hdr.ipv4.dst_addr": &client.ExactMatch{
-							Value: Pack32BinaryIP4(workerep),
-						},
-						"hdr.ipv4.protocol": &client.LpmMatch{
-							Value: valueToBytes8(protocol),
-							PLen:  8,
-						},
-					},
-					nil,
-					nil,
-				)
-			} else {
-				entryDelete = p4RtC.NewTableEntry(
-					"k8s_dp_control.acl_pod_ip_proto_table_ingress",
-					map[string]client.MatchInterface{
-						"hdr.ipv4.dst_addr": &client.ExactMatch{
-							Value: Pack32BinaryIP4(workerep),
-						},
-						"hdr.ipv4.protocol": &client.LpmMatch{
-							Value: valueToBytes8(0),
-							PLen:  1,
-						},
-					},
-					nil,
-					nil,
-				)
-			}
-			if err := p4RtC.DeleteTableEntry(ctx, entryDelete); err != nil {
-				log.Errorf("Cannot delete entry from %s: %v", tableName, err)
-				return err
-			}
+		entry.Action = nil
+		if err := p4RtC.DeleteTableEntry(ctx, entry); err != nil {
+			log.Errorf("Cannot delete entry from %s: %v", tableName, err)
+			return err
 		}
 
 	default:
-		log.Warnf("Invalid action %v", action)
+		log.Warnf("Invalid operation %v", action)
 		err := fmt.Errorf("Invalid action %v", action)
 		return err
 	}
@@ -222,9 +112,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 
 func AclIpSetMatchTable(ctx context.Context, p4RtC *client.Client,
 	polID uint16, cidr string, mask uint8, direction string, action InterfaceType) error {
-	var tableName string
-	var entryAdd *p4_v1.TableEntry
-	var entryDelete *p4_v1.TableEntry
+	var tableName, addrKey string
 
 	res := strings.Split(cidr, "/")
 	ip := res[0]
@@ -234,84 +122,43 @@ func AclIpSetMatchTable(ctx context.Context, p4RtC *client.Client,
 		return err
 	}
 
+	switch direction {
+	case "RX":
+		tableName = "k8s_dp_control.acl_ipset_match_table_ingress"
+		addrKey = "hdr.ipv4.src_addr"
+	case "TX":
+		tableName = "k8s_dp_control.acl_pod_ip_proto_table_egress"
+		addrKey = "hdr.ipv4.dst_addr"
+	default:
+		return fmt.Errorf("Invalid direction %s", direction)
+	}
+
+	entry := p4RtC.NewTableEntry(
+		tableName,
+		map[string]client.MatchInterface{
+			"meta.acl_pol_id": &client.ExactMatch{
+				Value: ValueToBytes16(polID),
+			},
+			addrKey: &client.LpmMatch{
+				Value: Pack32BinaryIP4(ip),
+				PLen:  int32(plen),
+			},
+		},
+		p4RtC.NewTableActionDirect("k8s_dp_control.set_ipset_match_result",
+			[][]byte{valueToBytes8(mask)}),
+		nil,
+	)
+
 	switch action {
 	case Insert:
-		if direction == "TX" {
-			tableName = "k8s_dp_control.acl_ipset_match_table_egress"
-			entryAdd = p4RtC.NewTableEntry(
-				"k8s_dp_control.acl_ipset_match_table_egress",
-				map[string]client.MatchInterface{
-					"meta.acl_pol_id": &client.ExactMatch{
-						Value: ValueToBytes16(polID),
-					},
-					"hdr.ipv4.dst_addr": &client.LpmMatch{
-						Value: Pack32BinaryIP4(ip),
-						PLen:  int32(plen),
-					},
-				},
-				p4RtC.NewTableActionDirect("k8s_dp_control.set_ipset_match_result",
-					[][]byte{valueToBytes8(mask)}),
-				nil,
-			)
-		} else {
-			tableName = "k8s_dp_control.acl_ipset_match_table_ingress"
-			entryAdd = p4RtC.NewTableEntry(
-				"k8s_dp_control.acl_ipset_match_table_ingress",
-				map[string]client.MatchInterface{
-					"meta.acl_pol_id": &client.ExactMatch{
-						Value: ValueToBytes16(polID),
-					},
-					"hdr.ipv4.src_addr": &client.LpmMatch{
-						Value: Pack32BinaryIP4(ip),
-						PLen:  int32(plen),
-					},
-				},
-				p4RtC.NewTableActionDirect("k8s_dp_control.set_ipset_match_result",
-					[][]byte{valueToBytes8(mask)}),
-				nil,
-			)
-		}
-		if err := p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
+		if err := p4RtC.InsertTableEntry(ctx, entry); err != nil {
 			log.Errorf("Cannot insert entry into %s: %v", tableName, err)
 			return err
 		}
 
 	case Delete:
-		tableName = "k8s_dp_control.acl_ipset_match_table_egress"
-		if direction == "TX" {
-			tableName = "k8s_dp_control.acl_ipset_match_table_egress"
-			entryDelete = p4RtC.NewTableEntry(
-				"k8s_dp_control.acl_ipset_match_table_egress",
-				map[string]client.MatchInterface{
-					"meta.acl_pol_id": &client.ExactMatch{
-						Value: ValueToBytes16(polID),
-					},
-					"hdr.ipv4.dst_addr": &client.LpmMatch{
-						Value: Pack32BinaryIP4(ip),
-						PLen:  int32(plen),
-					},
-				},
-				nil,
-				nil,
-			)
-		} else {
-			tableName = "k8s_dp_control.acl_ipset_match_table_ingress"
-			entryDelete = p4RtC.NewTableEntry(
-				"k8s_dp_control.acl_ipset_match_table_ingress",
-				map[string]client.MatchInterface{
-					"meta.acl_pol_id": &client.ExactMatch{
-						Value: ValueToBytes16(polID),
-					},
-					"hdr.ipv4.src_addr": &client.LpmMatch{
-						Value: Pack32BinaryIP4(ip),
-						PLen:  int32(plen),
-					},
-				},
-				nil,
-				nil,
-			)
-		}
-		if err := p4RtC.DeleteTableEntry(ctx, entryDelete); err != nil {
+		entry.Action = nil
+		if err := p4RtC.DeleteTableEntry(ctx, entry); err != nil {
 			log.Errorf("Cannot delete entry from %s: %v", tableName, err)
 			return err
 		}
@@ -328,41 +175,34 @@ func AclIpSetMatchTable(ctx context.Context, p4RtC *client.Client,
 func DstPortRcTable(ctx context.Context, p4RtC *client.Client,
 	polID uint16, portrange []uint16, protocol uint8,
 	action InterfaceType) error {
-	var tableName string
-	var entry *p4_v1.TableEntry
-	var entryDelete *p4_v1.TableEntry
+	var tableName, tableAction string
 	var ports = [][]byte{}
 
 	for i := range portrange {
 		ports = append(ports, ValueToBytes16(portrange[i]))
 	}
 
-	if protocol == PROTO_TCP {
+	switch protocol {
+	case PROTO_TCP:
 		tableName = "k8s_dp_control.tcp_dport_rc_table"
-		entry = p4RtC.NewTableEntry(
-			"k8s_dp_control.tcp_dport_rc_table",
-			map[string]client.MatchInterface{
-				"meta.acl_pol_id": &client.ExactMatch{
-					Value: ValueToBytes16(polID),
-				},
-			},
-			p4RtC.NewTableActionDirect("k8s_dp_control.do_range_check_tcp", ports),
-			nil,
-		)
-	}
-	if protocol == PROTO_UDP {
+		tableAction = "k8s_dp_control.do_range_check_tcp"
+	case PROTO_UDP:
 		tableName = "k8s_dp_control.udp_dport_rc_table"
-		entry = p4RtC.NewTableEntry(
-			"k8s_dp_control.udp_dport_rc_table",
-			map[string]client.MatchInterface{
-				"meta.acl_pol_id": &client.ExactMatch{
-					Value: ValueToBytes16(polID),
-				},
-			},
-			p4RtC.NewTableActionDirect("k8s_dp_control.do_range_check_udp", ports),
-			nil,
-		)
+		tableAction = "k8s_dp_control.do_range_check_tcp"
+	default:
+		return fmt.Errorf("Invalid protocol %v", protocol)
 	}
+
+	entry := p4RtC.NewTableEntry(
+		tableName,
+		map[string]client.MatchInterface{
+			"meta.acl_pol_id": &client.ExactMatch{
+				Value: ValueToBytes16(polID),
+			},
+		},
+		p4RtC.NewTableActionDirect(tableAction, ports),
+		nil,
+	)
 
 	switch action {
 	case Insert:
@@ -378,33 +218,8 @@ func DstPortRcTable(ctx context.Context, p4RtC *client.Client,
 		}
 
 	case Delete:
-		if protocol == 6 {
-			tableName = "k8s_dp_control.tcp_dport_rc_table"
-			entryDelete = p4RtC.NewTableEntry(
-				"k8s_dp_control.tcp_dport_rc_table",
-				map[string]client.MatchInterface{
-					"meta.acl_pol_id": &client.ExactMatch{
-						Value: ValueToBytes16(polID),
-					},
-				},
-				nil,
-				nil,
-			)
-		}
-		if protocol == 17 {
-			tableName = "k8s_dp_control.udp_dport_rc_table"
-			entryDelete = p4RtC.NewTableEntry(
-				"k8s_dp_control.udp_dport_rc_table",
-				map[string]client.MatchInterface{
-					"meta.acl_pol_id": &client.ExactMatch{
-						Value: ValueToBytes16(polID),
-					},
-				},
-				nil,
-				nil,
-			)
-		}
-		if err := p4RtC.DeleteTableEntry(ctx, entryDelete); err != nil {
+		entry.Action = nil
+		if err := p4RtC.DeleteTableEntry(ctx, entry); err != nil {
 			log.Errorf("Cannot delete entry from %s: %v", tableName, err)
 			return err
 		}
@@ -417,34 +232,21 @@ func DstPortRcTable(ctx context.Context, p4RtC *client.Client,
 	return nil
 }
 
-func IsSame(slice1 []uint16, slice2 []uint16) bool {
-	if len(slice1) != len(slice2) {
-		return false
-	}
-	for i := range slice1 {
-		if slice1[i] != slice2[i] {
-			log.Infof("%d and %d are not same", slice1[i], slice2[i])
-			return false
-		}
-	}
-	return true
-}
-
 func updatePolicy(ctx context.Context, p4RtC *client.Client,
 	policy store.Policy, action InterfaceType) error {
-	for id, RuleGroup := range policy.RuleGroups {
-		for _, rule := range RuleGroup.Rules {
+	for id, ruleGroup := range policy.RuleGroups {
+		for _, rule := range ruleGroup.Rules {
 			cidr := rule.Cidr
 			mask := rule.RuleMask
 
-			if err := AclIpSetMatchTable(ctx, p4RtC, id, cidr, mask, RuleGroup.Direction,
+			if err := AclIpSetMatchTable(ctx, p4RtC, id, cidr, mask, ruleGroup.Direction,
 				action); err != nil {
 				log.Errorf("Failed to add entry to AclIpSetMatchTable, err: %v", err)
 				return err
 			}
 		}
-		if len(RuleGroup.DportRange) != 0 {
-			if err := DstPortRcTable(ctx, p4RtC, id, RuleGroup.DportRange, RuleGroup.Protocol,
+		if len(ruleGroup.DportRange) != 0 {
+			if err := DstPortRcTable(ctx, p4RtC, id, ruleGroup.DportRange, ruleGroup.Protocol,
 				action); err != nil {
 				log.Errorf("Failed to add entry into DstPortRcTable, err: %v", err)
 				return err
@@ -461,6 +263,10 @@ func updatePolicy(ctx context.Context, p4RtC *client.Client,
 				}
 			}
 		}
+		/*
+			Release rule group index back to stack.
+		*/
+		store.ReleasePolicyIpsetIDX(int(ruleGroup.Index))
 	}
 	return nil
 }
