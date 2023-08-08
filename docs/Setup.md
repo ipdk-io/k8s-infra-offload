@@ -196,7 +196,14 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
      export KUBECONFIG=/etc/kubernetes/admin.conf
      ```
 
-5. Remove taints from the node.
+5. Install and setup Calico plugin
+   ```bash
+    cd /usr/local/bin
+    curl -L https://github.com/projectcalico/calico/releases/download/v3.24.1/calicoctl-linux-amd64 -o kubectl-calico
+    chmod +x kubectl-calico
+   ```
+
+6. Remove taints from the node.
    For single node deployment, the node must be untainted to allow worker pods
    to share the node with control plane. The taint to remove is "control-plane"
    or "master" or both. These taints can be removed as shown:
@@ -205,13 +212,13 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
    kubectl taint node <node-name> node-role.kubernetes.io/master-
    ```
 
-6. Create Kubernetes secrets from the generated certificates. The infraagent and
+7. Create Kubernetes secrets from the generated certificates. The infraagent and
    inframanager read the certificates from the secrets.
    ```bash
    make tls-secrets
    ```
 
-7. Start the deployments:
+8. Start the deployments:
    ```bash
    make deploy
    make deploy-calico
@@ -343,14 +350,6 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
    ./steps/cleanup.sh
    ```
 
-## Debugging
-
-- The Kubernetes Infrastructure Offload software provides logging capabilities.
-  The logs are dumped in temporary log file. Logs for Infra Manager are put in
-  `/var/log/inframanager/inframanager.log` while logs for Infra Agent are put
-  in `/var/log/infraagent/infraagent.log`). You can inspect logs emitted to stdout
-  and stderr using `"kubectl logs <pod> -n <namespace>"`.
-
 ## Setup Scripts
 
 - The script `./script/create_interfaces.sh` sets up HugePages required by
@@ -360,7 +359,17 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
   assigns an interface to it, and then launches the ARP proxy within the
   isolated namespace.
 
-## Clean Up All
+## Troubleshooting
+
+### Debugging
+
+- The Kubernetes Infrastructure Offload software provides logging capabilities.
+  The logs are dumped in temporary log file. Logs for Infra Manager are put in
+  `/var/log/inframanager/inframanager.log` while logs for Infra Agent are put
+  in `/var/log/infraagent/infraagent.log`). You can inspect logs emitted to stdout
+  and stderr using `"kubectl logs <pod> -n <namespace>"`.
+
+### Clean Up All
    Reset kubernetes which would stop and remove all pods. Then, remove all k8s
    runtime configurations and other files. Finally, stop container services.
 
@@ -392,3 +401,37 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
    pkill arp_proxy
    pkill infrap4d
    ```
+## Versions and Third-parties
+
+Versions of Kubernetes, linux distros, docker and other third-party libraries tested with (calico, felix)
+
+### OS
+
+* Linux
+  * Fedora 33
+  * Fedora 37
+  * Rocky Linux 9.1
+
+### golang
+
+Install Go package (go version go1.20.5 linux/amd64), following instruction
+   at https://go.dev/doc/install
+
+### kubernetes
+
+Versions tested and supported with
+
+1.24.4-0
+1.27.3-0
+
+```bash
+$ dnf list installed | grep kube
+cri-tools.x86_64                                 1.24.2-0
+kubeadm.x86_64                                   1.24.4-0
+kubectl.x86_64                                   1.24.4-0
+kubelet.x86_64                                   1.24.4-0
+```
+
+### Calico
+
+v3.24.1
