@@ -1,1 +1,10 @@
 /bin/
+
+# temp vim files
+*.swp
+*.swo
+
+#Temp doc files
+docs/_build
+docs/_static
+

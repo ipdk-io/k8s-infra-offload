@@ -22,10 +22,17 @@ Welcome to k8s-infra-offload's documentation!
 
 .. toctree::
    :maxdepth: 1
+   :caption: Security
+
+   security/security-guide
+   security/SECURITY
+   security/using-tls-certificates
+
+.. toctree::
+   :maxdepth: 1
    :caption: Release notes
 
    ReleaseNotes
-
 
 
 Indices and tables
@@ -34,6 +41,5 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
 
 
