@@ -421,15 +421,14 @@ Install Go package (go version go1.20.5 linux/amd64), following instruction
 
 Versions tested and supported with
 
-1.24.4-0
-1.27.3-0
+1.25.x
 
 ```bash
 $ dnf list installed | grep kube
-cri-tools.x86_64                                 1.24.2-0
-kubeadm.x86_64                                   1.24.4-0
-kubectl.x86_64                                   1.24.4-0
-kubelet.x86_64                                   1.24.4-0
+cri-tools.x86_64                                 1.25.2-0
+kubeadm.x86_64                                   1.25.4-0
+kubectl.x86_64                                   1.25.4-0
+kubelet.x86_64                                   1.25.4-0
 ```
 
 ### Calico
