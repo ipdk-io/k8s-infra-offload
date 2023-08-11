@@ -31,6 +31,7 @@ sysconfdir=/etc/infra
 datadir=/share/infra/k8s_dp
 bindir=/opt/infra
 sbindir=/sbin/infra
+certdir=/etc/pki
 
 RUNFILES:=$(logdir)/arp-proxy* $(logdir)/infra* $(cnidir)/infra* $(sysconfdir)/config.yaml $(datadir)
 RUNFILES+=$(bindir)/felix-api* $(bindir)/infra* $(bindir)/arp-proxy*
@@ -93,6 +94,8 @@ install:
 	install -d $(DESTDIR)$(datadir)
 	install -d $(DESTDIR)$(bindir)
 	install -d $(DESTDIR)$(sbindir)
+	install -d $(DESTDIR)$(certdir)/inframanager/certs
+	install -d $(DESTDIR)$(certdir)/infraagent/certs
 	install -m 0755 bin/* $(DESTDIR)$(bindir)
 	install -C -m 0755 ./inframanager/config.yaml $(DESTDIR)$(sysconfdir)/config.yaml
 	install -C -m 0755 ./scripts/es2k/*.sh $(DESTDIR)$(sbindir)
@@ -140,6 +143,10 @@ docker-push-manager:
 
 deploy: kustomize create-kubeconfig-cm
 	cd deploy && $(KUSTOMIZE) edit set image infraagent:latest=$(INFRAAGENT_IMAGE) && $(KUSTOMIZE) edit set image inframanager:latest=$(INFRAMANAGER_IMAGE)
+	$(KUSTOMIZE) build --load-restrictor LoadRestrictionsNone deploy | envsubst | kubectl apply -f -
+
+deploy-split: kustomize create-kubeconfig-cm
+	cd deploy && cp kustomization.yaml.split  kustomization.yaml && $(KUSTOMIZE) edit set image infraagent:latest=$(INFRAAGENT_IMAGE)
 	$(KUSTOMIZE) build --load-restrictor LoadRestrictionsNone deploy | envsubst | kubectl apply -f -
 
 undeploy: kustomize delete-kubeconfig-cm

@@ -8,7 +8,7 @@ OPENSSL_CNF=openssl.cnf
 AGENT_CLIENT=$CERTS/infraagent/client
 MGR_CLIENT=$CERTS/inframanager/client
 MGR_SERVER=$CERTS/inframanager/server
-INFRAP4D=$CERTS/infrap4d/certs
+INFRAP4D=$CERTS/infrap4d
 
 [ -d $CERTS ] && rm -rf $CERTS
 mkdir -p $CERTS

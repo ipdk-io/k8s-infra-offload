@@ -51,14 +51,14 @@ const (
 	DefaultRoute                = "169.254.1.1/32"
 	HostInterfaceAddr           = "200.1.1.2/32"
 	ArpProxyDefaultPort         = 0
-	AgentDefaultClientCert      = "/etc/pki/infraagent/cert/client/tls.crt"
-	AgentDefaultClientKey       = "/etc/pki/infraagent/cert/client/tls.key"
-	AgentDefaultCACert          = "/etc/pki/infraagent/cert/client/ca.crt"
-	ManagerDefaultClientCert    = "/etc/pki/inframanager/cert/client/tls.crt"
-	ManagerDefaultClientKey     = "/etc/pki/inframanager/cert/client/tls.key"
-	ManagerDefaultServerCert    = "/etc/pki/inframanager/cert/server/tls.crt"
-	ManagerDefaultServerKey     = "/etc/pki/inframanager/cert/server/tls.key"
-	ManagerDefaultCACert        = "/etc/pki/inframanager/cert/client/ca.crt"
+	AgentDefaultClientCert      = "/etc/pki/infraagent/certs/client/tls.crt"
+	AgentDefaultClientKey       = "/etc/pki/infraagent/certs/client/tls.key"
+	AgentDefaultCACert          = "/etc/pki/infraagent/certs/client/ca.crt"
+	ManagerDefaultClientCert    = "/etc/pki/inframanager/certs/client/tls.crt"
+	ManagerDefaultClientKey     = "/etc/pki/inframanager/certs/client/tls.key"
+	ManagerDefaultServerCert    = "/etc/pki/inframanager/certs/server/tls.crt"
+	ManagerDefaultServerKey     = "/etc/pki/inframanager/certs/server/tls.key"
+	ManagerDefaultCACert        = "/etc/pki/inframanager/certs/client/ca.crt"
 	IfTtype                     = "cdq"
 )
 
