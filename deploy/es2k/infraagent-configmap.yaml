@@ -7,3 +7,5 @@ data:
   infraagent.yaml: |
     interfaceType: cdq
     interface: ens801f0
+    mtls: true
+    insecure: false

@@ -60,12 +60,11 @@ InfraManager:
 #        for the list of supported ciphersuites.
 
 # Not required for dpdk
-  arp-mac: "00:09:00:04:03:14"
-
+  arp-mac: "00:0f:00:04:03:14"
   conn: mtls
-  server-cert: "/etc/pki/inframanager/cert/server/tls.crt"
-  server-key: "/etc/pki/inframanager/cert/server/tls.key"
-  ca-cert: "/etc/pki/inframanager/cert/server/ca.crt"
+  server-cert: "/etc/pki/inframanager/certs/server/tls.crt"
+  server-key: "/etc/pki/inframanager/certs/server/tls.key"
+  ca-cert: "/etc/pki/inframanager/certs/server/ca.crt"
   ciphersuites : [
           "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
           "TLS_AES_256_GCM_SHA384",
