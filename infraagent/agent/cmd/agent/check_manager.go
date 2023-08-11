@@ -58,6 +58,8 @@ var checkManager = &cobra.Command{
 			fmt.Fprintf(os.Stdout, "Waiting for Infra Manager to be running for %s\n", viper.GetString("timeout"))
 		}
 
+		types.InfraManagerAddr = viper.GetString("managerAddr")
+		types.InfraManagerPort = viper.GetString("managerPort")
 		managerAddr := fmt.Sprintf("%s:%s", types.InfraManagerAddr, types.InfraManagerPort)
 		watcher := utils.NewGrpcWatcher(timeout, sleepDuration, managerAddr, grpcDialFunc, utils.CheckGrpcServerStatus)
 		if err := utils.WaitFor(watcher); err != nil {
