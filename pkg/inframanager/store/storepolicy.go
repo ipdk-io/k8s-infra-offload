@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path"
 	"reflect"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
@@ -20,9 +21,9 @@ const (
 )
 
 var (
-	PolicyFile   = StorePath + "policy_db.json"
-	IpsetFile    = StorePath + "ipset_db.json"
-	WorkerepFile = StorePath + "workerep_db.json"
+	PolicyFile   = path.Join(StorePath, "policy_db.json")
+	IpsetFile    = path.Join(StorePath, "ipset_db.json")
+	WorkerepFile = path.Join(StorePath, "workerep_db.json")
 )
 
 func GetNewRuleGroupId() int {
@@ -58,16 +59,22 @@ func IsWorkerepStoreEmpty() bool {
 }
 
 func OpenPolicyStoreFiles(fileName string, flags int) (retflag, []byte) {
-	file, err := NewOpenFile(fileName, flags, 0755)
+	verifiedFileName, err := utils.VerifiedFilePath(fileName, StorePath)
 	if err != nil {
-		log.Error("Failed to open", fileName)
+		log.Errorf("Failed to open %s", fileName)
+		return Fail, nil
+	}
+
+	file, err := NewOpenFile(verifiedFileName, flags, 0755)
+	if err != nil {
+		log.Errorf("Failed to open %s", fileName)
 		return Fail, nil
 	}
 	file.Close()
 
 	data, err := NewReadFile(fileName)
 	if err != nil {
-		log.Error("Error reading ", fileName, err)
+		log.Errorf("Failed to  %s, err: %s", fileName, err)
 		return Fail, nil
 	}
 
@@ -95,7 +102,7 @@ func InitPolicyStore(setFwdPipe bool) bool {
 	if _, err := os.Stat(StorePath); errors.Is(err, os.ErrNotExist) {
 		err := os.MkdirAll(StorePath, 0755)
 		if err != nil {
-			log.Error("Failed to create directory ", StorePath)
+			log.Errorf("Failed to create directory %s", StorePath)
 			return false
 		}
 	}
@@ -109,7 +116,7 @@ func InitPolicyStore(setFwdPipe bool) bool {
 	} else {
 		err := JsonUnmarshal(data, &PolicySet.PolicyMap)
 		if err != nil {
-			log.Error("Error unmarshalling data from ", PolicyFile, err)
+			log.Errorf("Failed to unmarshal data from %s, err: %s", PolicyFile, err)
 			return false
 		}
 	}
@@ -122,7 +129,7 @@ func InitPolicyStore(setFwdPipe bool) bool {
 	} else {
 		err := JsonUnmarshal(data, &PolicySet.IpSetMap)
 		if err != nil {
-			log.Error("Error unmarshalling data from ", IpsetFile, err)
+			log.Errorf("Failed to unmarshal data from %s, err: %s", IpsetFile, err)
 			return false
 		}
 	}
@@ -135,7 +142,7 @@ func InitPolicyStore(setFwdPipe bool) bool {
 	} else {
 		err := JsonUnmarshal(data, &PolicySet.WorkerEpMap)
 		if err != nil {
-			log.Error("Error unmarshalling data from ", WorkerepFile, err)
+			log.Errorf("Failed to unmarshal data from %s, err: %s", WorkerepFile, err)
 			return false
 		}
 		return true

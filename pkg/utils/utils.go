@@ -645,10 +645,14 @@ func GetDataDirPath(t string) string {
 func VerifiedFilePath(fileName string, allowedDir string) (string, error) {
 	path := fileName
 	path = filepath.Clean(path)
-	if _, err := os.Lstat(path); err == nil {
+	if fileInfo, err := os.Lstat(path); err == nil {
 		realPath, err := filepath.EvalSymlinks(path)
 		if err != nil {
 			return "", fmt.Errorf("Unsafe or invalid path specified. %s", err)
+		}
+
+		if fileInfo.Mode()&os.ModeSymlink == os.ModeSymlink {
+			return "", fmt.Errorf("file %s is a symlink", fileName)
 		}
 		path = realPath
 	}
