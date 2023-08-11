@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	StorePath = "/var/lib/cni/inframanager/"
+	StorePath = "/var/lib/cni/inframanager"
 )
 
 type store interface {

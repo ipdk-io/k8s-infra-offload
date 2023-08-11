@@ -19,13 +19,15 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path"
 	"reflect"
 
+	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	ServicesFile = StorePath + "services_db.json"
+	ServicesFile = path.Join(StorePath, "services_db.json")
 )
 
 func IsServiceStoreEmpty() bool {
@@ -53,22 +55,28 @@ func InitServiceStore(setFwdPipe bool) bool {
 	if _, err := os.Stat(StorePath); errors.Is(err, os.ErrNotExist) {
 		err := os.MkdirAll(StorePath, 0755)
 		if err != nil {
-			log.Error("Failed to create directory ", StorePath)
+			log.Errorf("Failed to create directory %s, err: %s", StorePath, err)
 			return false
 		}
 	}
 
-	/* Create the store file if it doesn't exist */
-	file, err := NewOpenFile(ServicesFile, flags, 0755)
+	verifiedFileName, err := utils.VerifiedFilePath(ServicesFile, StorePath)
 	if err != nil {
-		log.Error("Failed to open", ServicesFile)
+		log.Errorf("Failed to open %s, err: %s", ServicesFile, err)
+		return false
+	}
+
+	/* Create the store file if it doesn't exist */
+	file, err := NewOpenFile(verifiedFileName, flags, 0755)
+	if err != nil {
+		log.Errorf("Failed to open %s, err: %s", ServicesFile, err)
 		return false
 	}
 	file.Close()
 
 	data, err := NewReadFile(ServicesFile)
 	if err != nil {
-		log.Error("Error reading ", ServicesFile, err)
+		log.Errorf("Failed to read %s, err: %s", ServicesFile, err)
 		return false
 	}
 
@@ -78,7 +86,7 @@ func InitServiceStore(setFwdPipe bool) bool {
 
 	err = JsonUnmarshal(data, &ServiceSet.ServiceMap)
 	if err != nil {
-		log.Error("Error unmarshalling data from ", ServicesFile, err)
+		log.Errorf("Failed to unmarshal data from %s, err: %s", ServicesFile, err)
 		return false
 	}
 

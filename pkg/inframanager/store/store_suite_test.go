@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"path"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -53,8 +54,8 @@ var _ = Describe("Storeendpoint", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.StoreEpFile = store.StorePath + "cni_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.StoreEpFile = path.Join(store.StorePath, "cni_db.json")
 			})
 
 			AfterEach(func() {
@@ -93,8 +94,8 @@ var _ = Describe("Storeendpoint", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.StoreEpFile = store.StorePath + "cni_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.StoreEpFile = path.Join(store.StorePath, "cni_db.json")
 			})
 
 			AfterEach(func() {
@@ -153,8 +154,8 @@ var _ = Describe("Storeendpoint", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.StoreEpFile = store.StorePath + "cni_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.StoreEpFile = path.Join(store.StorePath, "cni_db.json")
 			})
 
 			It("writes the data to the store if data is valid and returns true", func() {
@@ -200,8 +201,8 @@ var _ = Describe("Storeendpoint", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.StoreEpFile = store.StorePath + "cni_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.StoreEpFile = path.Join(store.StorePath, "cni_db.json")
 			})
 
 			It("Deletes the data from the store and returns true if data is valid and is present in the store", func() {
@@ -238,8 +239,8 @@ var _ = Describe("Storeendpoint", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.StoreEpFile = store.StorePath + "cni_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.StoreEpFile = path.Join(store.StorePath, "cni_db.json")
 			})
 
 			It("Gets the data from the store and returns true when input is valid", func() {
@@ -289,8 +290,8 @@ var _ = Describe("Storeendpoint", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.StoreEpFile = store.StorePath + "cni_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.StoreEpFile = path.Join(store.StorePath, "cni_db.json")
 				data_valid := store.EndPoint{
 					PodIpAddress:  "10.10.10.4",
 					InterfaceID:   4,
@@ -341,8 +342,8 @@ var _ = Describe("Storeservice", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.ServicesFile = store.StorePath + "services_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.ServicesFile = path.Join(store.StorePath, "services_db.json")
 			})
 
 			AfterEach(func() {
@@ -396,8 +397,8 @@ var _ = Describe("Storeservice", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.ServicesFile = store.StorePath + "services_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.ServicesFile = path.Join(store.StorePath, "services_db.json")
 			})
 
 			AfterEach(func() {
@@ -469,8 +470,8 @@ var _ = Describe("Storeservice", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.ServicesFile = store.StorePath + "services_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.ServicesFile = path.Join(store.StorePath, "services_db.json")
 			})
 
 			AfterEach(func() {
@@ -562,8 +563,8 @@ var _ = Describe("Storeservice", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.ServicesFile = store.StorePath + "services_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.ServicesFile = path.Join(store.StorePath, "services_db.json")
 			})
 
 			AfterEach(func() {
@@ -657,8 +658,8 @@ var _ = Describe("Storeservice", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.ServicesFile = store.StorePath + "services_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.ServicesFile = path.Join(store.StorePath, "services_db.json")
 			})
 
 			AfterEach(func() {
@@ -751,8 +752,8 @@ var _ = Describe("Storeservice", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.ServicesFile = store.StorePath + "services_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.ServicesFile = path.Join(store.StorePath, "services_db.json")
 			})
 
 			AfterEach(func() {
@@ -829,8 +830,8 @@ var _ = Describe("Storeservice", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.ServicesFile = store.StorePath + "services_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.ServicesFile = path.Join(store.StorePath, "services_db.json")
 				ep1 := store.ServiceEndPoint{
 					IpAddress: "10.10.10.1",
 					Port:      8081,
@@ -895,8 +896,8 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.PolicyFile = store.StorePath + "policy_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.PolicyFile = path.Join(store.StorePath, "policy_db.json")
 			})
 
 			AfterEach(func() {
@@ -948,8 +949,8 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.IpsetFile = store.StorePath + "ipset_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.IpsetFile = path.Join(store.StorePath, "ipset_db.json")
 			})
 
 			AfterEach(func() {
@@ -985,8 +986,8 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.WorkerepFile = store.StorePath + "workerep_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.WorkerepFile = path.Join(store.StorePath, "workerep_db.json")
 			})
 
 			AfterEach(func() {
@@ -1024,10 +1025,10 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.PolicyFile = store.StorePath + "policy_db.json"
-				store.IpsetFile = store.StorePath + "ipset_db.json"
-				store.WorkerepFile = store.StorePath + "workerep_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.PolicyFile = path.Join(store.StorePath, "policy_db.json")
+				store.IpsetFile = path.Join(store.StorePath, "ipset_db.json")
+				store.WorkerepFile = path.Join(store.StorePath, "workerep_db.json")
 			})
 
 			AfterEach(func() {
@@ -1193,8 +1194,8 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.PolicyFile = store.StorePath + "policy_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.PolicyFile = path.Join(store.StorePath, "policy_db.json")
 			})
 
 			AfterEach(func() {
@@ -1322,8 +1323,8 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.IpsetFile = store.StorePath + "ipset_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.IpsetFile = path.Join(store.StorePath, "ipset_db.json")
 			})
 
 			AfterEach(func() {
@@ -1379,8 +1380,8 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.WorkerepFile = store.StorePath + "workerep_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.WorkerepFile = path.Join(store.StorePath, "workerep_db.json")
 			})
 
 			AfterEach(func() {
@@ -1420,8 +1421,8 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.PolicyFile = store.StorePath + "policy_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.PolicyFile = path.Join(store.StorePath, "policy_db.json")
 			})
 
 			AfterEach(func() {
@@ -1494,8 +1495,8 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.IpsetFile = store.StorePath + "ipset_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.IpsetFile = path.Join(store.StorePath, "ipset_db.json")
 			})
 
 			AfterEach(func() {
@@ -1562,8 +1563,8 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.WorkerepFile = store.StorePath + "workerep_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.WorkerepFile = path.Join(store.StorePath, "workerep_db.json")
 			})
 
 			AfterEach(func() {
@@ -1604,8 +1605,8 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.PolicyFile = store.StorePath + "policy_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.PolicyFile = path.Join(store.StorePath, "policy_db.json")
 			})
 
 			AfterEach(func() {
@@ -1679,8 +1680,8 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.IpsetFile = store.StorePath + "ipset_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.IpsetFile = path.Join(store.StorePath, "ipset_db.json")
 			})
 
 			AfterEach(func() {
@@ -1725,8 +1726,8 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.WorkerepFile = store.StorePath + "workerep_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.WorkerepFile = path.Join(store.StorePath, "workerep_db.json")
 			})
 
 			AfterEach(func() {
@@ -1767,8 +1768,8 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.PolicyFile = store.StorePath + "policy_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.PolicyFile = path.Join(store.StorePath, "policy_db.json")
 			})
 
 			AfterEach(func() {
@@ -1890,8 +1891,8 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.IpsetFile = store.StorePath + "ipset_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.IpsetFile = path.Join(store.StorePath, "ipset_db.json")
 			})
 
 			AfterEach(func() {
@@ -1952,8 +1953,8 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.WorkerepFile = store.StorePath + "workerep_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.WorkerepFile = path.Join(store.StorePath, "workerep_db.json")
 			})
 
 			AfterEach(func() {
@@ -2012,8 +2013,8 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.PolicyFile = store.StorePath + "policy_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.PolicyFile = path.Join(store.StorePath, "policy_db.json")
 				r1 := store.Rule{
 					Id:        "rule1",
 					PortRange: []uint16{80, 443},
@@ -2077,8 +2078,8 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.IpsetFile = store.StorePath + "ipset_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.IpsetFile = path.Join(store.StorePath, "ipset_db.json")
 				data_valid := store.IpSet{
 					IpsetID:    "1234",
 					IpSetIDx:   1,
@@ -2129,8 +2130,8 @@ var _ = Describe("Storepolicy", func() {
 				var err error
 				tempDir, err = os.MkdirTemp("", "test")
 				Expect(err).ShouldNot(HaveOccurred())
-				store.StorePath = tempDir + "/inframanager/"
-				store.WorkerepFile = store.StorePath + "workerep_db.json"
+				store.StorePath = path.Join(tempDir, "inframanager")
+				store.WorkerepFile = path.Join(store.StorePath, "workerep_db.json")
 				data_valid := store.PolicyWorkerEndPoint{
 					WorkerEp:          "10.10.10.1/24",
 					PolicyNameIngress: []string{"policy1", "policy2"},

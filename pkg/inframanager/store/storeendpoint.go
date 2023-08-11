@@ -19,12 +19,14 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path"
 
+	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	StoreEpFile = StorePath + "cni_db.json"
+	StoreEpFile = path.Join(StorePath, "cni_db.json")
 )
 
 func IsEndPointStoreEmpty() bool {
@@ -52,23 +54,29 @@ func InitEndPointStore(setFwdPipe bool) bool {
 	if _, err := os.Stat(StorePath); errors.Is(err, os.ErrNotExist) {
 		err := os.MkdirAll(StorePath, 0755)
 		if err != nil {
-			log.Error("Failed to create directory, err ", StorePath, err)
+			log.Errorf("Failed to create directory %s, err: %s", StorePath, err)
 			return false
 		}
 	}
 
+	verifiedFileName, err := utils.VerifiedFilePath(StoreEpFile, StorePath)
+	if err != nil {
+		log.Errorf("Failed to open %s, error: %s ", StoreEpFile, err)
+		return false
+	}
+
 	/* Create the store file if it doesn't exist */
-	file, err := NewOpenFile(StoreEpFile, flags, 0755)
+	file, err := NewOpenFile(verifiedFileName, flags, 0755)
 	log.Info("store ep file path:", StoreEpFile)
 	if err != nil {
-		log.Error("Failed to open with error", StoreEpFile, err)
+		log.Errorf("Failed to open %s, error: %s", StoreEpFile, err)
 		return false
 	}
 	file.Close()
 
 	data, err := NewReadFile(StoreEpFile)
 	if err != nil {
-		log.Error("Error reading ", StoreEpFile, err)
+		log.Errorf("Failed to read %s, error: %s", StoreEpFile, err)
 		return false
 	}
 
@@ -78,7 +86,7 @@ func InitEndPointStore(setFwdPipe bool) bool {
 
 	err = JsonUnmarshal(data, &EndPointSet.EndPointMap)
 	if err != nil {
-		log.Error("Error unmarshalling data from ", StoreEpFile, err)
+		log.Errorf("Failed to unmarshal data from %s, error: %s", StoreEpFile, err)
 		return false
 	}
 
