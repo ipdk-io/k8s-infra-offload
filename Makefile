@@ -142,7 +142,7 @@ docker-push-manager:
 	docker push $(INFRAMANAGER_IMAGE)
 
 deploy: kustomize create-kubeconfig-cm
-	cd deploy && cp kustomization.yaml.host kustomization.yaml && $(KUSTOMIZE) edit set image infraagent:latest=$(INFRAAGENT_IMAGE) && $(KUSTOMIZE) edit set image inframanager:latest=$(INFRAMANAGER_IMAGE)
+	cd deploy && $(KUSTOMIZE) edit set image infraagent:latest=$(INFRAAGENT_IMAGE) && $(KUSTOMIZE) edit set image inframanager:latest=$(INFRAMANAGER_IMAGE)
 	$(KUSTOMIZE) build --load-restrictor LoadRestrictionsNone deploy | envsubst | kubectl apply -f -
 
 deploy-split: kustomize create-kubeconfig-cm
