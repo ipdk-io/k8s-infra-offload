@@ -132,14 +132,29 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 
 ## Deploy P4 Kubernetes
 
-1. Run the `create_interfaces.sh` script, which, in addition to creating the
+1. Run the `setup_infra.sh` script, which, in addition to creating the
    specified number of virtual interfaces (TAP type on DPDK target and IDPF
-   Sub-Function type on ES2K), sets up the HugePages and starts infrap4d. The
-   script requires the following environment variables to be set:
-   `SDE_INSTALL`, `IPDK_RECIPE`, `DEPEND_INSTALL`.
+   Sub-Function type on ES2K), sets up the HugePages and starts infrap4d.
 
    ```bash
-   ./scripts/create_interfaces.sh <8/16/32/...>
+   i./setup_infra.sh [-i <8|16|..>] [-m <split|host>] [-r <10.10.0.2>]
+   Configure and setup infrastructure for deployment
+
+
+   Options:
+     -i  Num interfaces to configure for deployment
+     -m  Mode host or split, depending on where Inframanager is configured to run
+     -r  IP address configured by the user on the ACC-ARM complex for
+       connectivity to the Host. This is provisioned using Node Policy - comms
+       channel [[0,3],[4,2]]. This is needed for runnning in split mode. Script will assign
+       an IP addresss from the same subnet on the Host side for connectivity.
+
+
+   Please set following env variables for host deployment:
+     SDE_INSTALL - Default SDE install directory
+     P4CP_INSTALL - Default p4cp install directory
+     DEPEND_INSTALL - Default target dependencies directory
+
    ```
 
    After running the above script, verify that infrap4d is running.
