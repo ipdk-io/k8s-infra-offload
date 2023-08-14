@@ -364,12 +364,18 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 ### Debugging
 
 - The Kubernetes Infrastructure Offload software provides logging capabilities.
-  The logs are dumped in temporary log file. Logs for Infra Manager are put in
-  `/var/log/inframanager/inframanager.log` while logs for Infra Agent are put
-  in `/var/log/infraagent/infraagent.log`). You can inspect logs emitted to stdout
+  Check logs emitted to stdout
   and stderr using `"kubectl logs <pod> -n <namespace>"`.
 
-### Clean Up All
+### FAQs
+
+1. "failed to get a CDQ interface for pod: no free resources left" error is seen on infraagent and remaining pods do not come up
+
+Reason : interface mapping available on host needs to be refreshed
+Solution : Run [cleanup](#Clean-Up) before `make deploy`
+
+
+## Clean Up
    Reset kubernetes which would stop and remove all pods. Then, remove all k8s
    runtime configurations and other files. Finally, stop container services.
 
@@ -417,6 +423,27 @@ Versions of Kubernetes, linux distros, docker and other third-party libraries te
 Install Go package (go version go1.20.5 linux/amd64), following instruction
    at https://go.dev/doc/install
 
+### docker
+```bash
+docker version
+Client: Docker Engine - Community
+ Version:           20.10.12
+ API version:       1.41
+```
+
+### containerd
+```bash
+ctr version
+Client:
+  Version:  1.4.12
+  Revision: 7b11cfaabd73bb80907dd23182b9347b4245eb5d
+
+Server:
+  Version:  1.4.12
+  Revision: 7b11cfaabd73bb80907dd23182b9347b4245eb5d
+  UUID: 76c4517c-609f-472b-97e4-85725e44417b
+
+```
 ### kubernetes
 
 Versions tested and supported with
