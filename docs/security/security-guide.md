@@ -7,8 +7,8 @@ modes for K8s-infra-offload recipe and certificate management.
 
 The gRPC ports are secured using TLS certificates. 
 There are 2 gRPC interfaces in the recipe.
-1. AGENT_CLIENT <-> MGR_SERVER
-2. MGR_CLIENT <-> INFRAP4D  (p4runtime)
+1. infraagent(client) <-> inframanager(server)
+2. inframanager(client) <-> infrap4d  (p4runtime)
 
 A script and reference
 configuration files are available to assist in generating certificates and
@@ -26,9 +26,4 @@ multiple depth levels in order to conform to higher security standards.
 
 See [Using TLS Certificates](docs/guides/security/using-tls-certificates.md)
 for step by step guide to generate and install TLS certificates
-
-# Security Policy
-
-The IPDK community has a documented CVE process [here](https://ipdk.io/development/#cve) that describes
-both how to report a potential security issue as well as who to contact for more information.
 

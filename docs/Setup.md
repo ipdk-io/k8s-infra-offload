@@ -42,13 +42,23 @@ IPU ES2K target.
    Refer to section [inframanager config file update](#inframanager-config-file-update)
    for details.
 
+4. Run `make install` to install all config and other artifacts to relevant
+   directories
 
-4. Build P4-K8s binaries and container images.
+5. Build P4-K8s binaries and container images.
 
    Notes:
    i) For ES2K target, get the K8s P4 artifacts from ES2K release package and
       copy them into p4-k8s/k8s_dp/es2k/. This must be done before running
-      below make commands.
+      below make commands. Ensure the following artifacts are present.
+      ```bash
+      cd k8s_dp/es2k/
+      # ls
+      bf-rt.json  context.json  k8s_dp.p4  k8s_dp.pb.bin  p4Info.txt
+      ```
+      For generating the artifacts, use the
+      [compiling-p4-programs](guides/es2k/compiling-p4-programs.md) guide.
+
    ii) By default, Makefile is configured to build for ES2K target. To build
       for P4-DPDK target, use "tagname=dpdk" argument for both make targets
       below.
@@ -63,7 +73,7 @@ IPU ES2K target.
    make docker-build
    ```
 
-5. Push InfraManager and InfraAgent images into docker private repo either
+6. Push InfraManager and InfraAgent images into docker private repo either
    manually or through make command, using either of the following:
 
    ```bash
@@ -88,7 +98,7 @@ IPU ES2K target.
    ...
    ```
 
-6. Pull images for use by Kubernetes Container Runtime Interface (CRI):
+7. Pull images for use by Kubernetes Container Runtime Interface (CRI):
    ```bash
    crictl pull localhost:5000/inframanager:latest
    crictl pull localhost:5000/infraagent:latest
@@ -387,15 +397,20 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 Reason : interface mapping available on host needs to be refreshed
 Solution : Run [cleanup](#Clean-Up) before `make deploy`
 
+2. CDQ interfaces not coming up.
+
+Reason : IDPF driver failed to load
+Solution : Verify using `dmesg` command that it is the case. Then perform a `modprobe idpf`
 
 ## Clean Up
    Reset kubernetes which would stop and remove all pods. Then, remove all k8s
    runtime configurations and other files. Finally, stop container services.
 
-   Delete all started pods, service deployments and daemonsets
+   Delete all started pods, service deployments, namespace and daemonsets
    ```bash
    kubectl delete pod < >
    kubectl delete deployment < >
+   sudo ip -all netns delete
    make undeploy
    make undeploy-calico
    ```
@@ -433,8 +448,7 @@ Versions of Kubernetes, linux distros, docker and other third-party libraries te
 
 ### golang
 
-Install Go package (go version go1.20.5 linux/amd64), following instruction
-   at https://go.dev/doc/install
+go1.20.5
 
 ### docker
 ```bash
@@ -445,17 +459,11 @@ Client: Docker Engine - Community
 ```
 
 ### containerd
+
+Tested on 1.6.x
+
 ```bash
 ctr version
-Client:
-  Version:  1.4.12
-  Revision: 7b11cfaabd73bb80907dd23182b9347b4245eb5d
-
-Server:
-  Version:  1.4.12
-  Revision: 7b11cfaabd73bb80907dd23182b9347b4245eb5d
-  UUID: 76c4517c-609f-472b-97e4-85725e44417b
-
 ```
 ### kubernetes
 

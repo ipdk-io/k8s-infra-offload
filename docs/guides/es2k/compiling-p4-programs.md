@@ -89,7 +89,7 @@ export OUTPUT_DIR=k8s_dp/es2k/
 
 # Compile p4 program
 p4c-pna-xxp -I/usr/lib -I/usr/share/p4c/p4include -I/usr/share/p4c/idpf-lib \
-            $OUTPUT_DIR/k8s_dp.p4 -o $OUTPUT_DIR/k8s_dp.s \
+            $OUTPUT_DIR/k8s_dp.p4 -o $OUTPUT_DIR/k8s_dp.pb.bin \
             --p4runtime-files $OUTPUT_DIR/k8s_dp.p4info.txt \
             --context $OUTPUT_DIR/k8s_dp.context.json \
             --bfrt $OUTPUT_DIR/k8s_dp.bf-rt.json
@@ -100,7 +100,7 @@ The compiler will generate the following files:
 - k8s_dp.p4info.txt
 - k8s_dp.bf-rt.json
 - k8s_dp.context.json
-- k8s_dp.s
+- k8s_dp.pb.bin
 
 These files are called _P4 artifacts_.
 
@@ -110,7 +110,7 @@ Use `cpt` to prepare the P4 artifacts for deployment:
 
 ```bash
 cpt --npic --format csr --pbd  -o k8s_dp.pkg \
-    cpt_ver.s k8s_dp.s
+    cpt_ver.s k8s_dp.pb.bin
 ```
 
 Please see [Deploying P4 Programs](Setup.md#Deploy-P4-Kubernetes)
