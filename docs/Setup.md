@@ -137,11 +137,10 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
    Sub-Function type on ES2K), sets up the HugePages and starts infrap4d.
 
    ```bash
-   i./setup_infra.sh [-i <8|16|..>] [-m <split|host>] [-r <10.10.0.2>]
-   Configure and setup infrastructure for deployment
+   ./setup_infra.sh -i <8|16|..> -m <split|host> -r <10.10.0.2>
+   ```
 
-
-   Options:
+   Where, the options:
      -i  Num interfaces to configure for deployment
      -m  Mode host or split, depending on where Inframanager is configured to run
      -r  IP address configured by the user on the ACC-ARM complex for
@@ -155,7 +154,6 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
      P4CP_INSTALL - Default p4cp install directory
      DEPEND_INSTALL - Default target dependencies directory
 
-   ```
 
    After running the above script, verify that infrap4d is running.
    ```bash
