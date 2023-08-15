@@ -13,12 +13,14 @@ them to compile a P4 program
 Install the `cpt`, `p4c-pna-xxp`, and `p4-sde` packages on a Fedora 37 x86_64 server,
 from RPMs in the release tarball.
 
+  Extract RPMs from the tarball
   ```bash
-  # Extract RPMs from the tarball
   tar xvzf mev-hw-b0-<release>-fedora37.tgz
   cd host/packages/x86_64/
+  ```
 
-  # Install RPMs on server
+  Install RPMs on server
+  ```bash
   rpm -i cpt-<version>-ci.ts.release.<xxxx>.ehb0.5.15.fc37.x86_64.rpm
   dnf localinstall p4c*.rpm --allowerasing
   dnf localinstall p4-sde*.rpm --allowerasing
@@ -31,15 +33,22 @@ RPMs are not relocatable.
 
 After installing the RPMs, verify the version numbers of the executables:
 
+Set environment variables
 ```bash
-# Set environment variables
 export LD_LIBRARY_PATH=/usr/lib:/usr/lib64:/usr/local/lib:/usr/local/lib64:$LD_LIBRARY_PATH
-
-[root@host ~]# cpt --version
+```
+```bash
+cpt --version
+```
+```text
 Intel(R) Configurable Pipeline Tool Version 3.8.0.16
 Copyright (C) 2022 Intel Corporation.  All rights reserved.
+```
 
-[root@host ~] # p4c-pna-xxp --version
+```bash
+p4c-pna-xxp --version
+```
+```text
 p4c-pna-xxp
 Version 3.0.70.7
 ```
@@ -68,7 +77,9 @@ cd boost_1_69_0/
 Verify the compiler version number:
 
 ```bash
-[root@host ~] # p4c-pna-xxp --version
+p4c-pna-xxp --version
+```
+```text
 p4c-pna-xxp
 Version 3.0.70.7
 ```
@@ -113,5 +124,5 @@ cpt --npic --format csr --pbd  -o k8s_dp.pkg \
     cpt_ver.s k8s_dp.pb.bin
 ```
 
-Please see [Deploying P4 Programs](Setup.md#Deploy-P4-Kubernetes)
+Please see [Deploying P4 Programs](Setup.md)
 for details about deployment.

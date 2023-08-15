@@ -53,7 +53,9 @@ IPU ES2K target.
       below make commands. Ensure the following artifacts are present.
       ```bash
       cd k8s_dp/es2k/
-      # ls
+      ls
+      ```
+      ```
       bf-rt.json  context.json  k8s_dp.p4  k8s_dp.pb.bin  p4Info.txt
       ```
       For generating the artifacts, use the
@@ -375,7 +377,7 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 
 ## Setup Scripts
 
-- The script `./script/create_interfaces.sh` sets up HugePages required by
+- The script `./script/setup_infra.sh` sets up HugePages required by
   DPDK and launches infrap4d (P4 OVS/SDE).
 
 - The script `arp_proxy.sh` creates a separate namespace for the ARP proxy,
@@ -448,7 +450,7 @@ Versions of Kubernetes, linux distros, docker and other third-party libraries te
 
 ### golang
 
-go1.20.5
+go1.20.7
 
 ### docker
 ```bash

@@ -17,7 +17,14 @@ Welcome to k8s-infra-offload's documentation!
 
    Setup
    guides/k8s-docker-containerd-install
+   guides/setup/target-setup-dpdk
+   guides/setup/target-setup-es2k
    guides/es2k/compiling-p4-programs
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Security guide
+
    security/security-guide
    security/using-tls-certificates
 
@@ -26,13 +33,5 @@ Welcome to k8s-infra-offload's documentation!
    :caption: Release notes
 
    ReleaseNotes
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
 
 
