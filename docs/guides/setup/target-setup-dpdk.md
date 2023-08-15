@@ -14,16 +14,16 @@ required as this software includes P4C generated artifacts.
   Clone SDE repository, create install directory, setup environment variable and
   then build
   ```bash
-  # git clone https://github.com/p4lang/p4-dpdk-target.git
-  # cd p4-dpdk-target
-  # git checkout <Branch/SHA for IPDK 23.07>
-  # git submodule update --init --recursive --force
-  # mkdir install
-  # export SDE=$PWD
-  # cd ./tools/setup
-  # source p4sde_env_setup.sh $SDE
-  # cd $SDE
-  # ./build-p4sde.sh -s $SDE_INSTALL
+  git clone https://github.com/p4lang/p4-dpdk-target.git
+  cd p4-dpdk-target
+  git checkout <Branch/SHA for IPDK 23.07>
+  git submodule update --init --recursive --force
+  mkdir install
+  export SDE=$PWD
+  cd ./tools/setup
+  source p4sde_env_setup.sh $SDE
+  cd $SDE
+  ./build-p4sde.sh -s $SDE_INSTALL
   ```
 
 ### Infrap4d
@@ -32,19 +32,19 @@ required as this software includes P4C generated artifacts.
   Make sure to checkout the appropriate
   branch or SHA meant for IPDK 23.07 release. The main steps can be summerized as:
   ```bash
-  # git clone https://github.com/ipdk-io/networking-recipe.git ipdk.recipe
-  # cd ipdk.recipe
-  # git checkout <Branch/SHA for IPDK 23.07>
-  # git submodule update --init --recursive
-  # export IPDK_RECIPE=$PWD
-  # mkdir install
-  # export DEPEND_INSTALL=$PWD/install
-  # cd $IPDK_RECIPE/setup
-  # cmake -B build -DCMAKE_INSTALL_PREFIX=$DEPEND_INSTALL
-  # cmake --build build [-j<njobs>]
+  git clone https://github.com/ipdk-io/networking-recipe.git ipdk.recipe
+  cd ipdk.recipe
+  git checkout <Branch/SHA for IPDK 23.07>
+  git submodule update --init --recursive
+  export IPDK_RECIPE=$PWD
+  mkdir install
+  export DEPEND_INSTALL=$PWD/install
+  cd $IPDK_RECIPE/setup
+  cmake -B build -DCMAKE_INSTALL_PREFIX=$DEPEND_INSTALL
+  cmake --build build [-j<njobs>]
 
-  # cd $IPDK_RECIPE
-  # source ./scripts/dpdk/setup_env.sh $IPDK_RECIPE $SDE_INSTALL $DEPEND_INSTALL
-  # ./make-all.sh --target=dpdk
-  # ./scripts/dpdk/copy_config_files.sh $IPDK_RECIPE $SDE_INSTALL
+  cd $IPDK_RECIPE
+  source ./scripts/dpdk/setup_env.sh $IPDK_RECIPE $SDE_INSTALL $DEPEND_INSTALL
+  ./make-all.sh --target=dpdk
+  ./scripts/dpdk/copy_config_files.sh $IPDK_RECIPE $SDE_INSTALL
   ```

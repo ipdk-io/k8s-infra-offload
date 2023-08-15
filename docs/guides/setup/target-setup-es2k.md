@@ -70,7 +70,7 @@ additional setup.
   the IDPF source also from included source RPM. Then run the following commands
   build and install the IDPF driver.
   ```bash
-  cd <IDPF source base directory>
+  cd idpf         #IDPF source base directory
   make -j silicon
   make install
   ```
