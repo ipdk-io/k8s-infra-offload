@@ -13,23 +13,23 @@ Before installing Kubernetes, do the following:
 
 1. Disable swapping on all devices:
    ```bash
-   # swapoff -a
+   swapoff -a
    ```
  
 2. For Fedora* 33, swapoff doesn't completely turn off the swapping after
    a reboot. Remove the following package:
    ```bash
-   # dnf remove zram-generator-defaults
+   dnf remove zram-generator-defaults
    ```
 
 3. Check if swapping is off:
    ```bash
-   # swapon --show
+   swapon --show
    ```
 
 4. Verify that no zram device is listed:
    ```bash
-   # lsblk
+   lsblk
    ```
 
 5. Remove any swap-specific entries from `/etc/fstab`.
@@ -39,28 +39,28 @@ Before installing Kubernetes, do the following:
 1. Load the following kernel modules and add them to `modules-load` so they
    get automatically loaded during the reboot:
    ```bash
-   # modprobe overlay
-   # modprobe br_netfilter
+   modprobe overlay
+   modprobe br_netfilter
 
-   # cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+   cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
    br_netfilter
    EOF
    ```
 
 2. Enable IPvX forwarding:
    ```bash
-   # sudo tee /etc/sysctl.d/kubernetes.conf<<EOF
+   sudo tee /etc/sysctl.d/kubernetes.conf<<EOF
    net.bridge.bridge-nf-call-ip6tables = 1
    net.bridge.bridge-nf-call-iptables = 1
    net.ipv4.ip_forward = 1
    EOF
-   # sysctl -p
+   sysctl -p
    ```
 
 3. Set `SELinux` in permissive mode and verify:
    ```bash
-   # sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
-   # getenforce
+   sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+   getenforce
    ```
 
 #### Install, Configure, and Run Docker*
