@@ -124,5 +124,5 @@ cpt --npic --format csr --pbd  -o k8s_dp.pkg \
     cpt_ver.s k8s_dp.pb.bin
 ```
 
-Please see [Deploying P4 Programs](docs/Setup.md)
+Please see [Deploy P4 Kubernetes](../../Setup.md#Deploy-P4-Kubernetes)
 for details about deployment.
