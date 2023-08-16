@@ -16,11 +16,13 @@ function check_host_env() {
   fi
 }
 
+# Remove installed drivers
 function uninstall_drivers () {
   rmmod idpf
   rmmod mdev
 }
 
+# Reset kubernetes
 function reset_all () {
   docker container stop registry && docker container rm -v registry
   systemctl restart containerd 2> /dev/null
@@ -32,34 +34,35 @@ function reset_all () {
   rm -rf /var/lib/kubelet &&
   rm -rf /etc/kubernetes/* &&
   rm -rf $HOME/.kube &&
-  rm -rf /var/lib/cni &&
-  rm -rf /var/lib/etcd &&
-  rm -rf /etc/kubernetes/* &&
   rm -rf /etc/pki/inframanager &&
   rm -rf /etc/pki/infraagent &&
   rm -rf /usr/share/stratum/certs &&
   rm -rf /usr/share/stratum/es2k/certs &&
-  rm -rf /var/lib/kubelet &&
   rm -rf /var/lib/dockershim &&
-  rm -rf /var/lib/etcd &&
-  rm -rf /var/lib/cni &&
   rm -rf /etc/cni/net.d/* &&
   rm -rf /etc/stratum &&
   rm -rf /run/stratum
 }
 
+# Clean kubernetes pods created in default namespace
 function clean_k8s_pods () {
-  kubectl delete pods --all -A
+  kubectl delete pods --all -n default
 }
 
+# Delete the leftover namespaces created
 function clean_ns () {
-  ip -all netns delete
+  ns_filter=$(ip netns show | grep -v '^("cni-"|"pod0")')
+
+  for ns in $ns_filter; do
+    ip netns delete "$ns" 2> /dev/null
+  done
 }
 
+# Kill processes started for k8s infra offload
 function pkill_infrap4d_arp () {
   getPid=$(pgrep -f infrap4d)  #  kill if already runnning
   [[ $getPid ]] && kill $getPid
-  getPid=$(pgrep -f arp)  #  kill if already runnning
+  getPid=$(pgrep -f arp-proxy)  #  kill if already runnning
   [[ $getPid ]] && kill $getPid
 }
 
@@ -69,9 +72,9 @@ function pkill_infrap4d_arp () {
 
 echo "Cleaning up deployment on the host"
 check_host_env K8S_RECIPE
-pkill_infrap4d_arp
-cd $K8S_RECIPE && make undeploy-calico && make undeploy 2> /dev/null
 clean_k8s_pods
-uninstall_drivers
+cd $K8S_RECIPE && make undeploy-calico && make undeploy 2> /dev/null
+pkill_infrap4d_arp
 reset_all
+uninstall_drivers
 clean_ns

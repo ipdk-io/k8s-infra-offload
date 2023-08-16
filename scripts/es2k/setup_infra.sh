@@ -8,6 +8,7 @@ MODE="host"
 ARM_SCRIPT="setup_arm_infra.sh"
 K8S_REMOTE="/opt/p4/k8s"
 
+# Check the status of a command and return
 function check_status () {
   local status=$1
   local command="$2"
@@ -46,6 +47,7 @@ get_system_ip() {
   local ip=$(hostname -I | awk '{print $1}')
 }
 
+# Setup system environment for dependency resolution
 function setup_host_dep_env () {
   if [ -f "$P4CP_INSTALL/sbin/setup_env.sh" ]; then
     source $P4CP_INSTALL/sbin/setup_env.sh $P4CP_INSTALL $SDE_INSTALL $DEPEND_INSTALL
@@ -55,14 +57,15 @@ function setup_host_dep_env () {
   fi
 }
 
+# Install host drivers
 function install_drivers () {
   modprobe mdev
   modprobe vfio-pci
   modprobe vfio_iommu_type1
-  #change this to insmod for installing private idpf build
   modprobe idpf
 }
 
+# Get PCI device ID for es2k
 function get_device_id () {
   dev_id=$(lspci | grep 1453 | cut -d ':' -f 1)
   if [ -z "$dev_id" ]; then
@@ -74,19 +77,19 @@ function get_device_id () {
   DEV_BUS=$(echo "$devlink_output" | grep "$dev_id\:")
 }
 
+# Create an interface for arp-proxy
 function create_arp_interface () {
   DEVICE=$((devlink dev show| grep $DEV_BUS) 2> /dev/null)
   echo "$DEVICE"
   input_string=$((devlink port add $DEVICE flavour pcisf pfnum 0 sfnum 101) 2> /dev/null)
-  # split the input string into an array of words
   IFS=' ' read -r -a words <<< "$input_string"
   PORT="${words[0]%:}"
-  #read the response and parse pci/0000:af:00.0/1 to set active
   devlink port func set $PORT state active
   check_status $? "arp proxy port creation"
 
 }
 
+# Create interfaces for the interface pool
 function create_pod_interfaces () {
   DEVICE=$((devlink dev show| grep $DEV_BUS) 2> /dev/null)
   echo "$DEVICE"
@@ -94,14 +97,13 @@ function create_pod_interfaces () {
   do
     let "num = $i + 100"
     input_string=$((devlink port add $DEVICE flavour pcisf pfnum 0 sfnum $num) 2> /dev/null)
-    # split the input string into n array of words
     IFS=' ' read -r -a words <<< "$input_string"
     PORT="${words[0]%:}"
-    #read t{e response}and parse pci/0000:af:00.0/1 to set active
     devlink port func set $PORT state active
   done
 }
 
+# Copy certificates for mTLS in relevant directories
 function copy_certs() {
   if [ -d "$BASE_DIR/tls/certs/infrap4d" ]; then
     if [ ! -d $STRATUM_DIR ]; then
@@ -123,6 +125,7 @@ function copy_certs() {
   fi
 }
 
+# Copy certificates for mTLS in relevant directories
 function copy_cert_to_remote() {
   if [ -d "$BASE_DIR/tls/certs/infrap4d" ]; then
     # copy certs to remote infrap4d dir
@@ -138,6 +141,7 @@ function copy_cert_to_remote() {
   fi
 }
 
+# Copy remote execution script to arm acc
 function copy_script_to_remote() {
   if [ -f "$BASE_DIR/$ARM_SCRIPT" ]; then
     # copy acc setup script to k8s dir
@@ -149,6 +153,7 @@ function copy_script_to_remote() {
     fi
 }
 
+# Setup infrap4d config file with K8S attributes
 function setup_run_env () {
   $P4CP_INSTALL/sbin/copy_config_files.sh $P4CP_INSTALL $SDE_INSTALL
   GROUP=$((${SDE_INSTALL}/bin/vfio_bind.sh 8086:1453) 2> /dev/null)
@@ -156,6 +161,10 @@ function setup_run_env () {
 
   file="/usr/share/stratum/es2k/es2k_skip_p4.conf"
   cp $file $file.bkup
+  replacement=$(lspci | grep 1453 | cut -d ' ' -f 1)
+  orig_string=$(grep -Eo -- '-a [a-z]+\:[0-9]+\.[0-9]' "$file")
+  mod_string=$(echo "$orig_string" | sed -E "s/-a [a-z]+\:[0-9]+\.[0-9]/-a $replacement/")
+  sed -i "s@$orig_string@$mod_string@" "$file"
   sed -i "s/\"iommu_grp_num\": *[0-9][0-9]*/\"iommu_grp_num\": $GROUP_ID/g" "$file"
   sed -i "s/\(\"program-name\": \)\"[^\"]*\"/\1\"k8s_dp\"/" $file
   sed -i "s/\(\"bfrt-config\": \)\"[^\"]*\"/\1\"\/share\/infra\/k8s_dp\/bf-rt.json\"/" $file
@@ -165,6 +174,7 @@ function setup_run_env () {
   sed -i "s/\(\"path\": \)\"[^\"]*\"/\1\"\/share\/infra\/k8s_dp\"/" $file
 }
 
+# Launch infrap4d
 function run_infrap4d () {
   getPid=$(pgrep -f infrap4d)  #  kill if already runnning
   [[ $getPid ]] && kill $getPid
