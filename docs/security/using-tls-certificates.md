@@ -7,7 +7,7 @@ certificates for running k8s-infra-offload recipe.
 The system relies on mTLS (mutual TLS) for authentication.
 
 IPs of the servers using TLS, should be here. If in host mode,
-localhost is used so `127.0.0.1` works. But if in acc mode,
+localhost is used so `127.0.0.1` works. But if in split mode,
 ensure that the IP is present here.
 in the list in the config [openssl.cnf file](scripts/tls/openssl.cnf)
 ```bash
