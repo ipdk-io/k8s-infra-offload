@@ -370,7 +370,7 @@ images in step 8 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 
 3. The service created above can be removed as below:
    ```bash
-   ./steps/cleanup.sh
+   ./scripts/cleanup.sh
    ```
 
 ## Setup Scripts
