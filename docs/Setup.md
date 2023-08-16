@@ -37,15 +37,7 @@ IPU ES2K target.
    git checkout ipdk_v23.07
    ```
 
-3. Update `inframanager/config.yaml` file.
-
-   Refer to section [inframanager config file update](#inframanager-config-file-update)
-   for details.
-
-4. Run `make install` to install all config and other artifacts to relevant
-   directories
-
-5. Build P4-K8s binaries and container images.
+3. Build K8s P4 artifacts
 
    Notes:
    i) For ES2K target, get the K8s P4 artifacts from ES2K release package and
@@ -70,43 +62,8 @@ IPU ES2K target.
    ```bash
    make build
    ```
-   Then build the Kubernetes container images:
-   ```bash
-   make docker-build
-   ```
 
-6. Push InfraManager and InfraAgent images into docker private repo either
-   manually or through make command, using either of the following:
-
-   ```bash
-   make docker-push
-   ```
-   or
-   ```bash
-   docker push localhost:5000/infraagent:latest
-   docker push localhost:5000/inframanager:latest
-   ```
-
-   The docker images should now be listed in the local repository as below.
-   ```bash
-   docker images
-   ```
-   ```none
-   REPOSITORY                             TAG           IMAGE ID       CREATED         SIZE
-   localhost:5000/inframanager            latest        7605ed47e042   5 minutes ago   22.1MB
-   <none>                                 <none>        485d7bc6ec38   5 minutes ago   1.38GB
-   localhost:5000/infraagent              latest        500075b89922   6 minutes ago   68.7MB
-   <none>                                 <none>        dc519d06de56   6 minutes ago   1.68GB
-   ...
-   ```
-
-7. Pull images for use by Kubernetes Container Runtime Interface (CRI):
-   ```bash
-   crictl pull localhost:5000/inframanager:latest
-   crictl pull localhost:5000/infraagent:latest
-   ```
-
-7. Generate the certificates required for the mTLS connection between infraagent,
+4. Generate the certificates required for the mTLS connection between infraagent,
    inframanager, and infrap4d:
    ```bash
    make gen-certs
@@ -119,32 +76,10 @@ IPU ES2K target.
    Note that the above script generates the default keys and certificates and
    uses cipher suites as specified in the `inframanager/config.yaml` file.
 
-### inframanager config file update
+5. Run `make install` to install all config and other artifacts to relevant
+   directories
 
-The config file `inframanager/config.yaml` is used to define the parameters
-which the inframanager will use for the connection establishment with infrap4d
-and for the interfaces created.
-
-All fields have a default value in the file. Please verify if the values
-correspond to the desired values especially arp-mac.
-
-InfraManager section:
-arp-mac: The arp-mac needs to be configured. This should be the
-MAC of the interface the user wants to configure as the ARP-proxy gateway.
-This is the address of the interface which is given to the arp-proxy
-namespace using the `scrips/arp_proxy.sh` script mentioned in
-the [Deploy P4 Kubernetes section](#deploy-p4-kubernetes) for ARP proxy gateway.
-
-If user doesn't wish to use these default keys, certificates, and cipher suites, then
-modify the `scripts/mev/tls/gen_certs.sh` script accordingly before running
-`make gen-certs` and modify the `inframanager/config.yaml` file with preferred
-cipher suites. These changes need to be done prior to the creation of container
-images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
-
-
-## Deploy P4 Kubernetes
-
-1. Run the `setup_infra.sh` script, which, in addition to creating the
+6. Run the `setup_infra.sh` script, which, in addition to creating the
    specified number of virtual interfaces (TAP type on DPDK target and IDPF
    Sub-Function type on ES2K), sets up the HugePages and starts infrap4d.
 
@@ -184,7 +119,7 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
    pci/0000:af:00.0
    ```
 
-2. Run ARP-Proxy script, which creates a new namespace and assigns an interface
+7. Run ARP-Proxy script, which creates a new namespace and assigns an interface
    from the pool of interfaces created in previous step.
    On ES2K target, user needs to explicitly configure the interface to be
    assigned using IFACE environment variable.
@@ -200,15 +135,78 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
    ./scripts/arp_proxy.sh
    ```
 
-   Please note, any changes in config file need to be made before creating the images
+   Please note, any changes in config file need to be made
    as per section [inframanager config file update](#inframanager-config-file-update)
+   before building the images.
 
-3. Initialize and start the core Kubernetes components:
+
+8. Make the docker images. This step builds the Kubernetes container images:
+   ```bash
+   make docker-build
+   ```
+
+9. Push InfraManager and InfraAgent images into docker private repo either
+   manually or through make command, using either of the following:
+
+   ```bash
+   make docker-push
+   ```
+   or
+   ```bash
+   docker push localhost:5000/infraagent:latest
+   docker push localhost:5000/inframanager:latest
+   ```
+
+   The docker images should now be listed in the local repository as below.
+   ```bash
+   docker images
+   ```
+   ```none
+   REPOSITORY                             TAG           IMAGE ID       CREATED         SIZE
+   localhost:5000/inframanager            latest        7605ed47e042   5 minutes ago   22.1MB
+   <none>                                 <none>        485d7bc6ec38   5 minutes ago   1.38GB
+   localhost:5000/infraagent              latest        500075b89922   6 minutes ago   68.7MB
+   <none>                                 <none>        dc519d06de56   6 minutes ago   1.68GB
+   ...
+   ```
+
+10. Pull images for use by Kubernetes Container Runtime Interface (CRI):
+    ```bash
+    crictl pull localhost:5000/inframanager:latest
+    crictl pull localhost:5000/infraagent:latest
+    ```
+
+### inframanager config file update
+
+The config file `inframanager/config.yaml` is used to define the parameters
+which the inframanager will use for the connection establishment with infrap4d
+and for the interfaces created.
+
+All fields have a default value in the file. Please verify if the values
+correspond to the desired values especially arp-mac.
+
+InfraManager section:
+arp-mac: The arp-mac needs to be configured. This should be the
+MAC of the interface the user wants to configure as the ARP-proxy gateway.
+This is the address of the interface which is given to the arp-proxy
+namespace using the `scrips/arp_proxy.sh` script mentioned in
+the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) for ARP proxy gateway.
+
+If user doesn't wish to use these default keys, certificates, and cipher suites, then
+modify the `scripts/mev/tls/gen_certs.sh` script accordingly before running
+`make gen-certs` and modify the `inframanager/config.yaml` file with preferred
+cipher suites. These changes need to be done prior to the creation of container
+images in step 8 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
+
+
+## Deploy P4 Kubernetes
+
+1. Initialize and start the core Kubernetes components:
    ```bash
    kubeadm init --pod-network-cidr=<pod-cidr> --service-cidr=<service-cidr>
    ```
 
-4. Once the Kubernetes control plane initialization has completed successfully,
+2. Once the Kubernetes control plane initialization has completed successfully,
    then do either of the following:
    - As a non-root user:
      ```bash
@@ -221,14 +219,14 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
      export KUBECONFIG=/etc/kubernetes/admin.conf
      ```
 
-5. Install and setup Calico plugin
+3. Install and setup Calico plugin
    ```bash
     cd /usr/local/bin
     curl -L https://github.com/projectcalico/calico/releases/download/v3.24.1/calicoctl-linux-amd64 -o kubectl-calico
     chmod +x kubectl-calico
    ```
 
-6. Remove taints from the node.
+4. Remove taints from the node.
    For single node deployment, the node must be untainted to allow worker pods
    to share the node with control plane. The taint to remove is "control-plane"
    or "master" or both. These taints can be removed as shown:
@@ -237,13 +235,13 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
    kubectl taint node <node-name> node-role.kubernetes.io/master-
    ```
 
-7. Create Kubernetes secrets from the generated certificates. The infraagent and
+5. Create Kubernetes secrets from the generated certificates. The infraagent and
    inframanager read the certificates from the secrets.
    ```bash
    make tls-secrets
    ```
 
-8. Start the deployments:
+6. Start the deployments:
    ```bash
    make deploy
    make deploy-calico
