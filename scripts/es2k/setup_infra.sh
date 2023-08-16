@@ -1,16 +1,12 @@
 #!/bin/bash
 
-#Copyright (C) 2021 Intel Corporation
+#Copyright (C) 2023 Intel Corporation
 #SPDX-License-Identifier: Apache-2.0
-
-set -o pipefail
-
-set -e
 
 STRATUM_DIR="/usr/share/stratum"
 MODE="host"
 ARM_SCRIPT="setup_arm_infra.sh"
-P4K8S_INSTALL="/opt/p4/k8s"
+K8S_REMOTE="/opt/p4/k8s"
 
 function check_status () {
   local status=$1
@@ -29,17 +25,18 @@ function launch_on_remote {
     check_status $? "ssh $REMOTE_HOST \"$script\" \"$arg\""
 }
 
-function check_p4cp_host_env() {
+function check_host_env() {
   var_names=("$@")
   for var_name in "${var_names[@]}"; do
     [ -z "${!var_name}" ] && echo "Please refer to p4cp recipe and set $var_name." && var_unset=true
   done
   if [[ -n "$var_unset" ]];
-  then 
+  then
     echo "All following env variables must be set - "
     echo "SDE_INSTALL - Path to SDE install"
     echo "P4CP_INSTALL - Path to P4CP install"
     echo "DEPEND_INSTALL - Path to installed P4CP dependencies"
+    echo "K8S_RECIPE - Path to K8S recipe"
     exit 1
   fi
 }
@@ -66,8 +63,19 @@ function install_drivers () {
   modprobe idpf
 }
 
+function get_device_id () {
+  dev_id=$(lspci | grep 1453 | cut -d ':' -f 1)
+  if [ -z "$dev_id" ]; then
+    echo "No matching dev_id found."
+    exit 1
+  fi
+
+  devlink_output=$(devlink dev show)
+  DEV_BUS=$(echo "$devlink_output" | grep "$dev_id\:")
+}
+
 function create_arp_interface () {
-  DEVICE=$((devlink dev show) 2> /dev/null)
+  DEVICE=$((devlink dev show| grep $DEV_BUS) 2> /dev/null)
   echo "$DEVICE"
   input_string=$((devlink port add $DEVICE flavour pcisf pfnum 0 sfnum 101) 2> /dev/null)
   # split the input string into an array of words
@@ -80,7 +88,8 @@ function create_arp_interface () {
 }
 
 function create_pod_interfaces () {
-  DEVICE=$((devlink dev show) 2> /dev/null)                                                                  echo "$DEVICE"
+  DEVICE=$((devlink dev show| grep $DEV_BUS) 2> /dev/null)
+  echo "$DEVICE"
   for (( i=2; i<=$IF_MAX; i++ ))
   do
     let "num = $i + 100"
@@ -106,6 +115,7 @@ function copy_certs() {
     rm -rf $STRATUM_DIR/certs/stratum.crt
     rm -rf $STRATUM_DIR/certs/stratum.key
     cp $BASE_DIR/tls/certs/infrap4d/* /usr/share/stratum/es2k/certs
+    mkdir -p /usr/share/stratum/certs
     cp $BASE_DIR/tls/certs/infrap4d/* /usr/share/stratum/certs
   else
     echo "Missing infrap4d certificates. Run \"make gen-certs\" and try again."
@@ -143,12 +153,12 @@ function setup_run_env () {
   $P4CP_INSTALL/sbin/copy_config_files.sh $P4CP_INSTALL $SDE_INSTALL
   GROUP=$((${SDE_INSTALL}/bin/vfio_bind.sh 8086:1453) 2> /dev/null)
   GROUP_ID=$(echo "$GROUP" | grep -o "Group = [0-9]*" | awk '{print $3}')
-  
+
   file="/usr/share/stratum/es2k/es2k_skip_p4.conf"
   cp $file $file.bkup
   sed -i "s/\"iommu_grp_num\": *[0-9][0-9]*/\"iommu_grp_num\": $GROUP_ID/g" "$file"
   sed -i "s/\(\"program-name\": \)\"[^\"]*\"/\1\"k8s_dp\"/" $file
-  sed -i "s/\(\"bfrt-config\": \)\"[^\"]*\"/\1\"\/share\/infra\/k8s_dp\/bf-rt.json\"/" $file 
+  sed -i "s/\(\"bfrt-config\": \)\"[^\"]*\"/\1\"\/share\/infra\/k8s_dp\/bf-rt.json\"/" $file
   sed -i "s/\(\"p4_pipeline_name\": \)\"[^\"]*\"/\1\"main\"/" $file
   sed -i "s/\(\"context\": \)\"[^\"]*\"/\1\"\/share\/infra\/k8s_dp\/context.json\"/" $file
   sed -i "s/\(\"config\": \)\"[^\"]*\"/\1\"\/share\/infra\/k8s_dp\/tofino.bin\"/" $file
@@ -169,7 +179,8 @@ function run_infrap4d () {
 ##### main ##################################
 #############################################
 
-BASE_DIR="$(dirname "$(readlink -f "$0")")"
+#BASE_DIR="$(dirname "$(readlink -f "$0")")"
+BASE_DIR="$K8S_RECIPE/scripts"
 IF_MAX=8
 MODE="host"
 REMOTE_HOST="10.10.0.2"
@@ -177,21 +188,23 @@ REMOTE_HOST="10.10.0.2"
 # Displays help text
 usage() {
   echo ""
-  echo "Usage: $0 [-i <8|16|..>] [-m <split|host>] [-r <10.10.0.2>]" 1>&2;
-  echo "Configure and setup infrastructure for deployment"
+  echo "Usage: $0 < -i 8|16|.. > < -m host|split > < -r 10.10.0.2 >" 1>&2;
+  echo ""
+  echo "Configure and setup k8s infrastructure for deployment"
   echo ""
   echo "Options:"
   echo "  -i  Num interfaces to configure for deployment"
   echo "  -m  Mode host or split, depending on where Inframanager is configured to run"
   echo "  -r  IP address configured by the user on the ACC-ARM complex for
     connectivity to the Host. This is provisioned using Node Policy - comms
-    channel "[[0,3],[4,2]]". This is needed for runnning in split mode. Script will assign
+    channel "[[0,3],[4,2]]". This must be specified in split mode. Script will assign
     an IP addresss from the same subnet on the Host side for connectivity."
   echo ""
   echo " Please set following env variables for host deployment:"
   echo "  SDE_INSTALL - Default SDE install directory"
-  echo "  p4CP_INSTALL - Default p4cp install directory"
+  echo "  P4CP_INSTALL - Default p4cp install directory"
   echo "  DEPEND_INSTALL - Default target dependencies directory"
+  echo "  K8S_RECIPE - Path to K8S recipe on the host"
   echo ""
   exit 1
 }
@@ -237,16 +250,18 @@ fi
 IF_MAX=$i
 MODE=$m
 REMOTE_HOST=$r
+DEV_BUS="af"
 echo "$IF_MAX $MODE $REMOTE_HOST"
 
 if [ $MODE = "host" ]; then
   echo "Setting up p4k8s on host"
-  check_p4cp_host_env SDE_INSTALL P4CP_INSTALL DEPEND_INSTALL
+  check_host_env SDE_INSTALL P4CP_INSTALL DEPEND_INSTALL K8S_RECIPE
   setup_host_dep_env
   setup_run_env
   install_drivers
-  sleep 3
+  sleep 4
   copy_certs
+  get_device_id
   create_arp_interface
   create_pod_interfaces
   # Run infrap4d
@@ -265,7 +280,7 @@ else
   launch_on_remote "/usr/share/stratum/es2k/generate-certs.sh" ""
   copy_cert_to_remote
   SYSTEM_IP=$(get_system_ip)
-  launch_on_remote "$P4K8S_INSTALL/$ARM_SCRIPT" "$SYSTEM_IP"
+  launch_on_remote "$K8S_REMOTE/$ARM_SCRIPT" "$SYSTEM_IP"
   create_arp_interface
   create_pod_interfaces
   echo "Remote script launched successfully!"
