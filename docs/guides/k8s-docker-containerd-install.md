@@ -13,23 +13,23 @@ Before installing Kubernetes, do the following:
 
 1. Disable swapping on all devices:
    ```bash
-   # swapoff -a
+   swapoff -a
    ```
  
 2. For Fedora* 33, swapoff doesn't completely turn off the swapping after
    a reboot. Remove the following package:
    ```bash
-   # dnf remove zram-generator-defaults
+   dnf remove zram-generator-defaults
    ```
 
 3. Check if swapping is off:
    ```bash
-   # swapon --show
+   swapon --show
    ```
 
 4. Verify that no zram device is listed:
    ```bash
-   # lsblk
+   lsblk
    ```
 
 5. Remove any swap-specific entries from `/etc/fstab`.
@@ -39,28 +39,28 @@ Before installing Kubernetes, do the following:
 1. Load the following kernel modules and add them to `modules-load` so they
    get automatically loaded during the reboot:
    ```bash
-   # modprobe overlay
-   # modprobe br_netfilter
+   modprobe overlay
+   modprobe br_netfilter
 
-   # cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+   cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
    br_netfilter
    EOF
    ```
 
 2. Enable IPvX forwarding:
    ```bash
-   # sudo tee /etc/sysctl.d/kubernetes.conf<<EOF
+   sudo tee /etc/sysctl.d/kubernetes.conf<<EOF
    net.bridge.bridge-nf-call-ip6tables = 1
    net.bridge.bridge-nf-call-iptables = 1
    net.ipv4.ip_forward = 1
    EOF
-   # sysctl -p
+   sysctl -p
    ```
 
 3. Set `SELinux` in permissive mode and verify:
    ```bash
-   # sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
-   # getenforce
+   sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+   getenforce
    ```
 
 #### Install, Configure, and Run Docker*
@@ -70,16 +70,16 @@ Before installing Kubernetes, do the following:
    runtime is containerd.
 
    ```bash
-   # dnf update -y
-   # dnf install -y dnf-plugins-core
-   # dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
-   # dnf install docker-ce docker-ce-cli containerd.io
+   dnf update -y
+   dnf install -y dnf-plugins-core
+   dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+   dnf install docker-ce docker-ce-cli containerd.io
    ```
 
 2. Create or edit `/etc/systemd/system/docker.service.d/http-proxy.conf` with
    proxies, if your setup is behind a proxy. It should have contents like the
    following:
-   ```bash
+   ```text
    [Service]
    Environment="HTTPS_PROXY=<proxy-url>"
    Environment="HTTP_PROXY=<proxy-url>"
@@ -88,7 +88,7 @@ Before installing Kubernetes, do the following:
 
 3. Set the storage driver as overlay2 and use cgroupdriver:
    ```bash
-   # mkdir -p /etc/docker
+   mkdir -p /etc/docker
    ```
 
 4. Create `/edit /etc/docker/daemon.json` to have contents as shown below.
@@ -122,23 +122,28 @@ Before installing Kubernetes, do the following:
  
 6. Start the Docker daemon:
    ```bash
-   # systemctl start docker
+   systemctl start docker
    ```
 
 7. Create a local registry and verify that it is running. Note that this
    requires Docker login credentials to set up an authentication token on
    a local node.
    ```bash
-   # docker login
+   docker login
+   ```
+   ```text
    Authenticating with existing credentials...
    WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
    Configure a credential helper to remove this warning. See
    https://docs.docker.com/engine/reference/commandline/login/#credentials-store
  
    Login Succeeded
-
-   # docker run -d -p 5000:5000 --restart=always --name registry registry:2
-   # docker ps
+   ```
+   ```bash
+   docker run -d -p 5000:5000 --restart=always --name registry registry:2
+   docker ps
+   ```
+   ```text
    CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                    NAMES
     99d9b2ede2ea        registry:2          "/entrypoint.sh /etc…"   36 seconds ago      Up 35 seconds       0.0.0.0:5000->5000/tcp   registry
    ```
@@ -146,7 +151,9 @@ Before installing Kubernetes, do the following:
 #### Install, Configure, and Run Containerd
 1. Create `/etc/crictl.yaml` with following contents:
    ```bash
-   # cat /etc/crictl.yaml
+   cat /etc/crictl.yaml
+   ```
+   ```text
    runtime-endpoint: unix:///run/containerd/containerd.sock
    image-endpoint: unix:///run/containerd/containerd.sock
    timeout: 10
@@ -155,9 +162,9 @@ Before installing Kubernetes, do the following:
 
 2. Enable containerd services and configure default settings and proxies:
    ```bash
-   # systemctl enable containerd.service
-   # mkdir -p /etc/containerd
-   # containerd config default | tee /etc/containerd/config.toml
+   systemctl enable containerd.service
+   mkdir -p /etc/containerd
+   containerd config default | tee /etc/containerd/config.toml
    ```
 
 3. In the `/etc/containerd/config.toml` file, under
@@ -186,7 +193,9 @@ Before installing Kubernetes, do the following:
    10.244.0.0/16, service network is 10.96.0.0/16, and API server, local API
    endpoint, control plane endpoint is 192.168.110.5.
    ```bash
-   # cat /usr/lib/systemd/system/containerd.service.d/proxy.conf
+   cat /usr/lib/systemd/system/containerd.service.d/proxy.conf
+   ```
+   ```text
    [Service]
    Environment="HTTP_PROXY=<proxy-url>"
    Environment="HTTPS_PROXY=<proxy-url>"
@@ -204,12 +213,14 @@ Before installing Kubernetes, do the following:
 
 7. Start the containerd services:
    ```bash
-   # systemctl start containerd.service
+   systemctl start containerd.service
    ```
 
 8. Check the status. It should show it running as below:
    ```bash
-   # systemctl status containerd.service
+   systemctl status containerd.service
+   ```
+   ```text
      containerd.service - containerd container runtime
           Loaded: loaded (/usr/lib/systemd/system/containerd.service; enabled; vendor preset: disabled)
          Drop-In: /usr/lib/systemd/system/containerd.service.d
@@ -239,7 +250,7 @@ Before installing Kubernetes, do the following:
 #### Install Kubernetes Components
 1. Set up the Kubernetes repo manager:
    ```bash
-   # cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+   cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
    [kubernetes]
    name=Kubernetes
    baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
@@ -250,6 +261,8 @@ Before installing Kubernetes, do the following:
    EOF
    # dnf install -y kubelet-1.25.1 kubeadm-1.25.1 kubectl-1.25.1 containernetworking-plugins cri-tools-1.25.0 --disableexcludes=kubernetes
    # dnf list installed | grep kube
+   ```
+   ```text
    cri-tools.x86_64                                   1.25.0-0                            @kubernetes
    kubeadm.x86_64                                     1.25.0-0                            @kubernetes
    kubectl.x86_64                                     1.25.0-0                            @kubernetes
@@ -258,9 +271,10 @@ Before installing Kubernetes, do the following:
 
 2. Pull Kubernetes images and verify the downloaded images:
    ```bash
-   # kubeadm config images pull
-
-   # crictl images ls
+   kubeadm config images pull
+   crictl images ls
+   ```
+   ```text
    IMAGE                                TAG                 IMAGE ID            SIZE
    docker.io/calico/cni                      v3.24.1             67fd9ab484510       87.4MB
    docker.io/calico/kube-controllers         v3.24.1             f9c3c1813269c       31.1MB
@@ -275,8 +289,11 @@ Before installing Kubernetes, do the following:
    registry.k8s.io/kube-proxy                v1.25.0             58a9a0c6d96f2       20.3MB
    registry.k8s.io/kube-scheduler            v1.25.0             bef2cf3115095       15.8MB
    registry.k8s.io/pause                     3.8                 4873874c08efc       311kB
- 
-   # kubeadm config images list
+   ```
+   ```bash
+   kubeadm config images list
+   ```
+   ```text
    registry.k8s.io/kube-apiserver:v1.25.0
    registry.k8s.io/kube-controller-manager:v1.25.0
    registry.k8s.io/kube-scheduler:v1.25.0
@@ -288,5 +305,5 @@ Before installing Kubernetes, do the following:
 
 3. Enable the kubelet services:
    ```bash
-   # systemctl enable kubelet.service
+   systemctl enable kubelet.service
    ```

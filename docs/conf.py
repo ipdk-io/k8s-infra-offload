@@ -32,6 +32,7 @@ release = '23.07'
 # ones.
 extensions = [
 'sphinx_rtd_theme',
+'sphinx_copybutton',
 'myst_parser'
 ]
 

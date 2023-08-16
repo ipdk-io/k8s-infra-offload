@@ -37,18 +37,22 @@ IPU ES2K target.
    git checkout ipdk_v23.07
    ```
 
-3. Update `inframanager/config.yaml` file.
-
-   Refer to section [inframanager config file update](#inframanager-config-file-update)
-   for details.
-
-
-4. Build P4-K8s binaries and container images.
+3. Build K8s P4 artifacts
 
    Notes:
    i) For ES2K target, get the K8s P4 artifacts from ES2K release package and
       copy them into p4-k8s/k8s_dp/es2k/. This must be done before running
-      below make commands.
+      below make commands. Ensure the following artifacts are present.
+      ```bash
+      cd k8s_dp/es2k/
+      ls
+      ```
+      ```
+      bf-rt.json  context.json  k8s_dp.p4  k8s_dp.pb.bin  p4Info.txt
+      ```
+      For generating the artifacts, use the
+      [compiling-p4-programs](guides/es2k/compiling-p4-programs.md) guide.
+
    ii) By default, Makefile is configured to build for ES2K target. To build
       for P4-DPDK target, use "tagname=dpdk" argument for both make targets
       below.
@@ -58,12 +62,90 @@ IPU ES2K target.
    ```bash
    make build
    ```
-   Then build the Kubernetes container images:
+
+4. Generate the certificates required for the mTLS connection between infraagent,
+   inframanager, and infrap4d:
+   ```bash
+   make gen-certs
+   ```
+   Note that the above script generates the default keys and certificates and
+   uses cipher suites as specified in the `inframanager/config.yaml` file.
+   Refer to section [inframanager config file update](#inframanager-config-file-update)
+   for any custom cipher suite, key, certificate change.
+
+   Note that the above script generates the default keys and certificates and
+   uses cipher suites as specified in the `inframanager/config.yaml` file.
+
+5. Run `make install` to install all config and other artifacts to relevant
+   directories
+
+6. Run the `setup_infra.sh` script, which, in addition to creating the
+   specified number of virtual interfaces (TAP type on DPDK target and IDPF
+   Sub-Function type on ES2K), sets up the HugePages and starts infrap4d.
+
+   ```bash
+   ./setup_infra.sh -i <8|16|..> -m <split|host> -r <10.10.0.2>
+   ```
+
+   Where, the options:
+     -i  Num interfaces to configure for deployment
+     -m  Mode host or split, depending on where Inframanager is configured to run
+     -r  IP address configured by the user on the ACC-ARM complex for
+       connectivity to the Host. This is provisioned using Node Policy - comms
+       channel [[0,3],[4,2]]. This is needed for runnning in split mode. Script will assign
+       an IP addresss from the same subnet on the Host side for connectivity.
+
+
+   Please set following env variables for host deployment:
+     SDE_INSTALL - Default SDE install directory
+     P4CP_INSTALL - Default p4cp install directory
+     DEPEND_INSTALL - Default target dependencies directory
+
+
+   After running the above script, verify that infrap4d is running.
+   ```bash
+   ps -ef | grep infrap4d
+   ```
+   ```none
+   root     1254701       1 99 13:34 ?        00:13:10 /host/networking-recipe/install/sbin/infrap4d
+   ```
+
+   On ES2K target, this script will also load the IDPF driver. Verify the
+   presence of the PF:
+   ```bash
+   devlink dev show
+   ```
+   ```none
+   pci/0000:af:00.0
+   ```
+
+7. Run ARP-Proxy script, which creates a new namespace and assigns an interface
+   from the pool of interfaces created in previous step.
+   On ES2K target, user needs to explicitly configure the interface to be
+   assigned using IFACE environment variable.
+   ```bash
+   export IFACE=ens801f0d4
+   ```
+
+   For DPDK target, change the interfaceType in config.yaml file to "tap".
+
+   The script finally runs the arp-proxy on that assigned interface, within the
+   isolated namespace.
+   ```bash
+   ./scripts/arp_proxy.sh
+   ```
+
+   Please note, any changes in config file need to be made
+   as per section [inframanager config file update](#inframanager-config-file-update)
+   before building the images.
+
+
+8. Make the docker images. This step builds the Kubernetes container images:
    ```bash
    make docker-build
    ```
 
-5. Push InfraManager and InfraAgent images into docker private repo either
+9. Push InfraManager and InfraAgent images into docker private repo either
    manually or through make command, using either of the following:
 
    ```bash
@@ -88,24 +170,11 @@ IPU ES2K target.
    ...
    ```
 
-6. Pull images for use by Kubernetes Container Runtime Interface (CRI):
-   ```bash
-   crictl pull localhost:5000/inframanager:latest
-   crictl pull localhost:5000/infraagent:latest
-   ```
-
-7. Generate the certificates required for the mTLS connection between infraagent,
-   inframanager, and infrap4d:
-   ```bash
-   make gen-certs
-   ```
-   Note that the above script generates the default keys and certificates and
-   uses cipher suites as specified in the `inframanager/config.yaml` file.
-   Refer to section [inframanager config file update](#inframanager-config-file-update)
-   for any custom cipher suite, key, certificate change.
-
-   Note that the above script generates the default keys and certificates and
-   uses cipher suites as specified in the `inframanager/config.yaml` file.
+10. Pull images for use by Kubernetes Container Runtime Interface (CRI):
+    ```bash
+    crictl pull localhost:5000/inframanager:latest
+    crictl pull localhost:5000/infraagent:latest
+    ```
 
 ### inframanager config file update
 
@@ -121,69 +190,23 @@ arp-mac: The arp-mac needs to be configured. This should be the
 MAC of the interface the user wants to configure as the ARP-proxy gateway.
 This is the address of the interface which is given to the arp-proxy
 namespace using the `scrips/arp_proxy.sh` script mentioned in
-the [Deploy P4 Kubernetes section](#deploy-p4-kubernetes) for ARP proxy gateway.
+the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) for ARP proxy gateway.
 
 If user doesn't wish to use these default keys, certificates, and cipher suites, then
 modify the `scripts/mev/tls/gen_certs.sh` script accordingly before running
 `make gen-certs` and modify the `inframanager/config.yaml` file with preferred
 cipher suites. These changes need to be done prior to the creation of container
-images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
+images in step 8 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 
 
 ## Deploy P4 Kubernetes
 
-1. Run the `create_interfaces.sh` script, which, in addition to creating the
-   specified number of virtual interfaces (TAP type on DPDK target and IDPF
-   Sub-Function type on ES2K), sets up the HugePages and starts infrap4d. The
-   script requires the following environment variables to be set:
-   `SDE_INSTALL`, `IPDK_RECIPE`, `DEPEND_INSTALL`.
-
-   ```bash
-   ./scripts/create_interfaces.sh <8/16/32/...>
-   ```
-
-   After running the above script, verify that infrap4d is running.
-   ```bash
-   ps -ef | grep infrap4d
-   ```
-   ```none
-   root     1254701       1 99 13:34 ?        00:13:10 /host/networking-recipe/install/sbin/infrap4d
-   ```
-
-   On ES2K target, this script will also load the IDPF driver. Verify the
-   presence of the PF:
-   ```bash
-   devlink dev show
-   ```
-   ```none
-   pci/0000:af:00.0
-   ```
-
-2. Run ARP-Proxy script, which creates a new namespace and assigns an interface
-   from the pool of interfaces created in previous step.
-   On ES2K target, user needs to explicitly configure the interface to be
-   assigned using IFACE environment variable.
-   ```bash
-   export IFACE=ens801f0d4
-   ```
-
-   For DPDK target, change the interfaceType in config.yaml file to "tap".
-
-   The script finally runs the arp-proxy on that assigned interface, within the
-   isolated namespace.
-   ```bash
-   ./scripts/arp_proxy.sh
-   ```
-
-   Please note, any changes in config file need to be made before creating the images
-   as per section [inframanager config file update](#inframanager-config-file-update)
-
-3. Initialize and start the core Kubernetes components:
+1. Initialize and start the core Kubernetes components:
    ```bash
    kubeadm init --pod-network-cidr=<pod-cidr> --service-cidr=<service-cidr>
    ```
 
-4. Once the Kubernetes control plane initialization has completed successfully,
+2. Once the Kubernetes control plane initialization has completed successfully,
    then do either of the following:
    - As a non-root user:
      ```bash
@@ -196,7 +219,14 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
      export KUBECONFIG=/etc/kubernetes/admin.conf
      ```
 
-5. Remove taints from the node.
+3. Install and setup Calico plugin
+   ```bash
+    cd /usr/local/bin
+    curl -L https://github.com/projectcalico/calico/releases/download/v3.24.1/calicoctl-linux-amd64 -o kubectl-calico
+    chmod +x kubectl-calico
+   ```
+
+4. Remove taints from the node.
    For single node deployment, the node must be untainted to allow worker pods
    to share the node with control plane. The taint to remove is "control-plane"
    or "master" or both. These taints can be removed as shown:
@@ -205,13 +235,13 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
    kubectl taint node <node-name> node-role.kubernetes.io/master-
    ```
 
-6. Create Kubernetes secrets from the generated certificates. The infraagent and
+5. Create Kubernetes secrets from the generated certificates. The infraagent and
    inframanager read the certificates from the secrets.
    ```bash
    make tls-secrets
    ```
 
-7. Start the deployments:
+6. Start the deployments:
    ```bash
    make deploy
    make deploy-calico
@@ -340,34 +370,47 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 
 3. The service created above can be removed as below:
    ```bash
-   ./steps/cleanup.sh
+   ./scripts/cleanup.sh
    ```
-
-## Debugging
-
-- The Kubernetes Infrastructure Offload software provides logging capabilities.
-  The logs are dumped in temporary log file. Logs for Infra Manager are put in
-  `/var/log/inframanager/inframanager.log` while logs for Infra Agent are put
-  in `/var/log/infraagent/infraagent.log`). You can inspect logs emitted to stdout
-  and stderr using `"kubectl logs <pod> -n <namespace>"`.
 
 ## Setup Scripts
 
-- The script `./script/create_interfaces.sh` sets up HugePages required by
+- The script `./script/setup_infra.sh` sets up HugePages required by
   DPDK and launches infrap4d (P4 OVS/SDE).
 
 - The script `arp_proxy.sh` creates a separate namespace for the ARP proxy,
   assigns an interface to it, and then launches the ARP proxy within the
   isolated namespace.
 
-## Clean Up All
+## Troubleshooting
+
+### Debugging
+
+- The Kubernetes Infrastructure Offload software provides logging capabilities.
+  Check logs emitted to stdout
+  and stderr using `"kubectl logs <pod> -n <namespace>"`.
+
+### FAQs
+
+1. "failed to get a CDQ interface for pod: no free resources left" error is seen on infraagent and remaining pods do not come up
+
+Reason : interface mapping available on host needs to be refreshed
+Solution : Run [cleanup](#Clean-Up) before `make deploy`
+
+2. CDQ interfaces not coming up.
+
+Reason : IDPF driver failed to load
+Solution : Verify using `dmesg` command that it is the case. Then perform a `modprobe idpf`
+
+## Clean Up
    Reset kubernetes which would stop and remove all pods. Then, remove all k8s
    runtime configurations and other files. Finally, stop container services.
 
-   Delete all started pods, service deployments and daemonsets
+   Delete all started pods, service deployments, namespace and daemonsets
    ```bash
    kubectl delete pod < >
    kubectl delete deployment < >
+   sudo ip -all netns delete
    make undeploy
    make undeploy-calico
    ```
@@ -392,3 +435,50 @@ images in step 4 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
    pkill arp_proxy
    pkill infrap4d
    ```
+## Versions and Third-parties
+
+Versions of Kubernetes, linux distros, docker and other third-party libraries tested with (calico, felix)
+
+### OS
+
+* Linux
+  * Fedora 33
+  * Fedora 37
+  * Rocky Linux 9.1
+
+### golang
+
+go1.20.7
+
+### docker
+```bash
+docker version
+Client: Docker Engine - Community
+ Version:           20.10.12
+ API version:       1.41
+```
+
+### containerd
+
+Tested on 1.6.x
+
+```bash
+ctr version
+```
+### kubernetes
+
+Versions tested and supported with
+
+1.25.x
+
+```bash
+$ dnf list installed | grep kube
+cri-tools.x86_64                                 1.25.2-0
+kubeadm.x86_64                                   1.25.4-0
+kubectl.x86_64                                   1.25.4-0
+kubelet.x86_64                                   1.25.4-0
+```
+
+### Calico
+
+v3.24.1
