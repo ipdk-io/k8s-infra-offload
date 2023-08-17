@@ -10,6 +10,11 @@ resources:
 
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+configMapGenerator:
+- files:
+  - ../inframanager/config.yaml
+  name: inframanager-config
+  namespace: kube-system
 images:
 - name: infraagent:latest
 - name: inframanager:latest
