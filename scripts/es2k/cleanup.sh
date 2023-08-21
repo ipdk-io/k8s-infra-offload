@@ -18,12 +18,14 @@ function check_host_env() {
 
 # Remove installed drivers
 function uninstall_drivers () {
+  echo "uninstalling drivers"
   rmmod idpf
   rmmod mdev
 }
 
 # Reset kubernetes
 function reset_all () {
+  echo "resetting Kubernetes and infra settings"
   docker container stop registry && docker container rm -v registry
   systemctl restart containerd 2> /dev/null
   kubeadm reset -f &&
@@ -46,11 +48,13 @@ function reset_all () {
 
 # Clean kubernetes pods created in default namespace
 function clean_k8s_pods () {
+  echo "clean k8s pods in default namespace"
   kubectl delete pods --all -n default
 }
 
 # Delete the leftover namespaces created
 function clean_ns () {
+  echo "deleting network namespaces"
   ns_filter=$(ip netns show | grep -v '^("cni-"|"pod0")')
 
   for ns in $ns_filter; do
@@ -60,6 +64,7 @@ function clean_ns () {
 
 # Kill processes started for k8s infra offload
 function pkill_infrap4d_arp () {
+  echo "killing infrap4d & arp-proxy processes"
   getPid=$(pgrep -f infrap4d)  #  kill if already runnning
   [[ $getPid ]] && kill $getPid
   getPid=$(pgrep -f arp-proxy)  #  kill if already runnning

@@ -62,6 +62,7 @@ function install_drivers () {
   modprobe mdev
   modprobe vfio-pci
   modprobe vfio_iommu_type1
+  # change this with insmod in case of new idpf driver
   modprobe idpf
 }
 
@@ -116,9 +117,9 @@ function copy_certs() {
     rm -rf $STRATUM_DIR/certs/client.key
     rm -rf $STRATUM_DIR/certs/stratum.crt
     rm -rf $STRATUM_DIR/certs/stratum.key
-    cp $BASE_DIR/tls/certs/infrap4d/* /usr/share/stratum/es2k/certs
+    cp $BASE_DIR/tls/certs/infrap4d/* /usr/share/stratum/es2k/certs/.
     mkdir -p /usr/share/stratum/certs
-    cp $BASE_DIR/tls/certs/infrap4d/* /usr/share/stratum/certs
+    cp $BASE_DIR/tls/certs/infrap4d/* /usr/share/stratum/certs/.
   else
     echo "Missing infrap4d certificates. Run \"make gen-certs\" and try again."
     exit 1
@@ -156,8 +157,15 @@ function copy_script_to_remote() {
 # Setup infrap4d config file with K8S attributes
 function setup_run_env () {
   $P4CP_INSTALL/sbin/copy_config_files.sh $P4CP_INSTALL $SDE_INSTALL
-  GROUP=$((${SDE_INSTALL}/bin/vfio_bind.sh 8086:1453) 2> /dev/null)
-  GROUP_ID=$(echo "$GROUP" | grep -o "Group = [0-9]*" | awk '{print $3}')
+  dev_id=$(lspci | grep 1453 | cut -d ' ' -f 1)
+  string=$(find /sys/kernel/iommu_groups/ -type l | sort -n -k5 -t/ | grep $dev_id)
+  GROUP_ID=$(echo "$string" | sed -n 's/.*\/iommu_groups\/\([0-9]*\)\/devices.*/\1/p')
+  if [ -n "$GROUP_ID" ]; then
+    echo "Extracted iommu value: $GROUP_ID"
+  else
+    GROUP=$((${SDE_INSTALL}/bin/vfio_bind.sh 8086:1453) 2> /dev/null)
+    GROUP_ID=$(echo "$GROUP" | grep -o "Group = [0-9]*" | awk '{print $3}')
+  fi
 
   file="/usr/share/stratum/es2k/es2k_skip_p4.conf"
   cp $file $file.bkup
@@ -166,6 +174,7 @@ function setup_run_env () {
   mod_string=$(echo "$orig_string" | sed -E "s/-a [a-z]+\:[0-9]+\.[0-9]/-a $replacement/")
   sed -i "s@$orig_string@$mod_string@" "$file"
   sed -i "s/\"iommu_grp_num\": *[0-9][0-9]*/\"iommu_grp_num\": $GROUP_ID/g" "$file"
+  sed -i "s/\(\"pcie_bdf\": \)\"[^\"]*\"/\1\"0000:$dev_id\"/" $file
   sed -i "s/\(\"program-name\": \)\"[^\"]*\"/\1\"k8s_dp\"/" $file
   sed -i "s/\(\"bfrt-config\": \)\"[^\"]*\"/\1\"\/share\/infra\/k8s_dp\/bf-rt.json\"/" $file
   sed -i "s/\(\"p4_pipeline_name\": \)\"[^\"]*\"/\1\"main\"/" $file
@@ -180,8 +189,9 @@ function run_infrap4d () {
   [[ $getPid ]] && kill $getPid
   sleep 1
   #for running infrap4d in foreground to debug
-  #gdb --args $P4CP_INSTALL/install/sbin/infrap4d -grpc_open_insecure_mode=true --nodetach
-  $P4CP_INSTALL/sbin/infrap4d &
+  #gdb --args $P4CP_INSTALL/sbin/infrap4d -grpc_open_insecure_mode=true --nodetach
+  #gdb --args $P4CP_INSTALL/sbin/infrap4d --nodetach
+  $P4CP_INSTALL/sbin/infrap4d
   check_status $? "sbin/infrap4d"
 }
 
@@ -260,8 +270,8 @@ fi
 IF_MAX=$i
 MODE=$m
 REMOTE_HOST=$r
-DEV_BUS="af"
-echo "$IF_MAX $MODE $REMOTE_HOST"
+DEV_BUS=""
+echo "User entered - $IF_MAX $MODE $REMOTE_HOST"
 
 if [ $MODE = "host" ]; then
   echo "Setting up p4k8s on host"
