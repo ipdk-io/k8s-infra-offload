@@ -38,6 +38,8 @@ spec:
         volumeMounts:
         - name: db
           mountPath: /var/lib/cni/inframanager
+        - name: config-volume
+          mountPath: /etc/infra/
         - name: client-certs
           mountPath: /etc/pki/inframanager/certs/client
         - name: server-certs
@@ -54,6 +56,9 @@ spec:
         hostPath:
           path: /var/lib/cni/inframanager
           type: DirectoryOrCreate
+      - name: config-volume
+        configMap:
+          name: inframanager-config
       - name: client-certs
         secret:
           secretName: manager-client-secret
