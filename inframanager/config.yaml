@@ -58,13 +58,14 @@ InfraManager:
 #        ]
 #        Check https://pkg.go.dev/crypto/tls
 #        for the list of supported ciphersuites.
+#        The paths for the secrets are where the running
+#        instances look for the certs and these paths
+#        are not on the host where the secrets are
+#        being generated on
 
 # Not required for dpdk
   arp-mac: "00:0f:00:04:03:14"
   conn: mtls
-  server-cert: "/etc/pki/inframanager/certs/server/tls.crt"
-  server-key: "/etc/pki/inframanager/certs/server/tls.key"
-  ca-cert: "/etc/pki/inframanager/certs/server/ca.crt"
   ciphersuites : [
           "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
           "TLS_AES_256_GCM_SHA384",

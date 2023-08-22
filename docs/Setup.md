@@ -126,6 +126,8 @@ IPU ES2K target.
    ```bash
    export IFACE=ens801f0d4
    ```
+   Make changes to the [infragent config file](#infragent-config-file-update)
+   for interface and interface type.
 
    For DPDK target, change the interfaceType in config.yaml file to "tap".
 
@@ -138,6 +140,7 @@ IPU ES2K target.
    Please note, any changes in config file need to be made
    as per section [inframanager config file update](#inframanager-config-file-update)
    before building the images.
+
 
 
 8. Make the docker images. This step builds the Kubernetes container images:
@@ -175,6 +178,21 @@ IPU ES2K target.
     crictl pull localhost:5000/inframanager:latest
     crictl pull localhost:5000/infraagent:latest
     ```
+
+### infraagent config file update
+
+The config file `deploy/es2k/infraagent-configmap.yaml` is used to inform the
+infraagent which interface and interfacetype to use.
+
+The interfaceType should be `cdq` for ES2K and the the interface name is the
+base name for PF for PCI device ID 1452
+
+```text
+interfaceType : cdq
+interface: ens801f0
+mtls: true
+insecure: false
+```
 
 ### inframanager config file update
 
