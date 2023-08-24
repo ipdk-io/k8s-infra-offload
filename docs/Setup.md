@@ -69,12 +69,12 @@ IPU ES2K target.
    make gen-certs
    ```
    Note that the above script generates the default keys and certificates and
-   uses cipher suites as specified in the `inframanager/config.yaml` file.
+   uses cipher suites as specified in the `deploy/es2k/inframanager-config.yaml` file.
    Refer to section [inframanager config file update](#inframanager-config-file-update)
    for any custom cipher suite, key, certificate change.
 
    Note that the above script generates the default keys and certificates and
-   uses cipher suites as specified in the `inframanager/config.yaml` file.
+   uses cipher suites as specified in the `deploy/es2k/inframanager-config.yaml` file.
 
 5. Run `make install` to install all config and other artifacts to relevant
    directories
@@ -129,7 +129,7 @@ IPU ES2K target.
    Make changes to the [infragent config file](#infragent-config-file-update)
    for interface and interface type.
 
-   For DPDK target, change the interfaceType in config.yaml file to "tap".
+   For DPDK target, change the interfaceType in inframanager-config.yaml file to "tap".
 
    The script finally runs the arp-proxy on that assigned interface, within the
    isolated namespace.
@@ -181,7 +181,7 @@ IPU ES2K target.
 
 ### infraagent config file update
 
-The config file `deploy/es2k/infraagent-configmap.yaml` is used to inform the
+The config file `deploy/es2k/infraagent-config.yaml` is used to inform the
 infraagent which interface and interfacetype to use.
 
 The interfaceType should be `cdq` for ES2K and the the interface name is the
@@ -196,7 +196,7 @@ insecure: false
 
 ### inframanager config file update
 
-The config file `inframanager/config.yaml` is used to define the parameters
+The config file `deploy/es2k/inframanager-config.yaml` is used to define the parameters
 which the inframanager will use for the connection establishment with infrap4d
 and for the interfaces created.
 
@@ -212,7 +212,7 @@ the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) for ARP proxy gateway.
 
 If user doesn't wish to use these default keys, certificates, and cipher suites, then
 modify the `scripts/mev/tls/gen_certs.sh` script accordingly before running
-`make gen-certs` and modify the `inframanager/config.yaml` file with preferred
+`make gen-certs` and modify the `deploy/es2k/inframanager-config.yaml` file with preferred
 cipher suites. These changes need to be done prior to the creation of container
 images in step 8 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 

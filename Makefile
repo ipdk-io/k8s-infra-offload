@@ -83,7 +83,7 @@ endif
 	go build -tags $(tagname) -o ./bin/inframanager ./inframanager/cmd/main.go 
 	go build -o ./bin/arp-proxy ./arp-proxy/cmd/main.go
 
-BUILDFILES=k8s_dp/*.* scripts/*.sh deploy/infraagent-configmap.yaml hack/cicd/run-tests.sh
+BUILDFILES=k8s_dp/*.* scripts/*.sh deploy/infraagent-config.yaml deploy/inframanager-config.yaml hack/cicd/run-tests.sh
 
 # Make install is used by es2k targets
 install:
