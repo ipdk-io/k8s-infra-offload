@@ -171,9 +171,6 @@ func (pi *cdqIntfHandler) ReleasePodInterface(in *pb.DelRequest) error {
 	}
 
 	pi.pool.Release(conf.InterfaceName)
-	// remove cache, ignore error
-	path := filepath.Join(utilsGetDataDirPath(types.CDQInterface), refid+"-"+in.InterfaceName)
-	_ = os.Remove(path)
 	return nil
 }
 

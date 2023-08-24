@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
 
 	"github.com/containernetworking/plugins/pkg/ip"
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -69,6 +71,13 @@ func (e nsError) Error() string { return e.msg }
 
 func newNsError(toWrap error) nsError {
 	return nsError{msg: fmt.Sprintf("Error in containers namespace: %s", toWrap.Error())}
+}
+
+func DeletePodIfaceConf(ifaceName, ifaceType, netNS string) {
+	refid := filepath.Base(netNS)
+	// remove cache, ignore error
+	path := filepath.Join(utilsGetDataDirPath(ifaceType), refid+"-"+ifaceName)
+	_ = os.Remove(path)
 }
 
 func setupContainerRoutes(link netlink.Link, gw net.IP, containerRoutes []string) error {
