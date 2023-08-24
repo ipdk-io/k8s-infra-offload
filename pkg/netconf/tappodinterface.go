@@ -213,9 +213,6 @@ func (pi *tapPodInterface) ReleasePodInterface(in *pb.DelRequest) error {
 		return err
 	}
 	pi.pool.Release(conf.InterfaceName)
-	// remove cache, ignore error
-	path := filepath.Join(utilsGetDataDirPath(types.TapInterface), refid+"-"+in.InterfaceName)
-	_ = os.Remove(path)
 	return nil
 }
 

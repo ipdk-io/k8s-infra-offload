@@ -17,7 +17,6 @@ package netconf
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/containernetworking/plugins/pkg/ipam"
@@ -202,9 +201,6 @@ func (pi *sriovPodInterface) ReleasePodInterface(in *pb.DelRequest) error {
 		return err
 	}
 	pi.pool.Release(conf.InterfaceName)
-	// remove cache, ignore error
-	path := filepath.Join(dataDir, refid+"-"+in.InterfaceName)
-	_ = os.Remove(path)
 	return nil
 }
 
