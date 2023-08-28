@@ -1,3 +1,6 @@
 [submodule "third-party/ipdk.recipe"]
 	path = third-party/ipdk.recipe
 	url = https://github.com/ipdk-io/networking-recipe.git
+[submodule "third_party/ipdk.recipe"]
+	path = third_party/ipdk.recipe
+	url = https://github.com/ipdk-io/networking-recipe.git
