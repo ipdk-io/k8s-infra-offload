@@ -102,10 +102,11 @@ required as this software includes P4C generated artifacts.
   ```
 
 ### Infrap4d
-  To install infrap4d, follow instructions at
-  https://github.com/ipdk-io/networking-recipe/blob/main/docs/guides/es2k-guide.md
-  Make sure to checkout the appropriate
-  branch or SHA meant for IPDK 23.07 release. The main steps can be summerized as:
+  To install infrap4d, follow instructions at the [IPDK networking recipe
+  doc](https://ipdk.io/p4cp-userguide/guides/setup/es2k-setup-guide.html).
+
+  The main steps can be summerized as
+  the below :
   ```bash
   git clone https://github.com/ipdk-io/networking-recipe.git ipdk.recipe
   cd ipdk.recipe
@@ -114,12 +115,13 @@ required as this software includes P4C generated artifacts.
   export IPDK_RECIPE=$PWD
   mkdir install
   export DEPEND_INSTALL=$PWD/install
+  export P4CP_INSTALL=$PWD/install
   cd $IPDK_RECIPE/setup
   cmake -B build -DCMAKE_INSTALL_PREFIX=$DEPEND_INSTALL
   cmake --build build [-j<njobs>]
 
   cd $IPDK_RECIPE
-  source ./scripts/es2k/setup_env.sh $IPDK_RECIPE $SDE_INSTALL $DEPEND_INSTALL
+  source ./scripts/common/setup_env.sh $P4CP_INSTALL $SDE_INSTALL $DEPEND_INSTALL
   ./make-all.sh --target=es2k
-  ./scripts/es2k/copy_config_files.sh $IPDK_RECIPE $SDE_INSTALL
+  ./scripts/common/copy_config_files.sh $P4CP_INSTALL $SDE_INSTALL
   ```
