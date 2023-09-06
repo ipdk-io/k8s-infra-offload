@@ -51,7 +51,7 @@ var (
 func Ipv4ToPortTableT(ctx context.Context, p4RtC *client.Client) error {
 	for i := 0; i < 3; i++ {
 		entry1 := p4RtC.NewTableEntry(
-			"main.k8s_dp_control.ipv4_to_port_table_tx",
+			"k8s_dp_control.ipv4_to_port_table_tx",
 			map[string]client.MatchInterface{
 				"hdrs.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
 					Value: p4.Pack32BinaryIP4(ipAddress[i]),
@@ -67,7 +67,7 @@ func Ipv4ToPortTableT(ctx context.Context, p4RtC *client.Client) error {
 		log.Infof("Inserted entry in 'ipv4_to_port_table TX'")
 
 		entry2 := p4RtC.NewTableEntry(
-			"main.k8s_dp_control.ipv4_to_port_table_rx",
+			"k8s_dp_control.ipv4_to_port_table_rx",
 			map[string]client.MatchInterface{
 				"hdrs.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
 					Value: p4.Pack32BinaryIP4(ipAddress[i]),
@@ -91,7 +91,7 @@ func Ipv4ToPortTableT(ctx context.Context, p4RtC *client.Client) error {
 
 func ArptToPortTableT(ctx context.Context, p4RtC *client.Client) error {
 	entryAdd := p4RtC.NewTableEntry(
-		"main.k8s_dp_control.arp_to_port_table",
+		"k8s_dp_control.arp_to_port_table",
 		map[string]client.MatchInterface{
 			"hdrs.arp.tpa": &client.ExactMatch{
 				Value: p4.Pack32BinaryIP4(tpa),
@@ -116,7 +116,7 @@ func GWMacModTableT(ctx context.Context, p4RtC *client.Client) error {
 	dmac, _ := net.ParseMAC(macAddress[0])
 
 	entry := p4RtC.NewTableEntry(
-		"main.k8s_dp_control.pod_gateway_mac_mod_table",
+		"k8s_dp_control.pod_gateway_mac_mod_table",
 		map[string]client.MatchInterface{
 			"meta.common.mod_blob_ptr": &client.ExactMatch{
 				Value: p4.ValueToBytes(modPtr[0]),
