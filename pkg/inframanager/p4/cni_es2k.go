@@ -35,7 +35,7 @@ func ArptToPortTable(ctx context.Context, p4RtC *client.Client, arpTpa string, p
 	if flag == true {
 		entryAdd := P4w.NewTableEntry(
 			p4RtC,
-			"main.k8s_dp_control.arp_to_port_table",
+			"k8s_dp_control.arp_to_port_table",
 			map[string]client.MatchInterface{
 				"hdrs.arp.tpa": &client.ExactMatch{
 					Value: Pack32BinaryIP4(arpTpa),
@@ -54,7 +54,7 @@ func ArptToPortTable(ctx context.Context, p4RtC *client.Client, arpTpa string, p
 	} else {
 		entryDelete := P4w.NewTableEntry(
 			p4RtC,
-			"main.k8s_dp_control.arp_to_port_table",
+			"k8s_dp_control.arp_to_port_table",
 			map[string]client.MatchInterface{
 				"hdrs.arp.tpa": &client.ExactMatch{
 					Value: Pack32BinaryIP4(arpTpa),
@@ -89,7 +89,7 @@ func GWMacModTable(ctx context.Context, p4RtC *client.Client, ipAddr string,
 
 		entry := P4w.NewTableEntry(
 			p4RtC,
-			"main.k8s_dp_control.pod_gateway_mac_mod_table",
+			"k8s_dp_control.pod_gateway_mac_mod_table",
 			map[string]client.MatchInterface{
 				"meta.common.mod_blob_ptr": &client.ExactMatch{
 					Value: ValueToBytes(modPtr),
@@ -107,7 +107,7 @@ func GWMacModTable(ctx context.Context, p4RtC *client.Client, ipAddr string,
 
 		entry := P4w.NewTableEntry(
 			p4RtC,
-			"main.k8s_dp_control.pod_gateway_mac_mod_table",
+			"k8s_dp_control.pod_gateway_mac_mod_table",
 			map[string]client.MatchInterface{
 				"meta.common.mod_blob_ptr": &client.ExactMatch{
 					Value: ValueToBytes(modPtr),
@@ -135,7 +135,7 @@ func Ipv4ToPortTable(ctx context.Context, p4RtC *client.Client,
 
 		entryAdd := P4w.NewTableEntry(
 			p4RtC,
-			"main.k8s_dp_control.ipv4_to_port_table_tx",
+			"k8s_dp_control.ipv4_to_port_table_tx",
 			map[string]client.MatchInterface{
 				"hdrs.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
 					Value: Pack32BinaryIP4(ipAddr),
@@ -154,7 +154,7 @@ func Ipv4ToPortTable(ctx context.Context, p4RtC *client.Client,
 
 		entry2 := P4w.NewTableEntry(
 			p4RtC,
-			"main.k8s_dp_control.ipv4_to_port_table_rx",
+			"k8s_dp_control.ipv4_to_port_table_rx",
 			map[string]client.MatchInterface{
 				"hdrs.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
 					Value: Pack32BinaryIP4(ipAddr),
@@ -174,7 +174,7 @@ func Ipv4ToPortTable(ctx context.Context, p4RtC *client.Client,
 
 		entry := P4w.NewTableEntry(
 			p4RtC,
-			"main.k8s_dp_control.ipv4_to_port_table_tx",
+			"k8s_dp_control.ipv4_to_port_table_tx",
 			map[string]client.MatchInterface{
 				"hdrs.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
 					Value: Pack32BinaryIP4(ipAddr),
@@ -190,7 +190,7 @@ func Ipv4ToPortTable(ctx context.Context, p4RtC *client.Client,
 
 		entry2 := P4w.NewTableEntry(
 			p4RtC,
-			"main.k8s_dp_control.ipv4_to_port_table_rx",
+			"k8s_dp_control.ipv4_to_port_table_rx",
 			map[string]client.MatchInterface{
 				"hdrs.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
 					Value: Pack32BinaryIP4(ipAddr),
