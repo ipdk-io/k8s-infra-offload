@@ -103,9 +103,9 @@ required as this software includes P4C generated artifacts.
 
 ### Infrap4d
   To install infrap4d, follow instructions at
-  https://github.com/ipdk-io/networking-recipe/blob/main/docs/guides/es2k-guide.md
+  https://github.com/ipdk-io/networking-recipe/blob/main/docs/guides/setup/es2k-setup-guide.md
   Make sure to checkout the appropriate
-  branch or SHA meant for IPDK 23.07 release. The main steps can be summerized as:
+  branch or SHA meant for IPDK 23.07 release. The main steps can be summarized as:
   ```bash
   git clone https://github.com/ipdk-io/networking-recipe.git ipdk.recipe
   cd ipdk.recipe
