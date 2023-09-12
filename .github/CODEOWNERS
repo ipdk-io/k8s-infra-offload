@@ -1,27 +1,27 @@
 # Shared
 *       @nupurjai @ahalimx86 @venkateshpnv
-Makefile       @nupurjai @ahalimx86 @venkateshpnv @sharanakumarpatil @saynb 
-go.mod       @nupurjai @ahalimx86  @venkateshpnv @sharanakumarpatil @saynb
-go.sum       @nupurjai @ahalimx86 @venkateshpnv @sharanakumarpatil @saynb
-README.md       @nupurjai @ahalimx86 @venkateshpnv @sharanakumarpatil @saynb
-proto/*       @nupurjai @ahalimx86 @venkateshpnv @sharanakumarpatil @saynb
-docs/*       @nupurjai @ahalimx86 @venkateshpnv @sharanakumarpatil @saynb
-.github/workflows/*       @nupurjai @ahalimx86  @mgaravin  @venkateshpnv @sharanakumarpatil @saynb
+Makefile       @nupurjai @ahalimx86 @venkateshpnv @sharanakumarpatil @saynb @vishala-r
+go.mod       @nupurjai @ahalimx86  @venkateshpnv @sharanakumarpatil @saynb @vishala-r
+go.sum       @nupurjai @ahalimx86 @venkateshpnv @sharanakumarpatil @saynb @vishala-r
+README.md       @nupurjai @ahalimx86 @venkateshpnv @sharanakumarpatil @saynb @vishala-r
+proto/*       @nupurjai @ahalimx86 @venkateshpnv @sharanakumarpatil @saynb @vishala-r
+docs/*       @nupurjai @ahalimx86 @venkateshpnv @sharanakumarpatil @saynb @vishala-r
+.github/workflows/*       @nupurjai @ahalimx86  @mgaravin  @venkateshpnv @sharanakumarpatil @saynb @vishala-r
 
 # Cloud Native
-infraagent/*       @ahalimx86 @nupurjai @venkateshpnv
-pkg/*       @ahalimx86 @nupurjai @venkateshpnv
-deploy/*       @ahalimx86 @nupurjai @venkateshpnv
-images/Dockerfile.agent       @ahalimx86 @nupurjai @venkateshpnv
-docs/infraagent/*       @ahalimx86 @nupurjai @venkateshpnv
-hack/cicd/*       @ahalimx86 @nupurjai @venkateshpnv
+infraagent/*       @ahalimx86 @nupurjai @venkateshpnv @vishala-r
+pkg/*       @ahalimx86 @nupurjai @venkateshpnv @vishala-r
+deploy/*       @ahalimx86 @nupurjai @venkateshpnv @vishala-r
+images/Dockerfile.agent       @ahalimx86 @nupurjai @venkateshpnv @vishala-r
+docs/infraagent/*       @ahalimx86 @nupurjai @venkateshpnv @vishala-r
+hack/cicd/*       @ahalimx86 @nupurjai @venkateshpnv @vishala-r
 
 # EPG
-images/Dockerfile.manager       @nupurjai @venkateshpnv @sharanakumarpatil @saynb
-k8s_dp/*       @nupurjai @venkateshpnv @sharanakumarpatil @saynb
+images/Dockerfile.manager       @nupurjai @venkateshpnv @sharanakumarpatil @saynb @vishala-r
+k8s_dp/*       @nupurjai @venkateshpnv @sharanakumarpatil @saynb @vishala-r
 # scripts/ and k8s_dp/ dirs
-hack/scripts/*       @nupurjai @venkateshpnv @sharanakumarpatil @saynb
-hack/k8s_dp/*       @nupurjai @venkateshpnv @sharanakumarpatil @saynb
-inframanager/*       @nupurjai @venkateshpnv @sharanakumarpatil @saynb
-pkg/utils/*       @nupurjai @venkateshpnv @sharanakumarpatil @saynb
-pkg/inframanager/*       @nupurjai @venkateshpnv @sharanakumarpatil @saynb
+hack/scripts/*       @nupurjai @venkateshpnv @sharanakumarpatil @saynb @vishala-r
+hack/k8s_dp/*       @nupurjai @venkateshpnv @sharanakumarpatil @saynb @vishala-r
+inframanager/*       @nupurjai @venkateshpnv @sharanakumarpatil @saynb @vishala-r
+pkg/utils/*       @nupurjai @venkateshpnv @sharanakumarpatil @saynb @vishala-r
+pkg/inframanager/*       @nupurjai @venkateshpnv @sharanakumarpatil @saynb @vishala-r
