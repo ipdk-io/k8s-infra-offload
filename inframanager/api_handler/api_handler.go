@@ -417,11 +417,24 @@ func (s *ApiServer) CreateNetwork(ctx context.Context, in *proto.CreateNetworkRe
 		return out, errors.New("Empty CNI Add request")
 	}
 
+	if len(in.AddRequest.ContainerIps) == 0 {
+		out.Successful = false
+		logger.Errorf("Container ip address not provided")
+		return out, errors.New("Container ip address not provided")
+	}
+
 	logger.Infof("Incoming Add request %s", in.String())
 
 	server := NewApiServer()
 
 	ipAddr := strings.Split(in.AddRequest.ContainerIps[0].Address, "/")[0]
+
+	if net.ParseIP(ipAddr) == nil {
+		out.Successful = false
+		logger.Errorf("Invalid container ip address %s", ipAddr)
+		return out, fmt.Errorf("Invalid container ip address %s", ipAddr)
+	}
+
 	macAddr := in.MacAddr
 	macAddress, err := net.ParseMAC(in.MacAddr)
 	if err != nil {
