@@ -34,7 +34,7 @@ import (
 func main() {
 
 	config := &conf.Configuration{}
-	conf.ReadConfig(config, "config.yaml")
+	conf.ReadConfig(config, "inframanager-config.yaml")
 
 	ip, err := utils.GetNodeIPFromEnv()
 	if err != nil {

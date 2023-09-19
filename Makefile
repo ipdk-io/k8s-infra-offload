@@ -70,12 +70,12 @@ build:
 ifeq ($(tagname),es2k)
 	cp -f k8s_dp/es2k/*  k8s_dp/.
 	cp -f scripts/es2k/* scripts/.
-	cp -f deploy/es2k/infraagent-configmap.yaml deploy/.
+	cp -f deploy/es2k/infraagent-config.yaml deploy/.
 	cp -f hack/cicd/es2k/run-tests.sh hack/cicd/.
 else
 	cp -f k8s_dp/dpdk/* k8s_dp/.
 	cp -f scripts/dpdk/* scripts/.
-	cp -f deploy/dpdk/infraagent-configmap.yaml deploy/.
+	cp -f deploy/dpdk/infraagent-config.yaml deploy/.
 	cp -f hack/cicd/dpdk/run-tests.sh hack/cicd/.
 endif
 	go build -o ./bin/infraagent ./infraagent/agent/main.go
@@ -83,7 +83,7 @@ endif
 	go build -tags $(tagname) -o ./bin/inframanager ./inframanager/cmd/main.go 
 	go build -o ./bin/arp-proxy ./arp-proxy/cmd/main.go
 
-BUILDFILES=k8s_dp/*.* scripts/*.sh deploy/infraagent-configmap.yaml hack/cicd/run-tests.sh
+BUILDFILES=k8s_dp/*.* scripts/*.sh deploy/infraagent-config.yaml deploy/inframanager-config.yaml hack/cicd/run-tests.sh
 
 # Make install is used by es2k targets
 install:
@@ -94,12 +94,16 @@ install:
 	install -d $(DESTDIR)$(datadir)
 	install -d $(DESTDIR)$(bindir)
 	install -d $(DESTDIR)$(sbindir)
-	install -d $(DESTDIR)$(certdir)/inframanager/certs
-	install -d $(DESTDIR)$(certdir)/infraagent/certs
+	install -d $(DESTDIR)$(certdir)/inframanager/certs/{client,server}
+	install -d $(DESTDIR)$(certdir)/infraagent/certs/client
 	install -m 0755 bin/* $(DESTDIR)$(bindir)
-	install -C -m 0755 ./inframanager/config.yaml $(DESTDIR)$(sysconfdir)/config.yaml
-	install -C -m 0755 ./scripts/es2k/*.sh $(DESTDIR)$(sbindir)
-	install -C -m 0755 -t $(DESTDIR)$(datadir) ./k8s_dp/es2k/* ./LICENSE
+	install -C -m 0755 ./deploy/inframanager-config.yaml $(DESTDIR)$(sysconfdir)/inframanager-config.yaml
+	install -C -m 0755 ./deploy/infraagent-config.yaml $(DESTDIR)$(sysconfdir)/infraagent-config.yaml
+	install -C -m 0755 ./scripts/$(tagname)/*.sh $(DESTDIR)$(sbindir)
+	install -C -m 0755 -t $(DESTDIR)$(datadir) ./k8s_dp/$(tagname)/* ./LICENSE
+	install -C -m 0755 -t $(DESTDIR)$(certdir)/inframanager/certs/client ./scripts/tls/certs/inframanager/client/*
+	install -C -m 0755 -t $(DESTDIR)$(certdir)/inframanager/certs/server ./scripts/tls/certs/inframanager/server/*
+	install -C -m 0755 -t $(DESTDIR)$(certdir)/infraagent/certs/client ./scripts/tls/certs/infraagent/client/*
 
 test:
 	./hack/cicd/run-tests.sh
