@@ -26,8 +26,9 @@ IPU ES2K target.
 
 ## Set Up P4 Kubernetes
 
-1. Install Go package (go version go1.20.5 linux/amd64), following instruction
-   at https://go.dev/doc/install
+1. Install Go package (version 1.20.8)
+   following instruction at https://go.dev/doc/install
+
 
 2. Pull P4-K8s software from the GitHub repository:
 
@@ -462,11 +463,12 @@ Versions of Kubernetes, linux distros, docker and other third-party libraries te
 * Linux
   * Fedora 33
   * Fedora 37
-  * Rocky Linux 9.1
+  * Rocky Linux 9.2
+  * RHEL 9.2
 
 ### golang
 
-go1.20.7
+go1.20.8
 
 ### docker
 ```bash
