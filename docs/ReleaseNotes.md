@@ -54,6 +54,10 @@
 - conf and few other params in "inframanager/config.yaml" are not used,
   should be removed from input file
 - Unable to create pods after add/delete a few times
+- Inframanger restarts/crashes with "panic: runtime error
+- inframanager coming to running state after corrupting inframanager-server-ca.crt
+- dump flow-entries is not decrementing after deleting the test pods
+- Setup infra fixes for vfio driver bind
 
 ### Known Issues
 
@@ -74,6 +78,7 @@
 - Inframanager log level setting and some cleanup
 - Need support to set log level for all modules under Inframanager
   from the config setting
+- Split mode feature where manager runs on es2k is experimental
 
 ### Coming Attractions
 
