@@ -12,8 +12,16 @@ function check_host_env() {
   then
     echo "Please setup following env variable"
     echo "K8S_RECIPE - Path to K8S recipe"
+    echo "SDE_INSTALL - Path to P4 SDE install directory"
     exit 1
   fi
+}
+
+# unbind drivers
+function unbind_driver () {
+  echo "unbinding vfio driver"
+  dev_id=$(lspci | grep 1453 | cut -d ' ' -f 1)
+  $SDE_INSTALL/bin/dpdk-devbind.py -u 0000:$dev_id >/dev/null
 }
 
 # Remove installed drivers
@@ -76,10 +84,11 @@ function pkill_infrap4d_arp () {
 #############################################
 
 echo "Cleaning up deployment on the host"
-check_host_env K8S_RECIPE
+check_host_env K8S_RECIPE SDE_INSTALL
 clean_k8s_pods
 cd $K8S_RECIPE && make undeploy-calico && make undeploy 2> /dev/null
 pkill_infrap4d_arp
 reset_all
+unbind_driver
 uninstall_drivers
 clean_ns

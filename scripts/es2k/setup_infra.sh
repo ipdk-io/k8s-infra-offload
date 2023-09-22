@@ -3,11 +3,6 @@
 #Copyright (C) 2023 Intel Corporation
 #SPDX-License-Identifier: Apache-2.0
 
-STRATUM_DIR="/usr/share/stratum"
-MODE="host"
-ARM_SCRIPT="setup_arm_infra.sh"
-K8S_REMOTE="/opt/p4/k8s"
-
 # Check the status of a command and return
 function check_status () {
   local status=$1
@@ -42,11 +37,6 @@ function check_host_env() {
   fi
 }
 
-# Function to get the system's IP address
-get_system_ip() {
-  local ip=$(hostname -I | awk '{print $1}')
-}
-
 # Setup system environment for dependency resolution
 function setup_host_dep_env () {
   if [ -f "$P4CP_INSTALL/sbin/setup_env.sh" ]; then
@@ -62,13 +52,13 @@ function install_drivers () {
   modprobe mdev
   modprobe vfio-pci
   modprobe vfio_iommu_type1
-  # change this with insmod in case of new idpf driver
+  # change this with insmod in case of new idpf host driver
   modprobe idpf
 }
 
-# Get PCI device ID for es2k
+# Get PCI device ID for IDPF
 function get_device_id () {
-  dev_id=$(lspci | grep 1453 | cut -d ':' -f 1)
+  dev_id=$(lspci | grep 1452 | cut -d ':' -f 1)
   if [ -z "$dev_id" ]; then
     echo "No matching dev_id found."
     exit 1
@@ -87,7 +77,6 @@ function create_arp_interface () {
   PORT="${words[0]%:}"
   devlink port func set $PORT state active
   check_status $? "arp proxy port creation"
-
 }
 
 # Create interfaces for the interface pool
@@ -106,7 +95,7 @@ function create_pod_interfaces () {
 
 # Copy certificates for mTLS in relevant directories
 function copy_certs() {
-  if [ -d "$BASE_DIR/tls/certs/infrap4d" ]; then
+  if [ -d "$BASE_DIR/scripts/tls/certs/infrap4d" ]; then
     if [ ! -d $STRATUM_DIR ]; then
         echo "stratum directory not found."
         exit 1
@@ -117,9 +106,10 @@ function copy_certs() {
     rm -rf $STRATUM_DIR/certs/client.key
     rm -rf $STRATUM_DIR/certs/stratum.crt
     rm -rf $STRATUM_DIR/certs/stratum.key
-    cp $BASE_DIR/tls/certs/infrap4d/* /usr/share/stratum/es2k/certs/.
+    cp $BASE_DIR/scripts/tls/certs/infrap4d/* /usr/share/stratum/es2k/certs/.
+    # BUG:14020043045 workaround
     mkdir -p /usr/share/stratum/certs
-    cp $BASE_DIR/tls/certs/infrap4d/* /usr/share/stratum/certs/.
+    cp $BASE_DIR/scripts/tls/certs/infrap4d/* /usr/share/stratum/certs/.
   else
     echo "Missing infrap4d certificates. Run \"make gen-certs\" and try again."
     exit 1
@@ -128,13 +118,18 @@ function copy_certs() {
 
 # Copy certificates for mTLS in relevant directories
 function copy_cert_to_remote() {
-  if [ -d "$BASE_DIR/tls/certs/infrap4d" ]; then
+  # setup directory structure on ACC for p4infrad and manager certs
+  #launch_on_remote "/usr/share/stratum/es2k/generate-certs.sh" ""
+  launch_on_remote "mkdir -p /usr/share/stratum/es2k/certs" ""
+  launch_on_remote "mkdir -p /etc/pki/inframanager/certs" ""
+
+  if [ -d "$BASE_DIR/scripts/tls/certs/infrap4d" ]; then
     # copy certs to remote infrap4d dir
-    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BASE_DIR/tls/certs/infrap4d/* $REMOTE_HOST:/usr/share/stratum/es2k/certs
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BASE_DIR/scripts/tls/certs/infrap4d/* $REMOTE_HOST:/usr/share/stratum/es2k/certs
     check_status $? "scp infrap4d/certs/* root@$REMOTE_HOST:/usr/share/stratum/certs"
 
     # copy certs to remote inframanager dir
-    scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BASE_DIR/tls/certs/inframanager/* $REMOTE_HOST:/etc/pki/inframanager/certs
+    scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BASE_DIR/scripts/tls/certs/inframanager/* $REMOTE_HOST:/etc/pki/inframanager/certs
     check_status $? "scp inframanager/certs/* root@$REMOTE_HOST:/etc/pki/inframanager/certs"
   else
     echo "Missing infrap4d certificates. Run \"make gen-certs\" and try again."
@@ -142,11 +137,35 @@ function copy_cert_to_remote() {
   fi
 }
 
+# Copy Artifacts to Remote
+function copy_artifacts_to_remote() {
+  if [ -f "$BASE_DIR/k8s_dp/es2k/k8s_dp.pb.bin" ]; then
+    launch_on_remote "mkdir -p /share/infra/k8s_dp" ""
+    scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BASE_DIR/k8s_dp/es2k/* $REMOTE_HOST:/share/infra/k8s_dp/.
+    check_status $? "scp $BASE_DIR/k8s_dp/es2k/* root@$REMOTE_HOST:/share/infra/k8s_dp/"
+  else
+    echo "Missing compiler artifacts and proto file. Please compile p4 program and generate."
+    exit 1
+  fi
+}
+
+# Copy Config file to Remote
+function copy_config_to_remote() {
+  if [ -f "$BASE_DIR/deploy/inframanager-config.yaml" ]; then
+    launch_on_remote "mkdir -p /etc/infra" ""
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BASE_DIR/deploy/inframanager-config.yaml $REMOTE_HOST:/etc/infra/.
+    check_status $? "scp $BASE_DIR/deploy/inframanager-config.yaml root@$REMOTE_HOST:/etc/infra/"
+  else
+    echo "Missing InfraManager config file."
+    exit 1
+  fi
+}
+
 # Copy remote execution script to arm acc
 function copy_script_to_remote() {
-  if [ -f "$BASE_DIR/$ARM_SCRIPT" ]; then
+  if [ -f "$BASE_DIR/scripts/$ARM_SCRIPT" ]; then
     # copy acc setup script to k8s dir
-    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BASE_DIR/$ARM_SCRIPT $REMOTE_HOST:/opt/p4/k8s/.
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BASE_DIR/scripts/$ARM_SCRIPT $REMOTE_HOST:/opt/p4/k8s/.
     check_status $? "scp scripts/setup_arm_infra.sh/* root@$REMOTE_HOST:/opt/p4/k8s"
   else
     echo "Missing arm script"
@@ -158,14 +177,13 @@ function copy_script_to_remote() {
 function setup_run_env () {
   $P4CP_INSTALL/sbin/copy_config_files.sh $P4CP_INSTALL $SDE_INSTALL
   dev_id=$(lspci | grep 1453 | cut -d ' ' -f 1)
-  string=$(find /sys/kernel/iommu_groups/ -type l | sort -n -k5 -t/ | grep $dev_id)
-  GROUP_ID=$(echo "$string" | sed -n 's/.*\/iommu_groups\/\([0-9]*\)\/devices.*/\1/p')
-  if [ -n "$GROUP_ID" ]; then
-    echo "Extracted iommu value: $GROUP_ID"
-  else
-    GROUP=$((${SDE_INSTALL}/bin/vfio_bind.sh 8086:1453) 2> /dev/null)
-    GROUP_ID=$(echo "$GROUP" | grep -o "Group = [0-9]*" | awk '{print $3}')
-  fi
+
+  # unbind if bound
+  $SDE_INSTALL/bin/dpdk-devbind.py -u 0000:$dev_id >/dev/null
+  #bind to vfio
+  GROUP=$(${SDE_INSTALL}/bin/vfio_bind.sh 8086:1453)
+  GROUP_ID=$(echo "$GROUP" | grep -o "Group = [0-9]*" | awk '{print $3}')
+  echo "IOMMU Group ID: $GROUP_ID dev_id: $dev_id"
 
   file="/usr/share/stratum/es2k/es2k_skip_p4.conf"
   cp $file $file.bkup
@@ -192,18 +210,43 @@ function run_infrap4d () {
   #gdb --args $P4CP_INSTALL/sbin/infrap4d -grpc_open_insecure_mode=true --nodetach
   #gdb --args $P4CP_INSTALL/sbin/infrap4d --nodetach
   $P4CP_INSTALL/sbin/infrap4d
-  check_status $? "sbin/infrap4d"
+  getPid=$(pgrep -f infrap4d)
+  if [ $getPid ]; then
+    echo "infrap4d is running"
+  else
+    echo "failed to run infrap4d"
+  fi
+}
+
+# update the config file for manager
+function update_mgr_config () {
+  # Get the interface name from the command-line argument
+  interface="$1"
+
+  # Use ifconfig to retrieve the MAC address for the specified interface
+  mac_address=$(ifconfig "$interface" | grep -o 'HWaddr [0-9A-Fa-f:]*' | awk '{print $2}')
+
+  # Check if the interface exists and if a MAC address was found
+ if [ -z "$mac_address" ]; then
+    echo "Interface '$interface' not found or MAC address not available."
+    exit 2
+ fi
 }
 
 #############################################
 ##### main ##################################
 #############################################
 
-#BASE_DIR="$(dirname "$(readlink -f "$0")")"
-BASE_DIR="$K8S_RECIPE/scripts"
+# Globals
+BASE_DIR="$K8S_RECIPE"
 IF_MAX=8
 MODE="host"
 REMOTE_HOST="10.10.0.2"
+
+STRATUM_DIR="/usr/share/stratum"
+ARM_SCRIPT="setup_arm_infra.sh"
+K8S_REMOTE="/opt/p4/k8s"
+DEV_BUS=""
 
 # Displays help text
 usage() {
@@ -270,7 +313,7 @@ fi
 IF_MAX=$i
 MODE=$m
 REMOTE_HOST=$r
-DEV_BUS=""
+
 echo "User entered - $IF_MAX $MODE $REMOTE_HOST"
 
 if [ $MODE = "host" ]; then
@@ -286,22 +329,25 @@ if [ $MODE = "host" ]; then
   create_pod_interfaces
   # Run infrap4d
   run_infrap4d
-  echo "running host"
 else
+  echo "Setting up p4k8s in split mode. Manager runs on arm"
+  check_host_env SDE_INSTALL P4CP_INSTALL DEPEND_INSTALL K8S_RECIPE
   LAST_OCTET="${REMOTE_HOST##*.}"
   NEW_OCTET=$((LAST_OCTET + 1))
   NEW_IP="${REMOTE_HOST%.*}.$NEW_OCTET"
-  echo "Setting up p4k8s in split mode. Manager runs on arm"
   install_drivers
-  sleep 3
+  sleep 4
   ifconfig ens801f0d3 $NEW_IP/16 up
   sleep 1
   copy_script_to_remote
-  launch_on_remote "/usr/share/stratum/es2k/generate-certs.sh" ""
   copy_cert_to_remote
-  SYSTEM_IP=$(get_system_ip)
-  launch_on_remote "$K8S_REMOTE/$ARM_SCRIPT" "$SYSTEM_IP"
+  copy_artifacts_to_remote
+  copy_config_to_remote
+  SYSTEM_IP=$(hostname -I | awk '{print $1}')
+  get_device_id
   create_arp_interface
   create_pod_interfaces
+  #update_mgr_config
+  launch_on_remote "$K8S_REMOTE/$ARM_SCRIPT" "$SYSTEM_IP"
   echo "Remote script launched successfully!"
 fi
