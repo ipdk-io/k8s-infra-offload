@@ -107,7 +107,7 @@ function copy_certs() {
     rm -rf $STRATUM_DIR/certs/stratum.crt
     rm -rf $STRATUM_DIR/certs/stratum.key
     cp $BASE_DIR/scripts/tls/certs/infrap4d/* /usr/share/stratum/es2k/certs/.
-    # BUG:14020043045 workaround
+    # infrap4d bug workaround
     mkdir -p /usr/share/stratum/certs
     cp $BASE_DIR/scripts/tls/certs/infrap4d/* /usr/share/stratum/certs/.
   else
@@ -210,27 +210,13 @@ function run_infrap4d () {
   #gdb --args $P4CP_INSTALL/sbin/infrap4d -grpc_open_insecure_mode=true --nodetach
   #gdb --args $P4CP_INSTALL/sbin/infrap4d --nodetach
   $P4CP_INSTALL/sbin/infrap4d
+  sleep 1
   getPid=$(pgrep -f infrap4d)
   if [ $getPid ]; then
     echo "infrap4d is running"
   else
     echo "failed to run infrap4d"
   fi
-}
-
-# update the config file for manager
-function update_mgr_config () {
-  # Get the interface name from the command-line argument
-  interface="$1"
-
-  # Use ifconfig to retrieve the MAC address for the specified interface
-  mac_address=$(ifconfig "$interface" | grep -o 'HWaddr [0-9A-Fa-f:]*' | awk '{print $2}')
-
-  # Check if the interface exists and if a MAC address was found
- if [ -z "$mac_address" ]; then
-    echo "Interface '$interface' not found or MAC address not available."
-    exit 2
- fi
 }
 
 #############################################
@@ -347,7 +333,6 @@ else
   get_device_id
   create_arp_interface
   create_pod_interfaces
-  #update_mgr_config
   launch_on_remote "$K8S_REMOTE/$ARM_SCRIPT" "$SYSTEM_IP"
   echo "Remote script launched successfully!"
 fi
