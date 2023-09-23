@@ -95,6 +95,17 @@ function create_pod_interfaces () {
 
 # Copy certificates for mTLS in relevant directories
 function copy_certs() {
+  mkdir -p $CERT_DIR/inframanager/client
+  mkdir -p $CERT_DIR/inframanager/server
+  mkdir -p $CERT_DIR/infraagent/client
+
+  if [ -d "$BASE_DIR/scripts/tls/certs/inframanager/server" ]; then
+    cp -r  $BASE_DIR/scripts/tls/certs/inframanager/* $CERT_DIR/inframanager/.
+  fi
+  if [ -d "$BASE_DIR/scripts/tls/certs/infraagent/client" ]; then
+    cp $BASE_DIR/scripts/tls/certs/infraagent/client/* $CERT_DIR/infraagent/client/.
+  fi
+
   if [ -d "$BASE_DIR/scripts/tls/certs/infrap4d" ]; then
     if [ ! -d $STRATUM_DIR ]; then
         echo "stratum directory not found."
@@ -118,6 +129,11 @@ function copy_certs() {
 
 # Copy certificates for mTLS in relevant directories
 function copy_cert_to_remote() {
+  mkdir -p $CERT_DIR/infraagent/client
+  if [ -d "$BASE_DIR/scripts/tls/certs/infraagent/client" ]; then
+    cp $BASE_DIR/scripts/tls/certs/infraagent/client/* $CERT_DIR/infraagent/client/.
+  fi
+
   # setup directory structure on ACC for p4infrad and manager certs
   #launch_on_remote "/usr/share/stratum/es2k/generate-certs.sh" ""
   launch_on_remote "mkdir -p /usr/share/stratum/es2k/certs" ""
@@ -232,6 +248,7 @@ REMOTE_HOST="10.10.0.2"
 STRATUM_DIR="/usr/share/stratum"
 ARM_SCRIPT="setup_arm_infra.sh"
 K8S_REMOTE="/opt/p4/k8s"
+CERT_DIR="/etc/pki"
 DEV_BUS=""
 
 # Displays help text
