@@ -94,16 +94,11 @@ install:
 	install -d $(DESTDIR)$(datadir)
 	install -d $(DESTDIR)$(bindir)
 	install -d $(DESTDIR)$(sbindir)
-	install -d $(DESTDIR)$(certdir)/inframanager/certs/{client,server}
-	install -d $(DESTDIR)$(certdir)/infraagent/certs/client
 	install -m 0755 bin/* $(DESTDIR)$(bindir)
 	install -C -m 0755 ./deploy/inframanager-config.yaml $(DESTDIR)$(sysconfdir)/inframanager-config.yaml
 	install -C -m 0755 ./deploy/infraagent-config.yaml $(DESTDIR)$(sysconfdir)/infraagent-config.yaml
 	install -C -m 0755 ./scripts/$(tagname)/*.sh $(DESTDIR)$(sbindir)
 	install -C -m 0755 -t $(DESTDIR)$(datadir) ./k8s_dp/$(tagname)/* ./LICENSE
-	install -C -m 0755 -t $(DESTDIR)$(certdir)/inframanager/certs/client ./scripts/tls/certs/inframanager/client/*
-	install -C -m 0755 -t $(DESTDIR)$(certdir)/inframanager/certs/server ./scripts/tls/certs/inframanager/server/*
-	install -C -m 0755 -t $(DESTDIR)$(certdir)/infraagent/certs/client ./scripts/tls/certs/infraagent/client/*
 
 test:
 	./hack/cicd/run-tests.sh
