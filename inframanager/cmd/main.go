@@ -65,10 +65,6 @@ func main() {
 	ctx := context.Background()
 	stopCh := signals.RegisterSignalHandlers()
 
-	store.NewEndPoint()
-	store.NewService()
-	store.NewPolicy()
-
 	if err := api.OpenP4RtC(ctx, 0, 1, stopCh); err != nil {
 		log.Errorf("Failed to open p4 runtime client connection")
 		os.Exit(1)
@@ -117,6 +113,7 @@ func main() {
 		}
 	}
 
+	api.SetHostInterfaceMac()
 	// Starting inframanager gRPC server
 	waitCh := make(chan struct{})
 

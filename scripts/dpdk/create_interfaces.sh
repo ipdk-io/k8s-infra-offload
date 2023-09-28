@@ -57,7 +57,7 @@ function is_power_of_two () {
 }
 
 function copy_certs() {
-  if [ -d "./scripts/tls/certs/infrap4d/certs" ]; then
+  if [ -d "./scripts/tls/certs/infrap4d" ]; then
     if [ ! -d $STRATUM_DIR ]; then
         echo "stratum directory not found."
         exit 1
@@ -68,7 +68,7 @@ function copy_certs() {
     rm -rf $STRATUM_DIR/certs/client.key
     rm -rf $STRATUM_DIR/certs/stratum.crt
     rm -rf $STRATUM_DIR/certs/stratum.key
-    cp -r ./scripts/tls/certs/infrap4d/certs/* /usr/share/stratum/certs
+    cp -r ./scripts/tls/certs/infrap4d/* /usr/share/stratum/certs
   else
     echo "Missing infrap4d certificates. Run \"make gen-certs\" and try again."
     exit 1

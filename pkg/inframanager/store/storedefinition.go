@@ -35,6 +35,10 @@ type store interface {
 	UpdateToStore() bool
 }
 
+type SetupData struct {
+	HostInterfaceMac string
+}
+
 type EndPoint struct {
 	ModPtr        uint32
 	InterfaceID   uint32
@@ -117,11 +121,13 @@ type PolicyCollection struct {
 	RuleGroupIdStack *utils.IdStack
 }
 
+var Setup *SetupData
 var ServiceSet *ServiceCollection
 var EndPointSet *EndPointCollection
 var PolicySet *PolicyCollection
 
 var once sync.Once
+var onceSetup sync.Once
 var onceService sync.Once
 var oncePolicy sync.Once
 var onceInit sync.Once
@@ -161,7 +167,15 @@ func NewPolicy() {
 func Init(setFwdPipe bool) error {
 	var initErr error
 
+	NewEndPoint()
+	NewService()
+	NewPolicy()
+
 	onceInit.Do(func() {
+		if err := InitSetupStore(setFwdPipe); !err {
+			initErr = errors.New("Failed to open endpoint store")
+			return
+		}
 		if err := InitEndPointStore(setFwdPipe); !err {
 			initErr = errors.New("Failed to open endpoint store")
 			return
@@ -177,4 +191,10 @@ func Init(setFwdPipe bool) error {
 	})
 
 	return initErr
+}
+
+func SyncDB() {
+	RunSyncEndPointInfo()
+	RunSyncServiceInfo()
+	RunSyncSetupInfo()
 }

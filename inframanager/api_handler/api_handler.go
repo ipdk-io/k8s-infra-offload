@@ -55,6 +55,9 @@ const (
 func PutConf(c *conf.Configuration) {
 	config = c
 }
+func SetHostInterfaceMac() {
+	hostInterfaceMac = store.GetHostInterfaceMac()
+}
 
 type RuleGroupIDX struct {
 	ruleMaskId int
@@ -275,6 +278,13 @@ func CreateServer(log *log.Entry) *ApiServer {
 	return server
 }
 
+func recoverPanic(log *log.Entry) {
+	if r := recover(); r != nil {
+		log.Errorf("Panic occured, %v", r)
+		store.SyncDB()
+	}
+}
+
 func InsertDefaultRule() {
 	var portID uint32
 	var err error
@@ -407,6 +417,8 @@ func (s *ApiServer) CreateNetwork(ctx context.Context, in *proto.CreateNetworkRe
 
 	logger := s.log.WithField("func", "CreateNetwork")
 
+	defer recoverPanic(logger)
+
 	out := &proto.AddReply{
 		Successful: true,
 	}
@@ -467,6 +479,8 @@ func (s *ApiServer) DeleteNetwork(ctx context.Context, in *proto.DeleteNetworkRe
 	var err error
 
 	logger := s.log.WithField("func", "DeleteNetwork")
+
+	defer recoverPanic(logger)
 
 	out := &proto.DelReply{
 		Successful: true,
@@ -536,6 +550,8 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 	update := false
 
 	logger := log.WithField("func", "NatTranslationAdd")
+
+	defer recoverPanic(logger)
 
 	if in == nil || reflect.DeepEqual(*in, proto.NatTranslation{}) {
 		out.Successful = false
@@ -691,6 +707,8 @@ func (s *ApiServer) NatTranslationDelete(ctx context.Context, in *proto.NatTrans
 		Successful: true,
 	}
 
+	defer recoverPanic(logger)
+
 	/* Currently supporting services only for the dpdk target */
 	if config.InterfaceType != types.TapInterface {
 		return out, nil
@@ -740,6 +758,8 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 	}
 
 	logger := log.WithField("func", "updatePolicy")
+
+	defer recoverPanic(logger)
 
 	if in == nil || reflect.DeepEqual(*in, proto.ActivePolicyUpdate{}) {
 		err := errors.New("Empty policy add/update request")
@@ -942,6 +962,8 @@ func (s *ApiServer) ActivePolicyRemove(ctx context.Context, in *proto.ActivePoli
 		Successful: true,
 	}
 
+	defer recoverPanic(logger)
+
 	if in == nil || reflect.DeepEqual(*in, proto.ActivePolicyRemove{}) {
 		err := errors.New("Empty policy delete request")
 		logger.Errorf("Empty policy delete request.")
@@ -1035,6 +1057,8 @@ func (s *ApiServer) RemoveHostEndpoint(ctx context.Context, in *proto.HostEndpoi
 func (s *ApiServer) UpdateLocalEndpoint(ctx context.Context, in *proto.WorkloadEndpointUpdate) (*proto.Reply, error) {
 	logger := log.WithField("func", "UpdateLocalEndpoint")
 
+	defer recoverPanic(logger)
+
 	out := &proto.Reply{
 		Successful: true,
 	}
@@ -1103,6 +1127,8 @@ func (s *ApiServer) UpdateLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 
 func (s *ApiServer) RemoveLocalEndpoint(ctx context.Context, in *proto.WorkloadEndpointRemove) (*proto.Reply, error) {
 	logger := log.WithField("func", "RemoveLocalEndpoint")
+
+	defer recoverPanic(logger)
 
 	out := &proto.Reply{
 		Successful: true,
@@ -1248,6 +1274,8 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 
 	logger := s.log.WithField("func", "SetupHostInterface")
 
+	defer recoverPanic(logger)
+
 	out := &proto.Reply{
 		Successful: true,
 	}
@@ -1287,6 +1315,7 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 		return out, err
 	}
 	hostInterfaceMac = macAddr
+	store.SetHostInterfaceMac(macAddr)
 
 	if len(config.NodeIP) == 0 {
 		logger.Errorf("No node ip address configured")
