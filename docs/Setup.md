@@ -83,6 +83,22 @@ IPU ES2K target.
 6. Run the `setup_infra.sh` script, which, in addition to creating the
    specified number of virtual interfaces (TAP type on DPDK target and IDPF
    Sub-Function type on ES2K), sets up the HugePages and starts infrap4d.
+   The script supports setup in two different modes.
+
+   a. The host mode, where every component runs on the host and offload happens
+   from host.
+
+   b. The split mode, where the inframanager runs on IPU ARM cores for rule offloads
+   while the infraagent runs on host. In this mode, the communication channel between
+   IPU ACC-ARM complex and host must pre-exist through provisioning on IPU.
+   The communication channel on ARM-ACC side would require user to configure an IP
+   address and later use it as an argument in setup_infra.sh script. The below example
+   assumes remote ACC endpoint with an IP address of `10.10.0.2`.
+   The grpc communication between the two infra components over the comms channel
+   are encrypted. User would need to add IP address based on the configuration to
+   `openssl.cnf` under scripts TLS directory and regenerate certificates. Make sure
+   to also update inframanager config file for this IP address for manager to bind to
+   and infraagent config file for infraagent to connect to the remote manager.
 
    ```bash
    ./setup_infra.sh -i <8|16|..> -m <split|host> -r <10.10.0.2>
@@ -93,8 +109,8 @@ IPU ES2K target.
      -m  Mode host or split, depending on where Inframanager is configured to run
      -r  IP address configured by the user on the ACC-ARM complex for
        connectivity to the Host. This is provisioned using Node Policy - comms
-       channel [[0,3],[4,2]]. This is needed for runnning in split mode. Script will assign
-       an IP addresss from the same subnet on the Host side for connectivity.
+       channel ([5,0],[4,0]),([4,2],[0,3]). This is needed for runnning in split mode.
+       Script will assign an IP addresss from the same subnet on the Host side for connectivity.
 
 
    Please set following env variables for host deployment:
@@ -141,7 +157,6 @@ IPU ES2K target.
    Please note, any changes in config file need to be made
    as per section [inframanager config file update](#inframanager-config-file-update)
    before building the images.
-
 
 
 8. Make the docker images. This step builds the Kubernetes container images:
@@ -193,6 +208,12 @@ interfaceType : cdq
 interface: ens801f0
 mtls: true
 insecure: false
+```
+For split mode, also configure the follwing.
+
+```text
+managerAddr : <IP address of comms channel on ACC>
+managerPort : 50002
 ```
 
 ### inframanager config file update

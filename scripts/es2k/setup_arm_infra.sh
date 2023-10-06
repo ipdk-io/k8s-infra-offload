@@ -40,11 +40,6 @@ function run_infrap4d () {
   export PATH=$P4CP_INSTALL/bin:$P4CP_INSTALL/sbin:$PATH
   export SDE_INSTALL=/opt/p4/p4sde
   export LD_LIBRARY_PATH=$P4CP_INSTALL/lib:$P4CP_INSTALL/lib64:$SDE_INSTALL/lib64:$SDE_INSTALL/lib:/usr/lib64:/usr/lib:/usr/local/lib64:/usr/local/lib
-  # export-n -  unset DEBUGINFOD_URLS
-  # gdb --args $P4CP_INSTALL/install/sbin/infrap4d -grpc_open_insecure_mode=true --nodetach
-  # Bug - Infrap4d - copy certificates to another dir
-  mkdir -p /usr/share/stratum/certs
-  cp -r /usr/share/stratum/es2k/certs/* /usr/share/stratum/certs
   $P4CP_INSTALL/sbin/infrap4d
   check_status $? "sbin/infrap4d"
 }
