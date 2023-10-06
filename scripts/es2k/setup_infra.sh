@@ -111,13 +111,11 @@ function copy_certs() {
         echo "stratum directory not found."
         exit 1
     fi
-    mkdir -p $STRATUM_DIR/es2k/certs
     rm -rf $STRATUM_DIR/certs/ca.crt
     rm -rf $STRATUM_DIR/certs/client.crt
     rm -rf $STRATUM_DIR/certs/client.key
     rm -rf $STRATUM_DIR/certs/stratum.crt
     rm -rf $STRATUM_DIR/certs/stratum.key
-    cp $BASE_DIR/scripts/tls/certs/infrap4d/* /usr/share/stratum/es2k/certs/.
     # infrap4d bug workaround
     mkdir -p /usr/share/stratum/certs
     cp $BASE_DIR/scripts/tls/certs/infrap4d/* /usr/share/stratum/certs/.
@@ -136,17 +134,17 @@ function copy_cert_to_remote() {
 
   # setup directory structure on ACC for p4infrad and manager certs
   #launch_on_remote "/usr/share/stratum/es2k/generate-certs.sh" ""
-  launch_on_remote "mkdir -p /usr/share/stratum/es2k/certs" ""
-  launch_on_remote "mkdir -p /etc/pki/inframanager/certs" ""
+  launch_on_remote "mkdir -p /usr/share/stratum/certs" ""
+  launch_on_remote "mkdir -p /etc/pki/inframanager" ""
 
   if [ -d "$BASE_DIR/scripts/tls/certs/infrap4d" ]; then
     # copy certs to remote infrap4d dir
-    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BASE_DIR/scripts/tls/certs/infrap4d/* $REMOTE_HOST:/usr/share/stratum/es2k/certs
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BASE_DIR/scripts/tls/certs/infrap4d/* $REMOTE_HOST:/usr/share/stratum/certs
     check_status $? "scp infrap4d/certs/* root@$REMOTE_HOST:/usr/share/stratum/certs"
 
     # copy certs to remote inframanager dir
-    scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BASE_DIR/scripts/tls/certs/inframanager/* $REMOTE_HOST:/etc/pki/inframanager/certs
-    check_status $? "scp inframanager/certs/* root@$REMOTE_HOST:/etc/pki/inframanager/certs"
+    scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BASE_DIR/scripts/tls/certs/inframanager/* $REMOTE_HOST:/etc/pki/inframanager/.
+    check_status $? "scp $BASE_DIR/scripts/tls/certs/inframanager/* root@$REMOTE_HOST:/etc/pki/inframanager/"
   else
     echo "Missing infrap4d certificates. Run \"make gen-certs\" and try again."
     exit 1
@@ -259,11 +257,13 @@ usage() {
   echo "Configure and setup k8s infrastructure for deployment"
   echo ""
   echo "Options:"
-  echo "  -i  Num interfaces to configure for deployment"
+  echo "  -i  Num interfaces to configure for the deployment.
+              The max limit depends on IPU configuration setting for this host.
+              Recommended min is 8."
   echo "  -m  Mode host or split, depending on where Inframanager is configured to run"
   echo "  -r  IP address configured by the user on the ACC-ARM complex for
     connectivity to the Host. This is provisioned using Node Policy - comms
-    channel "[[0,3],[4,2]]". This must be specified in split mode. Script will assign
+    channel "([5,0],[4,0]),([4,2],[0,3])". This must be specified in split mode. Script will assign
     an IP addresss from the same subnet on the Host side for connectivity."
   echo ""
   echo " Please set following env variables for host deployment:"
