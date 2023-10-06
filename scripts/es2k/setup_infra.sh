@@ -263,8 +263,8 @@ usage() {
   echo "  -m  Mode host or split, depending on where Inframanager is configured to run"
   echo "  -r  IP address configured by the user on the ACC-ARM complex for
     connectivity to the Host. This is provisioned using Node Policy - comms
-    channel "([5,0],[4,0]),([4,2],[0,3])". This must be specified in split mode. Script will assign
-    an IP addresss from the same subnet on the Host side for connectivity."
+    channel \"([5,0],[4,0]),([4,2],[0,3])\". This must be specified in split mode.
+    Script will assign an IP addresss from the same subnet on the Host side for connectivity."
   echo ""
   echo " Please set following env variables for host deployment:"
   echo "  SDE_INSTALL - Default SDE install directory"
