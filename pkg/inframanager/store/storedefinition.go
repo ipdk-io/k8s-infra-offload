@@ -55,7 +55,7 @@ type Service struct {
 	ClusterIp       string
 	MacAddr         string
 	Proto           string
-	Port            uint32
+	Port            uint16
 	GroupID         uint32
 	ServiceEndPoint map[string]ServiceEndPoint
 	NumEndPoints    uint32
@@ -63,7 +63,7 @@ type Service struct {
 
 type ServiceEndPoint struct {
 	IpAddress      string
-	Port           uint32
+	Port           uint16
 	MemberID       uint32
 	ModBlobPtrDNAT uint32
 }

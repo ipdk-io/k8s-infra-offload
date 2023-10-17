@@ -1,0 +1,93 @@
+{
+	"k8s_dp_control.arp_to_port_table": [
+		{
+			"tableName": "k8s_dp_control.arp_to_port_table",
+			"actionName": "k8s_dp_control.set_dest_vport",
+			"entryCount": 1,
+			"keyCount": 1,
+			"actionParamCount": 1, 
+			"keyMatchType": ["Exact"], 
+			"keyName": ["hdrs.arp.tpa"],
+			"key": " ",
+			"action": " "
+		}
+	],
+	"k8s_dp_control.arpt_to_port_table": [
+		{
+			"tableName": "k8s_dp_control.arpt_to_port_table",
+			"actionName": "k8s_dp_control.set_dest_vport",
+			"entryCount": 1,
+			"keyCount": 1,
+			"actionParamCount": 1, 
+			"keyMatchType": ["Exact"], 
+			"keyName": ["hdrs.arp.tpa"],
+			"key": " ",
+			"action": " "
+		}
+	],
+	"k8s_dp_control.pod_gateway_mac_mod_table": [
+		{
+			"tableName": "k8s_dp_control.pod_gateway_mac_mod_table",
+			"actionName": "k8s_dp_control.update_src_dst_mac",
+			"entryCount": 1,
+			"keyCount": 1,
+			"actionParamCount": 2,
+			"keyMatchType": ["Exact"],
+			"keyName": ["meta.common.mod_blob_ptr"],
+			"key": " ",
+			"action": " "
+		}
+	],
+	"k8s_dp_control.ipv4_to_port_table_tx": [
+		{
+			"tableName": "k8s_dp_control.ipv4_to_port_table_tx",
+			"actionName": "k8s_dp_control.set_dest_mac_vport",
+			"entryCount": 1,
+			"keyCount": 1,
+			"actionParamCount": 2,
+			"keyMatchType": ["Exact"],
+			"keyName": ["hdrs.ipv4[meta.common.depth].dst_ip"],
+			"key": " ",
+			"action": " "
+		}
+	],
+	"k8s_dp_control.ipv4_to_port_table_rx": [
+		{
+			"tableName": "k8s_dp_control.ipv4_to_port_table_rx",
+			"actionName": "k8s_dp_control.set_dest_vport",
+			"entryCount": 1,
+			"keyCount": 1,
+			"actionParamCount": 1,
+			"keyMatchType": ["Exact"],
+			"keyName": ["hdrs.ipv4[meta.common.depth].dst_ip"],
+			"key": " ",
+			"action": " "
+		}
+	],
+	"k8s_dp_control.ipv4_to_port_table_tx_tcp": [
+		{
+			"tableName": "k8s_dp_control.ipv4_to_port_table_tx_tcp",
+			"actionName": "k8s_dp_control.set_dest_mac_vport",
+			"entryCount": 1,
+			"keyCount": 1,
+			"actionParamCount": 2,
+			"keyMatchType": ["Exact"],
+			"keyName": ["hdrs.ipv4[meta.common.depth].dst_ip"],
+			"key": " ",
+			"action": " "
+		}
+	],
+	"k8s_dp_control.ipv4_to_port_table_tx_service": [
+		{
+			"tableName": "k8s_dp_control.ipv4_to_port_table_tx_service",
+			"actionName": "k8s_dp_control.set_dest_mac_vport",
+			"entryCount": 1,
+			"keyCount": 1,
+			"actionParamCount": 2,
+			"keyMatchType": ["Exact"],
+			"keyName": ["hdrs.ipv4[meta.common.depth].dst_ip"],
+			"key": " ",
+			"action": " "
+		}
+	]
+}

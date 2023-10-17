@@ -100,7 +100,7 @@ func properKey(s Service) bool {
 	if len(s.Proto) == 0 {
 		return false
 	}
-	if s.Port > 65536 {
+	if s.Port >= 65535 {
 		return false
 	}
 	return true
