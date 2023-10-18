@@ -132,11 +132,10 @@ func newUpdateTable() UpdateTable {
 	return tblupdate
 }
 
-// Updating table structure members
+// Updating Table struct members
 func updateTables(tableName string, tableData map[string][]Table, svcmap map[string][]UpdateTable, keyparams []interface{}, actionparams []interface{}, entrycount int) {
 	entries, exists := tableData[tableName]
 	if exists {
-
 		for _, entry := range entries {
 			entry.EntryCount = entrycount
 			entry.Key = keyparams
@@ -149,6 +148,7 @@ func updateTables(tableName string, tableData map[string][]Table, svcmap map[str
 	}
 }
 
+// Updating UpdateTable struct
 func PrepareTable(tblaction map[string][]UpdateTable, tbl *Table) {
 	tblmap := newUpdateTable()
 
@@ -218,8 +218,8 @@ func ConfigureTable(ctx context.Context, p4RtC *client.Client, P4w P4RtCWrapper,
 		for k := 0; k < len(v); k++ {
 			for j := 0; j < len(v[k].mfs); j++ {
 				if flag {
-					log.Debugf("Key value %s action value %s", v[k].mfs[j].key, v[k].paramData[j].data)
-					log.Debugf("tablename %s actionname %s", tablenames[i], actionnames[i])
+					//log.Debugf("Key value %s action value %s", v[k].mfs[j].key, v[k].paramData[j].data)
+					//log.Debugf("tablename %s actionname %s", tablenames[i], actionnames[i])
 					entryAdd := P4w.NewTableEntry(
 						p4RtC,
 						tablenames[i],
@@ -231,7 +231,7 @@ func ConfigureTable(ctx context.Context, p4RtC *client.Client, P4w P4RtCWrapper,
 						log.Errorf("Failed to add entry in %s table, err: %v", tablenames[i], err)
 						return err
 					}
-					log.Debugf("Entry added for = %s", tablenames[i])
+					//log.Debugf("Entry added for = %s", tablenames[i])
 				} else {
 					entryDel := P4w.NewTableEntry(
 						p4RtC,
@@ -244,7 +244,7 @@ func ConfigureTable(ctx context.Context, p4RtC *client.Client, P4w P4RtCWrapper,
 						log.Errorf("Failed to delete entry in %s table, err: %v", tablenames[i], err)
 						return err
 					}
-					log.Debugf("Entry Deleted for = %s", tablenames[i])
+					//log.Debugf("Entry Deleted for = %s", tablenames[i])
 				}
 			}
 		}

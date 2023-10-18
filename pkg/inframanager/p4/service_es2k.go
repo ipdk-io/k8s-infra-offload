@@ -30,6 +30,22 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	service_table_names = []string{"k8s_dp_control.ipv4_to_port_table_tx_tcp",
+		"k8s_dp_control.ipv4_to_port_table_tx",
+		"k8s_dp_control.write_dest_ip_table",
+		"k8s_dp_control.write_source_ip_table",
+		"k8s_dp_control.rx_src_ip",
+		"k8s_dp_control.tx_balance"}
+
+	service_action_names = []string{"k8s_dp_control.set_vip_flag_tcp",
+		"k8s_dp_control.set_vip_flag",
+		"k8s_dp_control.update_dst_ip_mac",
+		"k8s_dp_control.update_src_ip_mac",
+		"k8s_dp_control.set_source_ip",
+		"k8s_dp_control.set_default_lb_dest"}
+)
+
 var flagMap = make(map[string]bool)
 
 func ServiceFlowPacketOptions(ctx context.Context, p4RtC *client.Client,
@@ -216,23 +232,8 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 
 	service = s
 
-	tablenames := []string{"k8s_dp_control.ipv4_to_port_table_tx_tcp",
-		"k8s_dp_control.ipv4_to_port_table_tx",
-		"k8s_dp_control.write_dest_ip_table",
-		"k8s_dp_control.write_source_ip_table",
-		"k8s_dp_control.rx_src_ip",
-		"k8s_dp_control.tx_balance"}
-
-	actionnames := []string{"k8s_dp_control.set_vip_flag_tcp",
-		"k8s_dp_control.set_vip_flag",
-		"k8s_dp_control.update_dst_ip_mac",
-		"k8s_dp_control.update_src_ip_mac",
-		"k8s_dp_control.set_source_ip",
-		"k8s_dp_control.set_default_lb_dest"}
-
 	log.Infof("=====Inserting to service tables======")
 
-	//TODO: Implement Update scenario for invoking ConfigureTable().
 	if update {
 		actn = Update
 		groupID = service.GroupID
@@ -266,7 +267,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		id := uint32((groupID << 4) | ((epNum + 1) & 0xF))
 		modblobptrdnatbyte = append(modblobptrdnatbyte, ValueToBytes(id))
 
-		log.Infof("modblobptrdnatbyte: %d, pod ip: %s, portID: %d",
+		log.Debugf("modblobptrdnatbyte: %d, pod ip: %s, portID: %d",
 			modblobptrdnatbyte[i], podIpAddr[i], portID[i])
 
 		serviceEp := store.ServiceEndPoint{
@@ -287,8 +288,6 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 			macByte = append(macByte, podmac)
 
 			InterfaceIDbyte = append(InterfaceIDbyte, ValueToBytes16(uint16(epEntry.InterfaceID))) //L2 forwarding port
-			log.Infof("macByte: %x, InterfaceIDbyte: %s",
-				podmac, ValueToBytes16(uint16(epEntry.InterfaceID)))
 		}
 	}
 	service.NumEndPoints = epNum
@@ -301,8 +300,6 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		err = fmt.Errorf("Error while parsing Json file")
 		return err, service
 	}
-	log.Infof("Json data")
-	fmt.Println(data)
 
 	//inserting forwarding rules for service IP
 	IP, netIp, err := net.ParseCIDR(types.DefaultRoute)
@@ -340,7 +337,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		key = nil
 		action = nil
 	} else {
-		log.Infof("vip flag already exists, skipping")
+		log.Debugf("vip flag already exists, skipping")
 	}
 
 	//inserting service tables
@@ -379,7 +376,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	} else {
 		key = append(key, ValueToBytes8(uint8(PROTO_UDP)))
 	}
-	key = append(key, portIDByte) //L4 ports
+	key = append(key, portIDByte)
 	action = append(action, ValueToBytes(groupID))
 	updateTables("k8s_dp_control.rx_src_ip", data, svcmap, key, action, len(podIpAddr))
 	key = nil
@@ -389,11 +386,10 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 
 	if actn == Update {
 		modblobptrdnatbyte, InterfaceIDbyte = concatOldEntries(modblobptrdnatbyte, oldmodblobptrdnatbyte, oldIpAddrs, InterfaceIDbyte)
-		log.Infof("Update scenario for tx_balance table, modblobptrdnatbyte: %v, InterfaceIDbyte: %v",
+		log.Debugf("Update tx_balance table, modblobptrdnatbyte: %v, InterfaceIDbyte: %v",
 			modblobptrdnatbyte, InterfaceIDbyte)
 	}
 	//tx_balance
-	//TODO: Implement Update scenario for invoking ConfigureTable()
 	key = append(key, Pack32BinaryIP4(service.ClusterIp))
 	if service.Proto == "TCP" {
 		key = append(key, ValueToBytes8(uint8(PROTO_TCP)))
@@ -419,7 +415,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	log.Debugf("Inserted into the table TxBalance, service ip: %s, service port: %d",
 		service.ClusterIp, uint16(service.Port))
 
-	err = ConfigureTable(ctx, p4RtC, P4w, tablenames, svcmap, actionnames, true)
+	err = ConfigureTable(ctx, p4RtC, P4w, service_table_names, svcmap, service_action_names, true)
 	if err != nil {
 		fmt.Println("failed to make entries to service p4")
 		return err, service
@@ -442,13 +438,6 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 	key := make([]interface{}, 0)
 
 	log.Infof("=====Deleting to service tables======")
-
-	tablenames := []string{"k8s_dp_control.ipv4_to_port_table_tx_tcp",
-		"k8s_dp_control.ipv4_to_port_table_tx",
-		"k8s_dp_control.write_dest_ip_table",
-		"k8s_dp_control.write_source_ip_table",
-		"k8s_dp_control.rx_src_ip",
-		"k8s_dp_control.tx_balance"}
 
 	data := parseJson("service.json")
 	if data == nil {
@@ -480,20 +469,22 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 		key = append(key, Pack32BinaryIP4(service.ClusterIp))
 		if service.Proto == "TCP" {
 			updateTables("k8s_dp_control.ipv4_to_port_table_tx_tcp", data, svcmap, key, nil, 1)
-			log.Infof("Deleting from table ipv4_to_port_table_tx_tcp, service.ClusterIp: %s", service.ClusterIp)
+			log.Debugf("Deleting from table ipv4_to_port_table_tx_tcp, service.ClusterIp: %s", service.ClusterIp)
 		} else {
 			updateTables("k8s_dp_control.ipv4_to_port_table_tx", data, svcmap, key, nil, 1)
-			log.Infof("Deleting from table ipv4_to_port_table_tx, service.ClusterIp: %s", service.ClusterIp)
+			log.Debugf("Deleting from table ipv4_to_port_table_tx, service.ClusterIp: %s", service.ClusterIp)
 		}
 		flagMap[vip_flag_key] = false
 		key = nil
 	}
 
+	//write_dest_ip_table
 	log.Infof("Deleting from table WriteDestIpTable, mod blob ptrs: %v", modblobptrdnatbyte)
 	key = append(key, modblobptrdnatbyte)
 	updateTables("k8s_dp_control.write_dest_ip_table", data, svcmap, key, nil, NumEp)
 	key = nil
 
+	//write_source_ip_table
 	log.Infof("Deleting from table WriteSourceIpTable, group id: %d", groupID)
 	key = append(key, ValueToBytes(groupID))
 	updateTables("k8s_dp_control.write_source_ip_table", data, svcmap, key, nil, 1)
@@ -517,13 +508,11 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 		service.ClusterIp, uint16(service.Port), service.Proto)
 
 	key = append(key, Pack32BinaryIP4(service.ClusterIp))
-
 	if service.Proto == "TCP" {
 		key = append(key, ValueToBytes8(uint8(PROTO_TCP)))
 	} else {
 		key = append(key, ValueToBytes8(uint8(PROTO_UDP)))
 	}
-
 	key = append(key, ValueToBytes16(uint16(service.Port)))
 
 	for i := 0; i < 64; i++ {
@@ -534,7 +523,7 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 	}
 	key = nil
 
-	err = ConfigureTable(ctx, p4RtC, P4w, tablenames, svcmap, nil, false)
+	err = ConfigureTable(ctx, p4RtC, P4w, service_table_names, svcmap, nil, false)
 	if err != nil {
 		fmt.Println("failed to delete entries")
 		return err
