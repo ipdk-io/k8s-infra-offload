@@ -16,6 +16,14 @@ daemon InfraP4d of the IPDK networking recipe to be runnning in the background.
 Once InfraP4d is running, Kubernetes can load its P4 pipeline and offload
 various functionalities on it (i.e. on the P4 data plane).
 
+On the Intel IPU, k8s-infra olload can run in 2 different modes details of which
+are present later in the doc.
+   a. The host mode, where every component runs on the host and offload happens
+   from host.
+
+   b. The split mode, where the inframanager runs on IPU ARM cores for rule offloads
+   while the infraagent runs on host.
+
 The instructions to setup the target and install infrap4d and its dependencies,
 are different for the two targets.
 See [Target Setup for P4-DPDK](guides/setup/target-setup-dpdk.md) for instructions on
@@ -65,7 +73,10 @@ IPU ES2K target.
    ```
 
 4. Generate the certificates required for the mTLS connection between infraagent,
-   inframanager, and infrap4d:
+   inframanager, and infrap4d.
+   Note that for split mode, users needs to add the IP of the ACC endpoint in the
+   `openssl.cnf` file under `scripts/tls/`.
+
    ```bash
    make gen-certs
    ```
@@ -85,19 +96,18 @@ IPU ES2K target.
    Sub-Function type on ES2K), sets up the HugePages and starts infrap4d.
    The script supports setup in two different modes.
 
-   a. The host mode, where every component runs on the host and offload happens
-   from host.
+   a. "host" : Host mode
 
-   b. The split mode, where the inframanager runs on IPU ARM cores for rule offloads
-   while the infraagent runs on host. In this mode, the communication channel between
+   b. "split" : In this mode, the communication channel between
    IPU ACC-ARM complex and host must pre-exist through provisioning on IPU.
    The communication channel on ARM-ACC side would require user to configure an IP
    address and later use it as an argument in setup_infra.sh script. The below example
    assumes remote ACC endpoint with an IP address of `10.10.0.2`.
    The grpc communication between the two infra components over the comms channel
    are encrypted. User would need to add IP address based on the configuration to
-   `openssl.cnf` under scripts TLS directory and regenerate certificates. Make sure
-   to also update inframanager config file for this IP address for manager to bind to
+   `openssl.cnf` under scripts TLS directory and generate certificates as mentioned
+   in the previous gen-certs step. Make sure to also update inframanager config file
+   for this IP address for manager to bind to
    and infraagent config file for infraagent to connect to the remote manager.
 
    ```bash
@@ -226,11 +236,21 @@ All fields have a default value in the file. Please verify if the values
 correspond to the desired values especially arp-mac.
 
 InfraManager section:
+addr: The local address to which the inframanager will bind to as the
+listening socket for infraagent. In `host` mode, it can be the localhost.
+```bash
+addr: 127.0.0.1:50002
+```
+For `split` mode, it needs to be the ACC comms channel IP. Example
+```bash
+addr:10.10.0.2:50002
+```
 arp-mac: The arp-mac needs to be configured. This should be the
 MAC of the interface the user wants to configure as the ARP-proxy gateway.
 This is the address of the interface which is given to the arp-proxy
 namespace using the `scrips/arp_proxy.sh` script mentioned in
 the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) for ARP proxy gateway.
+
 
 If user doesn't wish to use these default keys, certificates, and cipher suites, then
 modify the `scripts/mev/tls/gen_certs.sh` script accordingly before running
@@ -442,11 +462,26 @@ Solution : Run [cleanup](#Clean-Up) before `make deploy`
 Reason : IDPF driver failed to load
 Solution : Verify using `dmesg` command that it is the case. Then perform a `modprobe idpf`
 
+3. Failed to connect to inframanager seen on host when in `split` mode.
+
+Reason: Firewalld blocking it
+Solution: Disable firewall service
+
+4. Certs error while processing seen on inframanager when in `split` mode.
+
+Reason: Time might be out of sync.
+Solution: Ensure that the time is synced using the correct protocol.
+
 ## Clean Up
    Reset kubernetes which would stop and remove all pods. Then, remove all k8s
    runtime configurations and other files. Finally, stop container services.
+   Short way to cleanup everything
+   ```bash
+   ./scripts/cleanup.sh
+   ```
 
-   Delete all started pods, service deployments, namespace and daemonsets
+   If only delete all started pods, service deployments, namespace and
+   daemonsets
    ```bash
    kubectl delete pod < >
    kubectl delete deployment < >
