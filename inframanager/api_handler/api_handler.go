@@ -340,11 +340,10 @@ func InsertDefaultRule() {
 
 	log.Infof("Inserting default gateway rule for arp-proxy route, arp mac: %s", config.InfraManager.ArpMac)
 
-	if err := p4.ArpToPortDefault(context.Background(), server.p4RtC, ip,
-		portID); err != nil {
+	if err := p4.ArptToPortTable(context.Background(), server.p4RtC, ip,
+		portID, true); err != nil {
 		log.Errorf("Failed to insert the default rule for arp-proxy")
 	}
-
 	//service default rule
 	ep := store.EndPoint{
 		PodIpAddress:  ip,
@@ -364,12 +363,13 @@ func InsertDefaultRule() {
 
 	log.Infof("Inserting default gateway rule for service: ServiceFlowPacketOptions")
 	action := p4.Insert
-	err = p4.ServiceFlowPacketOptions(context.Background(), server.p4RtC, flags, action)
-	if err != nil {
-		log.Errorf("Failed to insert ServiceFlowPacketOptions")
-		return
+	if config.InterfaceType != types.TapInterface {
+		err = p4.ServiceFlowPacketOptions(context.Background(), server.p4RtC, flags, action)
+		if err != nil {
+			log.Errorf("Failed to insert ServiceFlowPacketOptions")
+			return
+		}
 	}
-
 	return
 }
 

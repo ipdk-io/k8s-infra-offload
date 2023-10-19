@@ -25,9 +25,6 @@ import (
 	"net"
 )
 
-var Env string
-var P4w P4RtCWrapper
-
 func ArptToPortTable(ctx context.Context, p4RtC *client.Client, arpTpa string, port uint32, flag bool) error {
 	var err error
 	P4w = GetP4Wrapper(Env)

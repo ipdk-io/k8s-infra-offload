@@ -43,7 +43,7 @@ var (
 		"k8s_dp_control.set_dest_mac_vport"}
 )
 
-func ArpToPortDefault(ctx context.Context, p4RtC *client.Client, arpTpa string, port uint32) error {
+func ArptToPortTable(ctx context.Context, p4RtC *client.Client, arpTpa string, port uint32, flag bool) error {
 	cniarpmap := make(map[string][]UpdateTable)
 
 	P4w = GetP4Wrapper(Env)
@@ -70,7 +70,7 @@ func ArpToPortDefault(ctx context.Context, p4RtC *client.Client, arpTpa string, 
 	}
 	PrepareTable(cniarpmap, arptbl)
 
-	err := ConfigureTable(ctx, p4RtC, P4w, tablenames, cniarpmap, actionnames, true)
+	err := ConfigureTable(ctx, p4RtC, P4w, tablenames, cniarpmap, actionnames, flag)
 	if err != nil {
 		log.Errorf("failed to insert default gateway rule")
 		return err
@@ -103,6 +103,7 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 		return ep, err
 	}
 
+	//To avoid overlapping with service modblob
 	var cni_offset uint32
 	cni_offset = 700
 	ep.ModPtr = cni_offset + uuidFactory.getUUID()
