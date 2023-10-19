@@ -16,7 +16,7 @@ daemon InfraP4d of the IPDK networking recipe to be runnning in the background.
 Once InfraP4d is running, Kubernetes can load its P4 pipeline and offload
 various functionalities on it (i.e. on the P4 data plane).
 
-On the Intel IPU, k8s-infra olload can run in 2 different modes details of which
+On the Intel IPU, k8s-infra-offload can run in 2 different modes details of which
 are present later in the doc.
    a. The host mode, where every component runs on the host and offload happens
    from host.
@@ -465,12 +465,19 @@ Solution : Verify using `dmesg` command that it is the case. Then perform a `mod
 3. Failed to connect to inframanager seen on host when in `split` mode.
 
 Reason: Firewalld blocking it
-Solution: Disable firewall service
+Solution: Disable firewall service on ACC. Might need to disable network-manager
+  service on both host and ACC.
 
 4. Certs error while processing seen on inframanager when in `split` mode.
 
 Reason: Time might be out of sync.
 Solution: Ensure that the time is synced using the correct protocol.
+
+5. Host/IMC crash and reboot.
+
+Reason: IDPF interfaces still exist on host and IMC is rebooted or host is
+rebooted.
+Solution: Ensure to run ./scripts/cleanup.sh prior to rebooting IMC or host.
 
 ## Clean Up
    Reset kubernetes which would stop and remove all pods. Then, remove all k8s
@@ -517,7 +524,6 @@ Versions of Kubernetes, linux distros, docker and other third-party libraries te
 ### OS
 
 * Linux
-  * Fedora 33
   * Fedora 37
   * Rocky Linux 9.2
   * RHEL 9.2
