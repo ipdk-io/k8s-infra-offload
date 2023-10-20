@@ -345,7 +345,8 @@ if [ $MODE = "host" ]; then
   setup_run_env
   install_drivers
   #Wait for driver initialization to happen
-  sleep 6
+  echo "This will take a few seconds, waiting on driver init"
+  sleep 12
   copy_certs
   get_device_id
   create_arp_interface
@@ -360,7 +361,8 @@ else
   NEW_IP="${REMOTE_HOST%.*}.$NEW_OCTET"
   install_drivers
   #Wait for driver initialization to happen
-  sleep 6
+  echo "This will take a few seconds, waiting on driver init"
+  sleep 12
   config_comms_channel_host $NEW_IP
   sleep 1
   copy_script_to_remote
