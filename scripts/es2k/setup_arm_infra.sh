@@ -25,9 +25,7 @@ function run_inframgr () {
   getPid=$(pgrep -f inframanager)  # kill if already runnning
   [[ $getPid ]] && kill $getPid
   sleep 1
-  #export NODE_IP=$NODE
   NODE_IP=$NODE $P4K8S_INSTALL/inframanager 1>&2> /dev/null &
-  #NODE_IP=$NODE $P4K8S_INSTALL/inframanager &
   check_status $? "$P4K8S_INSTALL/inframanager"
   echo "Press [^c] to exit"
   return 0
