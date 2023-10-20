@@ -19,6 +19,7 @@ function launch_on_remote {
 
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $REMOTE_HOST "$script $arg"
     check_status $? "ssh $REMOTE_HOST \"$script\" \"$arg\""
+    return 0
 }
 
 function check_host_env() {
@@ -42,7 +43,7 @@ function setup_host_dep_env () {
   if [ -f "$P4CP_INSTALL/sbin/setup_env.sh" ]; then
     source $P4CP_INSTALL/sbin/setup_env.sh $P4CP_INSTALL $SDE_INSTALL $DEPEND_INSTALL
   else
-    echo "Missing set_env script on host"
+    echo "Error: Missing set_env script on host"
     exit 1
   fi
 }
@@ -66,6 +67,15 @@ function get_device_id () {
 
   devlink_output=$(devlink dev show)
   DEV_BUS=$(echo "$devlink_output" | grep "$dev_id\:")
+}
+
+# Config comms channel on host side
+function config_comms_channel_host () {
+  IP_ADDR=$1
+  pf_id=$(lspci | grep 1452 | cut -d ':' -f 1)
+  HCOMM_IFACE=$(grep PCI_SLOT_NAME /sys/class/net/*/device/uevent | grep $pf_id | grep d3 | cut -d'/' -f5)
+  echo "$HCOMM_IFACE"
+  ifconfig $HCOMM_IFACE $IP_ADDR/16 up
 }
 
 # Create an interface for arp-proxy
@@ -108,7 +118,7 @@ function copy_certs() {
 
   if [ -d "$BASE_DIR/scripts/tls/certs/infrap4d" ]; then
     if [ ! -d $STRATUM_DIR ]; then
-        echo "stratum directory not found."
+        echo "Error: Stratum directory not found."
         exit 1
     fi
     rm -rf $STRATUM_DIR/certs/ca.crt
@@ -120,7 +130,7 @@ function copy_certs() {
     mkdir -p /usr/share/stratum/certs
     cp $BASE_DIR/scripts/tls/certs/infrap4d/* /usr/share/stratum/certs/.
   else
-    echo "Missing infrap4d certificates. Run \"make gen-certs\" and try again."
+    echo "Error: Missing infrap4d certificates. Run \"make gen-certs\" and try again."
     exit 1
   fi
 }
@@ -146,7 +156,7 @@ function copy_cert_to_remote() {
     scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BASE_DIR/scripts/tls/certs/inframanager/* $REMOTE_HOST:/etc/pki/inframanager/.
     check_status $? "scp $BASE_DIR/scripts/tls/certs/inframanager/* root@$REMOTE_HOST:/etc/pki/inframanager/"
   else
-    echo "Missing infrap4d certificates. Run \"make gen-certs\" and try again."
+    echo "Error: Missing infrap4d certificates. Run \"make gen-certs\" and try again."
     exit 1
   fi
 }
@@ -158,7 +168,7 @@ function copy_artifacts_to_remote() {
     scp -r -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BASE_DIR/k8s_dp/es2k/* $REMOTE_HOST:/share/infra/k8s_dp/.
     check_status $? "scp $BASE_DIR/k8s_dp/es2k/* root@$REMOTE_HOST:/share/infra/k8s_dp/"
   else
-    echo "Missing compiler artifacts and proto file. Please compile p4 program and generate."
+    echo "Error: Missing compiler artifacts and proto file. Please compile p4 program and generate."
     exit 1
   fi
 }
@@ -170,7 +180,7 @@ function copy_config_to_remote() {
     scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BASE_DIR/deploy/inframanager-config.yaml $REMOTE_HOST:/etc/infra/.
     check_status $? "scp $BASE_DIR/deploy/inframanager-config.yaml root@$REMOTE_HOST:/etc/infra/"
   else
-    echo "Missing InfraManager config file."
+    echo "Error: Missing InfraManager config file."
     exit 1
   fi
 }
@@ -182,7 +192,7 @@ function copy_script_to_remote() {
     scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BASE_DIR/scripts/$ARM_SCRIPT $REMOTE_HOST:/opt/p4/k8s/.
     check_status $? "scp scripts/setup_arm_infra.sh/* root@$REMOTE_HOST:/opt/p4/k8s"
   else
-    echo "Missing arm script"
+    echo "Error: Missing arm script"
     exit 1
     fi
 }
@@ -206,6 +216,7 @@ function setup_run_env () {
   mod_string=$(echo "$orig_string" | sed -E "s/-a [a-z]+\:[0-9]+\.[0-9]/-a $replacement/")
   sed -i "s@$orig_string@$mod_string@" "$file"
   sed -i "s/\"iommu_grp_num\": *[0-9][0-9]*/\"iommu_grp_num\": $GROUP_ID/g" "$file"
+  sed -i "s/\"cfgqs-idx\": \"[0-9]-15\"/\"cfgqs-idx\": \"2-15\"/g" "$file"
   sed -i "s/\(\"pcie_bdf\": \)\"[^\"]*\"/\1\"0000:$dev_id\"/" $file
   sed -i "s/\(\"program-name\": \)\"[^\"]*\"/\1\"k8s_dp\"/" $file
   sed -i "s/\(\"bfrt-config\": \)\"[^\"]*\"/\1\"\/share\/infra\/k8s_dp\/bf-rt.json\"/" $file
@@ -252,26 +263,32 @@ DEV_BUS=""
 # Displays help text
 usage() {
   echo ""
+  echo "*****************************************************************"
   echo "Usage: $0 < -i 8|16|.. > < -m host|split > < -r 10.10.0.2 >" 1>&2;
   echo ""
   echo "Configure and setup k8s infrastructure for deployment"
   echo ""
   echo "Options:"
   echo "  -i  Num interfaces to configure for the deployment.
-              The max limit depends on IPU configuration setting for this host.
-              Recommended min is 8."
-  echo "  -m  Mode host or split, depending on where Inframanager is configured to run"
+      The max limit depends on IPU configuration setting for this host.
+      Recommended min is 8."
+  echo "  -m  Mode host or split, depending on where Inframanager is configured
+      to run"
   echo "  -r  IP address configured by the user on the ACC-ARM complex for
-    connectivity to the Host. This is provisioned using Node Policy - comms
-    channel \"([5,0],[4,0]),([4,2],[0,3])\". This must be specified in split mode.
-    Script will assign an IP addresss from the same subnet on the Host side for connectivity."
+      connectivity to the Host. This is provisioned using Node Policy -
+      comms channel \"([5,0],[4,0]),([4,2],[0,3])\". This must be specified
+      in split mode. Script will assign an IP addresss from the same subnet
+      on the Host side for connectivity."
+  echo "  -c  Name of the interface on Host side for connectivity to remote ACC-ARM"
   echo ""
-  echo " Please set following env variables for host deployment:"
+  echo " Please set following env variables to setup paths prior to executing
+      the script:"
   echo "  SDE_INSTALL - Default SDE install directory"
   echo "  P4CP_INSTALL - Default p4cp install directory"
   echo "  DEPEND_INSTALL - Default target dependencies directory"
   echo "  K8S_RECIPE - Path to K8S recipe on the host"
   echo ""
+  echo "*****************************************************************"
   exit 1
 }
 
@@ -303,10 +320,12 @@ if [ -z "${i}" ] || [ -z "${m}" ]; then
   usage
 fi
 
-if [[ "$m" == "split" &&  -z "${r}" ]]; then
-  echo "Host-Arm connectivity IP is empty"
-  exit 1
-elif [[ "$m" == "split" ]]; then
+if [[ "$m" == "split" ]] && [ -z "${r}" ]; then
+  echo "Error: Missing Host-Arm connectivity information - \"remote IP Address\"."
+  usage
+fi
+
+if [[ "$m" == "split" ]]; then
   if ! [[ "$r" =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
     echo "Error: Invalid IP address format."
     exit 1
@@ -325,12 +344,13 @@ if [ $MODE = "host" ]; then
   setup_host_dep_env
   setup_run_env
   install_drivers
-  sleep 4
+  #Wait for driver initialization to happen
+  sleep 6
   copy_certs
   get_device_id
   create_arp_interface
   create_pod_interfaces
-  # Run infrap4d
+  #Run infrap4d
   run_infrap4d
 else
   echo "Setting up p4k8s in split mode. Manager runs on arm"
@@ -339,8 +359,9 @@ else
   NEW_OCTET=$((LAST_OCTET + 1))
   NEW_IP="${REMOTE_HOST%.*}.$NEW_OCTET"
   install_drivers
-  sleep 4
-  ifconfig ens801f0d3 $NEW_IP/16 up
+  #Wait for driver initialization to happen
+  sleep 6
+  config_comms_channel_host $NEW_IP
   sleep 1
   copy_script_to_remote
   copy_cert_to_remote
@@ -352,4 +373,5 @@ else
   create_pod_interfaces
   launch_on_remote "$K8S_REMOTE/$ARM_SCRIPT" "$SYSTEM_IP"
   echo "Remote script launched successfully!"
+  exit 0
 fi

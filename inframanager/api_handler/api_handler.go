@@ -182,8 +182,7 @@ func getPortID(ifName string, macAddr net.HardwareAddr) (portID uint32, err erro
 
 	//TODO: Test for SRIOV
 	switch config.InterfaceType {
-	case types.SriovPodInterface:
-	case types.CDQInterface:
+	case types.SriovPodInterface, types.CDQInterface:
 		portID = (uint32(macAddr[1]) + 16)
 		return
 	case types.TapInterface:
