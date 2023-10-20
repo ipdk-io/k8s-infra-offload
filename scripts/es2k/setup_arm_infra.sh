@@ -25,9 +25,10 @@ function run_inframgr () {
   getPid=$(pgrep -f inframanager)  # kill if already runnning
   [[ $getPid ]] && kill $getPid
   sleep 1
-  export NODE_IP=$NODE
-  $P4K8S_INSTALL/inframanager &
+  NODE_IP=$NODE $P4K8S_INSTALL/inframanager 1>&2> /dev/null &
   check_status $? "$P4K8S_INSTALL/inframanager"
+  echo "Press [^c] to exit"
+  return 0
 }
 
 # Run Infrap4d as standalone process
@@ -73,6 +74,7 @@ function setup_p4cp_file () {
   mod_string=$(echo "$orig_string" | sed -E "s/-a [a-z]+\:[0-9]+\.[0-9]/-a $replacement/")
   sed -i "s@$orig_string@$mod_string@" "$file"
   sed -i "s/\"iommu_grp_num\": *[0-9][0-9]*/\"iommu_grp_num\": $GROUP_ID/g" "$file"
+  sed -i "s/\"cfgqs-idx\": \"[0-9]-15\"/\"cfgqs-idx\": \"2-15\"/g" "$file"
   sed -i "s/\(\"pcie_bdf\": \)\"[^\"]*\"/\1\"0000:$dev_id\"/" $file
   sed -i "s/\(\"program-name\": \)\"[^\"]*\"/\1\"k8s_dp\"/" $file
   sed -i "s/\(\"bfrt-config\": \)\"[^\"]*\"/\1\"\/share\/infra\/k8s_dp\/bf-rt.json\"/" $file
@@ -87,8 +89,8 @@ echo "Host Node IP: \"$NODE\""
 setup_inframgr
 setup_p4cp_file
 run_infrap4d
-# wait for grpc sockets to be open
-#sleep 6
-# Certificates have to be regenerated on arm for inframanager
-# and infrap4d. Also, arp proxy mac and other config file changes needed
-#run_inframgr $NODE
+echo "This may take a while ..."
+run_infrap4d
+sleep 15
+run_inframgr $NODE
+exit 0
