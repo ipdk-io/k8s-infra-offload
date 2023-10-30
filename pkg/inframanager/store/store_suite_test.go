@@ -1005,7 +1005,7 @@ var _ = Describe("Storepolicy", func() {
 					PolicyNameIngress: []string{"policy1", "policy2"},
 					PolicyNameEgress:  []string{"policy3", "policy4"},
 				}
-        ret := data_valid.WriteToStore()
+				ret := data_valid.WriteToStore()
 				Expect(ret).To(Equal(true))
 				ret = store.IsWorkerepStoreEmpty()
 				Expect(ret).To(Equal(false))
