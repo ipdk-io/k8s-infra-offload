@@ -208,24 +208,19 @@ func (s *CniServer) Del(ctx context.Context, in *pb.DelRequest) (*pb.DelReply, e
 		return out, nil
 	}
 
-	err = s.podInterface.ReleasePodInterface(in)
-	if err != nil {
-		out.ErrorMessage = err.Error()
-		out.Successful = false
-		return out, nil
-	}
-
 	c := newInfraAgentClient(conn)
 	out, err = s.podInterface.ReleaseNetwork(ctx, c, in)
 	if err != nil || !out.Successful {
 		s.log.WithError(err).Error("Failed to clean up interface config via infra-manager")
-		return out, err
 	}
+
+	_ = s.podInterface.ReleasePodInterface(in)
+
 	if s.podInterfaceType != types.IpvlanPodInterface {
 		netconf.DeletePodIfaceConf(in.InterfaceName, s.podInterfaceType, in.Netns)
 	}
 
-	return out, nil
+	return out, err
 }
 
 // Check is used to check the status of GRPC service

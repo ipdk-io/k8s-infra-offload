@@ -17,7 +17,7 @@ mkdir -p $MGR_CLIENT
 mkdir -p $MGR_SERVER
 mkdir -p $INFRAP4D
 
-# Create common self-signed CA cert 
+# Create common self-signed CA cert
 openssl req -x509                                          \
   -newkey rsa:4096                                         \
   -nodes                                                   \
@@ -57,29 +57,6 @@ openssl x509 -req                                       \
   -sha384
 openssl verify -verbose -CAfile $CERTS/ca.crt $MGR_SERVER/tls.crt
 rm $MGR_SERVER/server.csr
-
-# Generate inframanager client csr and sign it
-# with CA.
-openssl genrsa -out $MGR_CLIENT/tls.key 4096
-openssl req -new                                        \
-  -key $MGR_CLIENT/tls.key                              \
-  -out $MGR_CLIENT/client.csr                           \
-  -subj /C=US/ST=CA/L=SJ/O=IPDK/CN=inframanager-server/ \
-  -config $OPENSSL_CNF                                  \
-  -reqexts v3_server
-openssl x509 -req                                       \
-  -in $MGR_CLIENT/client.csr                            \
-  -CAkey $CERTS/ca.key                                  \
-  -CA $CERTS/ca.crt                                     \
-  -days 365                                             \
-  -set_serial 1001                                      \
-  -out $MGR_CLIENT/tls.crt                              \
-  -extfile $OPENSSL_CNF                                 \
-  -extensions v3_server                                 \
-  -sha384
-openssl verify -verbose -CAfile $CERTS/ca.crt $MGR_CLIENT/tls.crt
-rm $MGR_CLIENT/client.csr
-
 
 # Generate infraagent client csr and sign it
 # with CA.
@@ -128,23 +105,44 @@ rm $INFRAP4D/stratum.csr
 # Generate infrap4d client csr and sign it
 # with CA.
 openssl genrsa -out $INFRAP4D/client.key 4096
-openssl req -new                                                  \
-  -key $INFRAP4D/client.key                                       \
-  -out $INFRAP4D/client.csr                                       \
-  -subj /C=US/ST=CA/L=SJ/O=IPDK/CN="Stratum client certificate"/  \
-  -config $OPENSSL_CNF                                            \
+openssl req -new                                        \
+  -key $INFRAP4D/client.key                             \
+  -out $INFRAP4D/client.csr                             \
+  -subj /C=US/ST=CA/L=SJ/O=IPDK/CN="stratum-client"/    \
+  -config $OPENSSL_CNF                                  \
   -reqexts v3_stratum_server
-openssl x509 -req                                                 \
-  -in $INFRAP4D/client.csr                                        \
-  -CAkey $CERTS/ca.key                                            \
-  -CA $CERTS/ca.crt                                               \
-  -days 365                                                       \
-  -set_serial 1004                                                \
-  -out $INFRAP4D/client.crt                                       \
+openssl x509 -req                                       \
+  -in $INFRAP4D/client.csr                              \
+  -CAkey $CERTS/ca.key                                  \
+  -CA $CERTS/ca.crt                                     \
+  -days 365                                             \
+  -set_serial 1004                                      \
+  -out $INFRAP4D/client.crt                             \
   -extfile $OPENSSL_CNF                                 \
   -extensions v3_stratum_server                         \
   -sha512
 openssl verify -verbose -CAfile $CERTS/ca.crt $INFRAP4D/client.crt
 rm $INFRAP4D/client.csr
 
+# Generate infrap4d client csr and sign it
+# with CA.
+openssl genrsa -out $MGR_CLIENT/tls.key 4096
+openssl req -new                                        \
+  -key $MGR_CLIENT/tls.key                              \
+  -out $MGR_CLIENT/tls.csr                              \
+  -subj /C=US/ST=CA/L=SJ/O=IPDK/CN="stratum-client"/    \
+  -config $OPENSSL_CNF                                  \
+  -reqexts v3_stratum_server
+openssl x509 -req                                       \
+  -in $MGR_CLIENT/tls.csr                               \
+  -CAkey $CERTS/ca.key                                  \
+  -CA $CERTS/ca.crt                                     \
+  -days 365                                             \
+  -set_serial 1005                                      \
+  -out $MGR_CLIENT/tls.crt                              \
+  -extfile $OPENSSL_CNF                                 \
+  -extensions v3_stratum_server                         \
+  -sha512
+openssl verify -verbose -CAfile $CERTS/ca.crt $MGR_CLIENT/tls.crt
+rm $MGR_CLIENT/tls.csr
 

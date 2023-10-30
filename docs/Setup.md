@@ -16,6 +16,14 @@ daemon InfraP4d of the IPDK networking recipe to be runnning in the background.
 Once InfraP4d is running, Kubernetes can load its P4 pipeline and offload
 various functionalities on it (i.e. on the P4 data plane).
 
+On the Intel IPU, k8s-infra-offload can run in 2 different modes details of which
+are present later in the doc.
+   a. The host mode, where every component runs on the host and offload happens
+   from host.
+
+   b. The split mode, where the inframanager runs on IPU ARM cores for rule offloads
+   while the infraagent runs on host.
+
 The instructions to setup the target and install infrap4d and its dependencies,
 are different for the two targets.
 See [Target Setup for P4-DPDK](guides/setup/target-setup-dpdk.md) for instructions on
@@ -26,8 +34,9 @@ IPU ES2K target.
 
 ## Set Up P4 Kubernetes
 
-1. Install Go package (go version go1.20.5 linux/amd64), following instruction
-   at https://go.dev/doc/install
+1. Install Go package (version 1.20.8)
+   following instruction at https://go.dev/doc/install
+
 
 2. Pull P4-K8s software from the GitHub repository:
 
@@ -64,17 +73,20 @@ IPU ES2K target.
    ```
 
 4. Generate the certificates required for the mTLS connection between infraagent,
-   inframanager, and infrap4d:
+   inframanager, and infrap4d.
+   Note that for split mode, users needs to add the IP of the ACC endpoint in the
+   `openssl.cnf` file under `scripts/tls/`.
+
    ```bash
    make gen-certs
    ```
    Note that the above script generates the default keys and certificates and
-   uses cipher suites as specified in the `inframanager/config.yaml` file.
+   uses cipher suites as specified in the `deploy/inframanager-config.yaml` file.
    Refer to section [inframanager config file update](#inframanager-config-file-update)
    for any custom cipher suite, key, certificate change.
 
    Note that the above script generates the default keys and certificates and
-   uses cipher suites as specified in the `inframanager/config.yaml` file.
+   uses cipher suites as specified in the `deploy/inframanager-config.yaml` file.
 
 5. Run `make install` to install all config and other artifacts to relevant
    directories
@@ -82,6 +94,21 @@ IPU ES2K target.
 6. Run the `setup_infra.sh` script, which, in addition to creating the
    specified number of virtual interfaces (TAP type on DPDK target and IDPF
    Sub-Function type on ES2K), sets up the HugePages and starts infrap4d.
+   The script supports setup in two different modes.
+
+   a. "host" : Host mode
+
+   b. "split" : In this mode, the communication channel between
+   IPU ACC-ARM complex and host must pre-exist through provisioning on IPU.
+   The communication channel on ARM-ACC side would require user to configure an IP
+   address and later use it as an argument in setup_infra.sh script. The below example
+   assumes remote ACC endpoint with an IP address of `10.10.0.2`.
+   The grpc communication between the two infra components over the comms channel
+   are encrypted. User would need to add IP address based on the configuration to
+   `openssl.cnf` under scripts TLS directory and generate certificates as mentioned
+   in the previous gen-certs step. Make sure to also update inframanager config file
+   for this IP address for manager to bind to
+   and infraagent config file for infraagent to connect to the remote manager.
 
    ```bash
    ./setup_infra.sh -i <8|16|..> -m <split|host> -r <10.10.0.2>
@@ -92,8 +119,8 @@ IPU ES2K target.
      -m  Mode host or split, depending on where Inframanager is configured to run
      -r  IP address configured by the user on the ACC-ARM complex for
        connectivity to the Host. This is provisioned using Node Policy - comms
-       channel [[0,3],[4,2]]. This is needed for runnning in split mode. Script will assign
-       an IP addresss from the same subnet on the Host side for connectivity.
+       channel ([5,0],[4,0]),([4,2],[0,3]). This is needed for runnning in split mode.
+       Script will assign an IP addresss from the same subnet on the Host side for connectivity.
 
 
    Please set following env variables for host deployment:
@@ -129,7 +156,7 @@ IPU ES2K target.
    Make changes to the [infragent config file](#infragent-config-file-update)
    for interface and interface type.
 
-   For DPDK target, change the interfaceType in config.yaml file to "tap".
+   For DPDK target, change the interfaceType in inframanager-config.yaml file to "tap".
 
    The script finally runs the arp-proxy on that assigned interface, within the
    isolated namespace.
@@ -140,7 +167,6 @@ IPU ES2K target.
    Please note, any changes in config file need to be made
    as per section [inframanager config file update](#inframanager-config-file-update)
    before building the images.
-
 
 
 8. Make the docker images. This step builds the Kubernetes container images:
@@ -181,7 +207,7 @@ IPU ES2K target.
 
 ### infraagent config file update
 
-The config file `deploy/es2k/infraagent-configmap.yaml` is used to inform the
+The config file `deploy/es2k/infraagent-config.yaml` is used to inform the
 infraagent which interface and interfacetype to use.
 
 The interfaceType should be `cdq` for ES2K and the the interface name is the
@@ -193,10 +219,16 @@ interface: ens801f0
 mtls: true
 insecure: false
 ```
+For split mode, also configure the follwing.
+
+```text
+managerAddr : <IP address of comms channel on ACC>
+managerPort : 50002
+```
 
 ### inframanager config file update
 
-The config file `inframanager/config.yaml` is used to define the parameters
+The config file `deploy/inframanager-config.yaml` is used to define the parameters
 which the inframanager will use for the connection establishment with infrap4d
 and for the interfaces created.
 
@@ -204,15 +236,25 @@ All fields have a default value in the file. Please verify if the values
 correspond to the desired values especially arp-mac.
 
 InfraManager section:
+addr: The local address to which the inframanager will bind to as the
+listening socket for infraagent. In `host` mode, it can be the localhost.
+```bash
+addr: 127.0.0.1:50002
+```
+For `split` mode, it needs to be the ACC comms channel IP. Example
+```bash
+addr:10.10.0.2:50002
+```
 arp-mac: The arp-mac needs to be configured. This should be the
 MAC of the interface the user wants to configure as the ARP-proxy gateway.
 This is the address of the interface which is given to the arp-proxy
 namespace using the `scrips/arp_proxy.sh` script mentioned in
 the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) for ARP proxy gateway.
 
+
 If user doesn't wish to use these default keys, certificates, and cipher suites, then
 modify the `scripts/mev/tls/gen_certs.sh` script accordingly before running
-`make gen-certs` and modify the `inframanager/config.yaml` file with preferred
+`make gen-certs` and modify the `deploy/inframanager-config.yaml` file with preferred
 cipher suites. These changes need to be done prior to the creation of container
 images in step 8 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 
@@ -420,11 +462,33 @@ Solution : Run [cleanup](#Clean-Up) before `make deploy`
 Reason : IDPF driver failed to load
 Solution : Verify using `dmesg` command that it is the case. Then perform a `modprobe idpf`
 
+3. Failed to connect to inframanager seen on host when in `split` mode.
+
+Reason: Firewalld blocking it
+Solution: Disable firewall service on ACC. Might need to disable network-manager
+  service on both host and ACC.
+
+4. Certs error while processing seen on inframanager when in `split` mode.
+
+Reason: Time might be out of sync.
+Solution: Ensure that the time is synced using the correct protocol.
+
+5. Host/IMC crash and reboot.
+
+Reason: IDPF interfaces still exist on host and IMC is rebooted or host is
+rebooted.
+Solution: Ensure to run ./scripts/cleanup.sh prior to rebooting IMC or host.
+
 ## Clean Up
    Reset kubernetes which would stop and remove all pods. Then, remove all k8s
    runtime configurations and other files. Finally, stop container services.
+   Short way to cleanup everything
+   ```bash
+   ./scripts/cleanup.sh
+   ```
 
-   Delete all started pods, service deployments, namespace and daemonsets
+   If only delete all started pods, service deployments, namespace and
+   daemonsets
    ```bash
    kubectl delete pod < >
    kubectl delete deployment < >
@@ -460,13 +524,13 @@ Versions of Kubernetes, linux distros, docker and other third-party libraries te
 ### OS
 
 * Linux
-  * Fedora 33
   * Fedora 37
-  * Rocky Linux 9.1
+  * Rocky Linux 9.2
+  * RHEL 9.2
 
 ### golang
 
-go1.20.7
+go1.20.8
 
 ### docker
 ```bash

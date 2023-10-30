@@ -128,9 +128,8 @@ func Run(stopCh <-chan struct{}, waitCh chan<- struct{}) {
 	<-stopCh
 
 	manager.stopServer()
-
-	store.RunSyncEndPointInfo()
-	store.RunSyncServiceInfo()
+	store.SyncDB()
 
 	close(waitCh)
+
 }
