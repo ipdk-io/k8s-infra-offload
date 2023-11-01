@@ -11,4 +11,4 @@ if [ ! -f "$SETUP_ENVTEST" ]; then
 fi
 export KUBEBUILDER_ASSETS=$($SETUP_ENVTEST use | grep -oP '[^\s]*kubebuilder[^\s]*')
 
-go test -tags es2k $(go list ./... | grep -v proto | grep -v types) -coverprofile=./cover.out
+go test  -tags es2k $(go list ./...) -coverprofile=./cover.out
