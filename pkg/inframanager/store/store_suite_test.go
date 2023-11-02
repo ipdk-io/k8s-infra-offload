@@ -1826,7 +1826,7 @@ var _ = Describe("Storepolicy", func() {
 				Expect(ret).To(Equal(true))
 			})
 			//Valid case 2
-			It("returns true if data doesn't exits in store", func() {
+			It("returns true if data doesn't exist in store", func() {
 				// This case is supposed to pass because if
 				// an entry isn't found, it is added instead
 				r1 := store.Rule{
@@ -1854,7 +1854,7 @@ var _ = Describe("Storepolicy", func() {
 				Expect(ret).To(Equal(true))
 			})
 			//Valid case 3
-			It("returns true if same data already exits in store", func() {
+			It("returns true if same data already exist in store", func() {
 				// The update is an idempotent function
 				// and it returns true if the same data exists
 				// even though no update is actually done.
