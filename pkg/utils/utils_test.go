@@ -747,7 +747,7 @@ var _ = Describe("utils", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(actualFilePath).To(Equal(""))
 		})
-		var _ = It("return no error with a log file with symlink inside the allowed dir", func() {
+		var _ = It("return an error with a log file if it is a symlink", func() {
 			logDir := "/var/log/infraagent"
 			logFile := "/var/log/infraagent/infraagent.log"
 			otherFile := "/var/log/infraagent/otherfile.log"
@@ -765,9 +765,8 @@ var _ = Describe("utils", func() {
 			_, tearDown, err := fs.Use(tempDir)
 			Expect(err).NotTo(HaveOccurred())
 			defer tearDown()
-			actualFilePath, err := VerifiedFilePath(filepath.Join(tempDir, logFile), filepath.Join(tempDir, logDir))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(actualFilePath).To(Equal(filepath.Join(tempDir, otherFile)))
+			_, err = VerifiedFilePath(filepath.Join(tempDir, logFile), filepath.Join(tempDir, logDir))
+			Expect(err).To(HaveOccurred())
 		})
 	})
 	var _ = Context("CheckGrpcServerStatus() should", func() {

@@ -38,8 +38,7 @@ jobs:
 
     - name: "Test"
       run: |
-        #make test
-        echo "skipping unit test"
+        make test
 
   lint_dockerfiles:
     timeout-minutes: 15
