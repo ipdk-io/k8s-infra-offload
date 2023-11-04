@@ -504,7 +504,7 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 	key = nil
 
 	//tx_balance
-	log.Infof("Deleting from table TxBalanceTable, service ip: %s, service port: %d, service.Proto: %d",
+	log.Infof("Deleting from table TxBalanceTable, service ip: %s, service port: %d, service.Proto: %s",
 		service.ClusterIp, uint16(service.Port), service.Proto)
 
 	key = append(key, Pack32BinaryIP4(service.ClusterIp))
