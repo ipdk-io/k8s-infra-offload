@@ -1005,8 +1005,9 @@ var _ = Describe("Storepolicy", func() {
 					PolicyNameIngress: []string{"policy1", "policy2"},
 					PolicyNameEgress:  []string{"policy3", "policy4"},
 				}
-				data_valid.WriteToStore()
-				ret := store.IsWorkerepStoreEmpty()
+				ret := data_valid.WriteToStore()
+				Expect(ret).To(Equal(true))
+				ret = store.IsWorkerepStoreEmpty()
 				Expect(ret).To(Equal(false))
 			})
 
@@ -1824,8 +1825,10 @@ var _ = Describe("Storepolicy", func() {
 				ret := data_valid1.UpdateToStore()
 				Expect(ret).To(Equal(true))
 			})
-			//Invalid case 1
-			It("returns false if data doesn't exits in store", func() {
+			//Valid case 2
+			It("returns true if data doesn't exist in store", func() {
+				// This case is supposed to pass because if
+				// an entry isn't found, it is added instead
 				r1 := store.Rule{
 					Id:        "rule1",
 					PortRange: []uint16{80, 443},
@@ -1848,10 +1851,13 @@ var _ = Describe("Storepolicy", func() {
 				}
 				data_valid1.RuleGroups[1] = ruleGroup
 				ret := data_valid1.UpdateToStore()
-				Expect(ret).To(Equal(false))
+				Expect(ret).To(Equal(true))
 			})
-			//Invalid case 2
-			It("returns false if data already exits in store", func() {
+			//Valid case 3
+			It("returns true if same data already exists in store", func() {
+				// The update is an idempotent function
+				// and it returns true if the same data exists
+				// even though no update is actually done.
 				r1 := store.Rule{
 					Id:        "rule1",
 					PortRange: []uint16{80, 443},
@@ -1876,7 +1882,7 @@ var _ = Describe("Storepolicy", func() {
 				data_valid2.WriteToStore()
 				//Try to update the same data which is already available in store
 				ret := data_valid2.UpdateToStore()
-				Expect(ret).To(Equal(false))
+				Expect(ret).To(Equal(true))
 			})
 		})
 	})
@@ -1975,18 +1981,23 @@ var _ = Describe("Storepolicy", func() {
 				ret := data_valid.UpdateToStore()
 				Expect(ret).To(Equal(true))
 			})
-			//Invalid case 1
-			It("returns false if data doesn't exits in store", func() {
+			//Valid case 2
+			It("returns true if data doesn't exist in store", func() {
+				// This case is supposed to pass because if
+				// an entry isn't found, it is added instead
 				data_valid1 := store.PolicyWorkerEndPoint{
 					WorkerEp:          "10.10.10.2/24",
 					PolicyNameIngress: []string{"policy1", "policy2"},
 					PolicyNameEgress:  []string{"policy3", "policy4"},
 				}
 				ret := data_valid1.UpdateToStore()
-				Expect(ret).To(Equal(false))
+				Expect(ret).To(Equal(true))
 			})
-			//Invalid case 2
-			It("returns false if same data exits in store", func() {
+			//Valid case 3
+			It("returns false if same data exists in store", func() {
+				// The update is an idempotent function
+				// and it returns true if the same data exists
+				// even though no update is actually done.
 				data_valid2 := store.PolicyWorkerEndPoint{
 					WorkerEp:          "10.10.10.1/24",
 					PolicyNameIngress: []string{"policy1", "policy2"},
@@ -1995,7 +2006,7 @@ var _ = Describe("Storepolicy", func() {
 				data_valid2.WriteToStore()
 				//Try to update the same data to store
 				ret := data_valid2.UpdateToStore()
-				Expect(ret).To(Equal(false))
+				Expect(ret).To(Equal(true))
 			})
 		})
 	})
