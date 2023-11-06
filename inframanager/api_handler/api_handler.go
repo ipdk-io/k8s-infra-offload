@@ -428,6 +428,12 @@ func (s *ApiServer) CreateNetwork(ctx context.Context, in *proto.CreateNetworkRe
 		return out, errors.New("Empty CNI Add request")
 	}
 
+	if in.AddRequest == nil || reflect.DeepEqual(*in.AddRequest, proto.AddRequest{}) {
+		out.Successful = false
+		logger.Errorf("Incomplete CNI Add request")
+		return out, errors.New("Incomplete CNI Add request")
+	}
+
 	if len(in.AddRequest.ContainerIps) == 0 {
 		out.Successful = false
 		logger.Errorf("Container ip address not provided")
