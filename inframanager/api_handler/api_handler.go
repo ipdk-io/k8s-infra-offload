@@ -44,6 +44,8 @@ import (
 var config *conf.Configuration
 var hostInterfaceMac string
 
+// To identify different tcp packets based on tcp flag
+// ACK RST SYN FIN
 var flags = [][]byte{{0x00, 0x00, 0x01, 0x00},
 	{0x00, 0x00, 0x00, 0x01},
 	{0x00, 0x00, 0x01, 0x01},

@@ -104,9 +104,9 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 	}
 
 	//To avoid overlapping with service modblob
-	var cni_offset uint32
-	cni_offset = 700
-	ep.ModPtr = cni_offset + uuidFactory.getUUID()
+	var cni_modblob_offset uint32
+	cni_modblob_offset = 700
+	ep.ModPtr = cni_modblob_offset + uuidFactory.getUUID()
 
 	key := make([]interface{}, 0)
 	action := make([]interface{}, 0)
@@ -114,8 +114,7 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
 	action = append(action, ValueToBytes16(uint16(ep.InterfaceID)))
 	updateTables("k8s_dp_control.arp_to_port_table", data, cniupdatemap, key, action, 1)
-	key = nil
-	action = nil
+	resetSlices(&key, &action)
 
 	//pod_gateway_mac_mod_table
 	key = append(key, ValueToBytes(ep.ModPtr))
@@ -146,39 +145,34 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 	dmac := []byte(dmacbyte)
 	action = append(action, dmac)
 	updateTables("k8s_dp_control.pod_gateway_mac_mod_table", data, cniupdatemap, key, action, 1)
-	key = nil
-	action = nil
+	resetSlices(&key, &action)
 
 	//ipv4_to_port_table_tx
 	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
 	action = append(action, ValueToBytes16(uint16(ep.InterfaceID)))
 	action = append(action, ValueToBytes(ep.ModPtr))
 	updateTables("k8s_dp_control.ipv4_to_port_table_tx", data, cniupdatemap, key, action, 1)
-	key = nil
-	action = nil
+	resetSlices(&key, &action)
 
 	//ipv4_to_port_table_rx
 	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
 	action = append(action, ValueToBytes16(uint16(ep.InterfaceID)))
 	updateTables("k8s_dp_control.ipv4_to_port_table_rx", data, cniupdatemap, key, action, 1)
-	key = nil
-	action = nil
+	resetSlices(&key, &action)
 
 	//ipv4_to_port_table_tx_tcp
 	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
 	action = append(action, ValueToBytes16(uint16(ep.InterfaceID)))
 	action = append(action, ValueToBytes(ep.ModPtr))
 	updateTables("k8s_dp_control.ipv4_to_port_table_tx_tcp", data, cniupdatemap, key, action, 1)
-	key = nil
-	action = nil
+	resetSlices(&key, &action)
 
 	//ipv4_to_port_table_tx_service
 	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
 	action = append(action, ValueToBytes16(uint16(ep.InterfaceID)))
 	action = append(action, ValueToBytes(ep.ModPtr))
 	updateTables("k8s_dp_control.ipv4_to_port_table_tx_service", data, cniupdatemap, key, action, 1)
-	key = nil
-	action = nil
+	resetSlices(&key, &action)
 
 	err = ConfigureTable(ctx, p4RtC, P4w, cni_table_names, cniupdatemap, cni_action_names, true)
 	if err != nil {
@@ -212,27 +206,28 @@ func DeleteCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 
 	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
 	updateTables("k8s_dp_control.arp_to_port_table", data, cniupdatemap, key, nil, 1)
-	key = nil
+	resetSlices(&key, nil)
 
 	key = append(key, ValueToBytes(ep.ModPtr))
 	updateTables("k8s_dp_control.pod_gateway_mac_mod_table", data, cniupdatemap, key, nil, 1)
-	key = nil
+	resetSlices(&key, nil)
 
 	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
 	updateTables("k8s_dp_control.ipv4_to_port_table_tx", data, cniupdatemap, key, nil, 1)
+	resetSlices(&key, nil)
 	key = nil
 
 	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
 	updateTables("k8s_dp_control.ipv4_to_port_table_rx", data, cniupdatemap, key, nil, 1)
-	key = nil
+	resetSlices(&key, nil)
 
 	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
 	updateTables("k8s_dp_control.ipv4_to_port_table_tx_tcp", data, cniupdatemap, key, nil, 1)
-	key = nil
+	resetSlices(&key, nil)
 
 	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
 	updateTables("k8s_dp_control.ipv4_to_port_table_tx_service", data, cniupdatemap, key, nil, 1)
-	key = nil
+	resetSlices(&key, nil)
 
 	err = ConfigureTable(ctx, p4RtC, P4w, cni_table_names, cniupdatemap, nil, false)
 	if err != nil {

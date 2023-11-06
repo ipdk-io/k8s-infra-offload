@@ -132,7 +132,8 @@ func newUpdateTable() UpdateTable {
 	return tblupdate
 }
 
-// Updating Table struct members
+// This function updates missing information in the Table struct.
+// Updating Table struct members.
 func updateTables(tableName string, tableData map[string][]Table, svcmap map[string][]UpdateTable, keyparams []interface{}, actionparams []interface{}, entrycount int) {
 	entries, exists := tableData[tableName]
 	if exists {
@@ -148,7 +149,8 @@ func updateTables(tableName string, tableData map[string][]Table, svcmap map[str
 	}
 }
 
-// Updating UpdateTable struct
+// This function utilizes the data from the Table struct
+// To prepare UpdateTable struct and then adds each instances to map.
 func PrepareTable(tblaction map[string][]UpdateTable, tbl *Table) {
 	tblmap := newUpdateTable()
 
@@ -156,6 +158,7 @@ func PrepareTable(tblaction map[string][]UpdateTable, tbl *Table) {
 	for i := 0; i < int(entrycount.Int()); i++ {
 		keydata := make(map[string]client.MatchInterface)
 		keycount := reflect.ValueOf(tbl.KeyCount)
+		//For keys - mfs
 		for j := 0; j < int(keycount.Int()); j++ {
 			var value []byte
 			a := tbl.Key[j]
@@ -178,6 +181,7 @@ func PrepareTable(tblaction map[string][]UpdateTable, tbl *Table) {
 		}
 		tblmap.mfs = append(tblmap.mfs, kd)
 
+		//For Action param
 		if tbl.Action != nil {
 			action := make([][]byte, 0)
 			actionparamcount := reflect.ValueOf(tbl.ActionParamCount)
@@ -211,13 +215,14 @@ func PrepareTable(tblaction map[string][]UpdateTable, tbl *Table) {
 	tblaction[tblmap.tableName] = append(tblaction[tblmap.tableName], tblmap)
 }
 
-func ConfigureTable(ctx context.Context, p4RtC *client.Client, P4w P4RtCWrapper, tablenames []string, tblactionmap map[string][]UpdateTable, actionnames []string, flag bool) error {
+// This function calls Insert_table_entry or delete_table_entry based on actiontype flag
+func ConfigureTable(ctx context.Context, p4RtC *client.Client, P4w P4RtCWrapper, tablenames []string, tblactionmap map[string][]UpdateTable, actionnames []string, actiontype bool) error {
 
 	for i := range tablenames {
 		v := tblactionmap[tablenames[i]]
 		for k := 0; k < len(v); k++ {
 			for j := 0; j < len(v[k].mfs); j++ {
-				if flag {
+				if actiontype {
 					//log.Debugf("Key value %s action value %s", v[k].mfs[j].key, v[k].paramData[j].data)
 					//log.Debugf("tablename %s actionname %s", tablenames[i], actionnames[i])
 					entryAdd := P4w.NewTableEntry(
@@ -250,6 +255,15 @@ func ConfigureTable(ctx context.Context, p4RtC *client.Client, P4w P4RtCWrapper,
 		}
 	}
 	return nil
+}
+
+func resetSlices(key *[]interface{}, action *[]interface{}) {
+	if key != nil {
+		*key = nil
+	}
+	if action != nil {
+		*action = nil
+	}
 }
 
 func GetStr(action InterfaceType) string {
