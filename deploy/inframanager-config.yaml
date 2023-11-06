@@ -64,7 +64,7 @@ InfraManager:
 #        being generated on
 
 # Not required for dpdk
-  arp-mac: "00:0c:00:04:03:14"
+  arp-mac: "00:0f:00:04:03:14"
   conn: mtls
   ciphersuites : [
           "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
