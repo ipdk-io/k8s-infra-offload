@@ -82,7 +82,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 				Value: Pack32BinaryIP4(workerep),
 			},
 			"hdr.ipv4.protocol": &client.LpmMatch{
-				Value: valueToBytes8(protocol),
+				Value: ValueToBytes8(protocol),
 				PLen:  pLen,
 			},
 		},
@@ -148,7 +148,7 @@ func AclIpSetMatchTable(ctx context.Context, p4RtC *client.Client,
 			},
 		},
 		p4RtC.NewTableActionDirect("k8s_dp_control.set_ipset_match_result",
-			[][]byte{valueToBytes8(mask)}),
+			[][]byte{ValueToBytes8(mask)}),
 		nil,
 	)
 

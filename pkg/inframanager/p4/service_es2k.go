@@ -19,341 +19,169 @@ package p4
 import (
 	"context"
 	"fmt"
+
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
-	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
-	log "github.com/sirupsen/logrus"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
+
+	//p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
 	"net"
+
+	log "github.com/sirupsen/logrus"
 )
 
-func WriteDestIpTable(ctx context.Context, p4RtC *client.Client,
-	podIpAddr []string, portID []uint16, modBlobPtrDnat []uint32,
-	action InterfaceType) error {
+var (
+	service_table_names = []string{"k8s_dp_control.ipv4_to_port_table_tx_tcp",
+		"k8s_dp_control.ipv4_to_port_table_tx",
+		"k8s_dp_control.write_dest_ip_table",
+		"k8s_dp_control.write_source_ip_table",
+		"k8s_dp_control.rx_src_ip",
+		"k8s_dp_control.tx_balance"}
+
+	service_action_names = []string{"k8s_dp_control.set_vip_flag_tcp",
+		"k8s_dp_control.set_vip_flag",
+		"k8s_dp_control.update_dst_ip_mac",
+		"k8s_dp_control.update_src_ip_mac",
+		"k8s_dp_control.set_source_ip",
+		"k8s_dp_control.set_default_lb_dest"}
+)
+
+// To track unique combination of service IP and service protocol.
+var flagMap = make(map[string]bool)
+
+func ServiceFlowPacketOptions(ctx context.Context, p4RtC *client.Client,
+	flags [][]byte, action InterfaceType) error {
 	P4w = GetP4Wrapper(Env)
+
 	switch action {
-	case Insert, Update:
-		for i := 0; i < len(modBlobPtrDnat); i++ {
+	case Insert:
+		for i := 1; i <= 12; i++ {
 			entryAdd := P4w.NewTableEntry(
 				p4RtC,
-				"k8s_dp_control.write_dest_ip_table",
+				"k8s_dp_control.service_flow_packet_options",
 				map[string]client.MatchInterface{
-					"meta.mod_blob_ptr_dnat": &client.ExactMatch{
-						Value: ValueToBytes(modBlobPtrDnat[i]),
+					"istd.direction": &client.ExactMatch{
+						Value: ValueToBytes8(uint8(1)),
+					},
+					"hdrs.tcp.ack": &client.ExactMatch{
+						Value: converttobytestream(flags[i][0]),
+					},
+					"hdrs.tcp.rst": &client.ExactMatch{
+						Value: converttobytestream(flags[i][1]),
+					},
+					"hdrs.tcp.syn": &client.ExactMatch{
+						Value: converttobytestream(flags[i][2]),
+					},
+					"hdrs.tcp.fin": &client.ExactMatch{
+						Value: converttobytestream(flags[i][3]),
 					},
 				},
-				P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.update_dst_ip",
-					[][]byte{Pack32BinaryIP4(podIpAddr[i]),
-						ValueToBytes16(portID[i])}),
+				P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.tcp_fin_or_rst_packet",
+					nil,
+				),
 				nil,
 			)
 			if err := P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
-				log.Errorf("Cannot insert entry into 'write_dest_ip_table': %v", err)
+				log.Errorf("Cannot insert entry into 'service_flow_packet_options': %v", err)
 				return err
 			}
 		}
-	case Delete:
-		for i := 0; i < len(modBlobPtrDnat); i++ {
-			entryDelete := P4w.NewTableEntry(
+		for i := 13; i <= 15; i++ {
+			entryAdd := P4w.NewTableEntry(
 				p4RtC,
-				"k8s_dp_control.write_dest_ip_table",
+				"k8s_dp_control.service_flow_packet_options",
 				map[string]client.MatchInterface{
-					"meta.mod_blob_ptr_dnat": &client.ExactMatch{
-						Value: ValueToBytes(modBlobPtrDnat[i]),
+					"istd.direction": &client.ExactMatch{
+						Value: ValueToBytes8(uint8(1)),
+					},
+					"hdrs.tcp.ack": &client.ExactMatch{
+						Value: converttobytestream(flags[i][0]),
+					},
+					"hdrs.tcp.rst": &client.ExactMatch{
+						Value: converttobytestream(flags[i][1]),
+					},
+					"hdrs.tcp.syn": &client.ExactMatch{
+						Value: converttobytestream(flags[i][2]), //care -syn
+					},
+					"hdrs.tcp.fin": &client.ExactMatch{
+						Value: converttobytestream(flags[i][3]),
 					},
 				},
-				nil,
+				P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.tcp_other_packets",
+					nil,
+				),
 				nil,
 			)
-			if err := P4w.DeleteTableEntry(ctx, p4RtC, entryDelete); err != nil {
-				log.Errorf("Cannot delete entry from 'write_dest_ip_table': %v", err)
+			if err := P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
+				log.Errorf("Cannot insert entry into 'service_flow_packet_options': %v", err)
 				return err
 			}
 		}
-	default:
-		log.Warnf("Invalid action %v", action)
-		err := fmt.Errorf("Invalid action %v", action)
-		return err
-	}
 
-	return nil
-}
-
-func AsSl3TcpTable(ctx context.Context, p4RtC *client.Client,
-	memberID []uint32, modBlobPtr []uint32,
-	groupID uint32, action InterfaceType) error {
-	var err error
-	var memberList []*p4_v1.ActionProfileGroup_Member
-
-	P4w = GetP4Wrapper(Env)
-	for i := 0; i < len(memberID); i++ {
-		member := &p4_v1.ActionProfileGroup_Member{
-			MemberId: memberID[i],
-		}
-		memberList = append(memberList, member)
-
-	}
-
-	entryGroupTcp := P4w.NewActionProfileGroup(
-		p4RtC,
-		"k8s_dp_control.as_sl3_tcp",
-		groupID,
-		memberList,
-		int32(128),
-	)
-
-	if action == Delete {
-		if err = P4w.DeleteActionProfileGroup(ctx, p4RtC, entryGroupTcp); err != nil {
-			log.Errorf("Cannot delete group entry from 'as_sl3_tcp table': %v", err)
-			return err
-		}
-	}
-
-	for i := 0; i < len(memberID); i++ {
-		entryMemberTcp := P4w.NewActionProfileMember(
-			p4RtC,
-			"k8s_dp_control.as_sl3_tcp",
-			memberID[i],
-			"k8s_dp_control.set_default_lb_dest",
-			[][]byte{ValueToBytes(modBlobPtr[i])},
-		)
-		switch action {
-		case Insert, Update:
-			if err = P4w.InsertActionProfileMember(ctx, p4RtC, entryMemberTcp); err != nil {
-				log.Errorf("Cannot insert member entry into 'as_sl3_tcp table': %v", err)
-				return err
-			}
-		case Delete:
-			if err = P4w.DeleteActionProfileMember(ctx, p4RtC, entryMemberTcp); err != nil {
-				log.Errorf("Cannot delete member entry from 'as_sl3_tcp table': %v", err)
-				return err
-			}
-		default:
-			log.Warnf("Invalid action %v", action)
-			err := fmt.Errorf("Invalid action %v", action)
-			return err
-		}
-	}
-
-	switch action {
-	case Insert:
-		if err = P4w.InsertActionProfileGroup(ctx, p4RtC, entryGroupTcp); err != nil {
-			log.Errorf("Cannot insert group entry into 'as_sl3_tcp table': %v", err)
-			return err
-		}
-	case Update:
-		if err = P4w.ModifyActionProfileGroup(ctx, p4RtC, entryGroupTcp); err != nil {
-			log.Errorf("Cannot update group entry into 'as_sl3_tcp table': %v", err)
-			return err
-		}
-	case Delete:
-	default:
-		log.Warnf("Invalid action %v", action)
-		err := fmt.Errorf("Invalid action %v", action)
-		return err
-	}
-
-	return nil
-}
-
-func AsSl3UdpTable(ctx context.Context, p4RtC *client.Client,
-	memberID []uint32, modBlobPtr []uint32,
-	groupID uint32, action InterfaceType) error {
-	var err error
-	var memberList []*p4_v1.ActionProfileGroup_Member
-
-	P4w = GetP4Wrapper(Env)
-	for i := 0; i < len(memberID); i++ {
-		member := &p4_v1.ActionProfileGroup_Member{
-			MemberId: memberID[i],
-		}
-		memberList = append(memberList, member)
-	}
-
-	entryGroupUdp := P4w.NewActionProfileGroup(
-		p4RtC,
-		"k8s_dp_control.as_sl3_udp",
-		groupID,
-		memberList,
-		int32(128),
-	)
-
-	if action == Delete {
-		if err = P4w.DeleteActionProfileGroup(ctx, p4RtC, entryGroupUdp); err != nil {
-			log.Errorf("Cannot delete group entry from 'as_sl3_udp table': %v", err)
-			return err
-		}
-	}
-
-	for i := 0; i < len(memberID); i++ {
-		entryMemberUdp := P4w.NewActionProfileMember(
-			p4RtC,
-			"k8s_dp_control.as_sl3_udp",
-			memberID[i],
-			"k8s_dp_control.set_default_lb_dest",
-			[][]byte{ValueToBytes(modBlobPtr[i])},
-		)
-		switch action {
-		case Insert, Update:
-			if err = P4w.InsertActionProfileMember(ctx, p4RtC, entryMemberUdp); err != nil {
-				log.Errorf("Cannot insert member entry into 'as_sl3_udp table': %v", err)
-				return err
-			}
-		case Delete:
-			if err = P4w.DeleteActionProfileMember(ctx, p4RtC, entryMemberUdp); err != nil {
-				log.Errorf("Cannot delete member entry from 'as_sl3_udp table': %v", err)
-				return err
-			}
-		default:
-			log.Warnf("Invalid action %v", action)
-			err := fmt.Errorf("Invalid action %v", action)
-			return err
-		}
-	}
-
-	switch action {
-	case Insert:
-		if err = P4w.InsertActionProfileGroup(ctx, p4RtC, entryGroupUdp); err != nil {
-			log.Errorf("Cannot insert group entry into 'as_sl3_udp table': %v", err)
-			return err
-		}
-	case Update:
-		if err = P4w.ModifyActionProfileGroup(ctx, p4RtC, entryGroupUdp); err != nil {
-			log.Errorf("Cannot insert group entry into 'as_sl3_udp table': %v", err)
-			return err
-		}
-	case Delete:
-	default:
-		log.Warnf("Invalid action %v", action)
-		err := fmt.Errorf("Invalid action %v", action)
-		return err
-	}
-
-	return nil
-}
-
-func TxBalanceTcpTable(ctx context.Context, p4RtC *client.Client,
-	serviceIpAddr string, servicePort uint16,
-	groupID uint32, action InterfaceType) error {
-	P4w = GetP4Wrapper(Env)
-
-	mfs := map[string]client.MatchInterface{
-		"hdr.ipv4.dst_addr": &client.ExactMatch{
-			Value: Pack32BinaryIP4(serviceIpAddr),
-		},
-		"hdr.tcp.dst_port": &client.ExactMatch{
-			Value: ValueToBytes16(servicePort),
-		},
-	}
-	entryTcp := P4w.NewTableEntry(
-		p4RtC,
-		"k8s_dp_control.tx_balance_tcp",
-		mfs,
-		P4w.NewTableActionGroup(p4RtC, groupID),
-		nil,
-	)
-	switch action {
-	case Insert:
-		if err := P4w.InsertTableEntry(ctx, p4RtC, entryTcp); err != nil {
-			log.Errorf("Cannot insert entry into 'tx_balance_tcp table': %v", err)
-			return err
-		}
-	case Delete:
-		if err := P4w.DeleteTableEntry(ctx, p4RtC, entryTcp); err != nil {
-			log.Errorf("Cannot delete entry from 'tx_balance_tcp table': %v", err)
-			return err
-		}
-	case Update:
-		return nil
-	default:
-		log.Warnf("Invalid action %v", action)
-		err := fmt.Errorf("Invalid action %v", action)
-		return err
-	}
-	return nil
-}
-
-func TxBalanceUdpTable(ctx context.Context, p4RtC *client.Client,
-	serviceIpAddr string, servicePort uint16,
-	groupID uint32, action InterfaceType) error {
-	P4w = GetP4Wrapper(Env)
-
-	mfs := map[string]client.MatchInterface{
-		"hdr.ipv4.dst_addr": &client.ExactMatch{
-			Value: Pack32BinaryIP4(serviceIpAddr),
-		},
-		"hdr.udp.dst_port": &client.ExactMatch{
-			Value: ValueToBytes16(servicePort),
-		},
-	}
-	entryUdp := P4w.NewTableEntry(
-		p4RtC,
-		"k8s_dp_control.tx_balance_udp",
-		mfs,
-		P4w.NewTableActionGroup(p4RtC, groupID),
-		nil,
-	)
-	switch action {
-	case Insert:
-		if err := P4w.InsertTableEntry(ctx, p4RtC, entryUdp); err != nil {
-			log.Errorf("Cannot insert entry into 'tx_balance_udp table': %v", err)
-			return err
-		}
-	case Delete:
-		if err := P4w.DeleteTableEntry(ctx, p4RtC, entryUdp); err != nil {
-			log.Errorf("Cannot delete entry from 'tx_balance_udp table': %v", err)
-			return err
-		}
-	case Update:
-		return nil
-	default:
-		log.Warnf("Invalid action %v", action)
-		err := fmt.Errorf("Invalid action %v", action)
-		return err
-	}
-	return nil
-}
-
-func WriteSourceIpTable(ctx context.Context, p4RtC *client.Client,
-	ModBlobPtrSnat uint32, serviceIpAddr string, servicePort uint16,
-	action InterfaceType) error {
-	P4w = GetP4Wrapper(Env)
-	switch action {
-	case Insert:
 		entryAdd := P4w.NewTableEntry(
 			p4RtC,
-			"k8s_dp_control.write_source_ip_table",
+			"k8s_dp_control.service_flow_packet_options",
 			map[string]client.MatchInterface{
-				"meta.mod_blob_ptr_snat": &client.ExactMatch{
-					Value: ValueToBytes(ModBlobPtrSnat),
+				"istd.direction": &client.ExactMatch{
+					Value: ValueToBytes8(uint8(1)),
+				},
+				"hdrs.tcp.ack": &client.ExactMatch{
+					Value: converttobytestream(flags[0][0]),
+				},
+				"hdrs.tcp.rst": &client.ExactMatch{
+					Value: converttobytestream(flags[0][1]),
+				},
+				"hdrs.tcp.syn": &client.ExactMatch{
+					Value: converttobytestream(flags[0][2]), //care -syn
+				},
+				"hdrs.tcp.fin": &client.ExactMatch{
+					Value: converttobytestream(flags[0][3]),
 				},
 			},
-			P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.update_src_ip",
-				[][]byte{Pack32BinaryIP4(serviceIpAddr),
-					ValueToBytes16(servicePort)}),
+			P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.tcp_syn_packet",
+				nil,
+			),
 			nil,
 		)
 		if err := P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
-			log.Errorf("Cannot insert entry into 'write_source_ip_table table': %v", err)
+			log.Errorf("Cannot insert entry into 'service_flow_packet_options': %v", err)
 			return err
 		}
+
 	case Delete:
-		entryDelete := P4w.NewTableEntry(
-			p4RtC,
-			"k8s_dp_control.write_source_ip_table",
-			map[string]client.MatchInterface{
-				"meta.mod_blob_ptr_snat": &client.ExactMatch{
-					Value: ValueToBytes(ModBlobPtrSnat),
+		for i := 0; i <= 15; i++ {
+			entryDel := P4w.NewTableEntry(
+				p4RtC,
+				"k8s_dp_control.service_flow_packet_options",
+				map[string]client.MatchInterface{
+					"istd.direction": &client.ExactMatch{
+						Value: ValueToBytes8(uint8(1)),
+					},
+					"hdrs.tcp.ack": &client.ExactMatch{
+						Value: converttobytestream(flags[i][0]),
+					},
+					"hdrs.tcp.rst": &client.ExactMatch{
+						Value: converttobytestream(flags[i][1]),
+					},
+					"hdrs.tcp.syn": &client.ExactMatch{
+						Value: converttobytestream(flags[i][2]),
+					},
+					"hdrs.tcp.fin": &client.ExactMatch{
+						Value: converttobytestream(flags[i][3]),
+					},
 				},
-			},
-			nil,
-			nil,
-		)
-		if err := P4w.DeleteTableEntry(ctx, p4RtC, entryDelete); err != nil {
-			log.Errorf("Cannot delete entry from 'write_source_ip_table table': %v", err)
-			return err
+				nil,
+				nil,
+			)
+			if err := P4w.DeleteTableEntry(ctx, p4RtC, entryDel); err != nil {
+				log.Errorf("Failed to delete entry from 'service_flow_packet_options': %v", err)
+				return err
+			}
 		}
+
 	case Update:
 		return nil
+
 	default:
 		log.Warnf("Invalid action %v", action)
 		err := fmt.Errorf("Invalid action %v", action)
@@ -363,139 +191,62 @@ func WriteSourceIpTable(ctx context.Context, p4RtC *client.Client,
 	return nil
 }
 
-func SetMetaTcpTable(ctx context.Context, p4RtC *client.Client,
-	podIpAddr []string, portID []uint16,
-	ModBlobPtrSnat uint32, action InterfaceType) error {
-	P4w = GetP4Wrapper(Env)
-	switch action {
-	case Insert, Update:
-		for i := 0; i < len(podIpAddr); i++ {
-			entryAdd := P4w.NewTableEntry(
-				p4RtC,
-				"k8s_dp_control.set_meta_tcp",
-				map[string]client.MatchInterface{
-					"hdr.ipv4.dst_addr": &client.ExactMatch{
-						Value: Pack32BinaryIP4(podIpAddr[i]),
-					},
-					"hdr.tcp.dst_port": &client.ExactMatch{
-						Value: ValueToBytes16(portID[i]),
-					},
-				},
-				P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.set_key_for_reverse_ct",
-					[][]byte{ValueToBytes(ModBlobPtrSnat)}),
-				nil,
-			)
-			if err := P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
-				log.Errorf("Cannot insert entry in 'set_meta_tcp table': %v", err)
-				return err
-			}
-		}
-	case Delete:
-		for i := 0; i < len(podIpAddr); i++ {
-			entryDelete := P4w.NewTableEntry(
-				p4RtC,
-				"k8s_dp_control.set_meta_tcp",
-				map[string]client.MatchInterface{
-					"hdr.ipv4.dst_addr": &client.ExactMatch{
-						Value: Pack32BinaryIP4(podIpAddr[i]),
-					},
-					"hdr.tcp.dst_port": &client.ExactMatch{
-						Value: ValueToBytes16(portID[i]),
-					},
-				},
-				nil,
-				nil,
-			)
-			if err := P4w.DeleteTableEntry(ctx, p4RtC, entryDelete); err != nil {
-				log.Errorf("Cannot delete entry from 'set_meta_tcp table': %v", err)
-				return err
-			}
-		}
-	default:
-		log.Warnf("Invalid action %v", action)
-		err := fmt.Errorf("Invalid action %v", action)
-		return err
-	}
-	return nil
-}
+func concatOldEntries(modblobPtrDNAT [][]byte, oldModblobPtrDNAT [][]byte, oldIpAddrs []string, InterfaceIDs [][]byte) ([][]byte, [][]byte) {
 
-func SetMetaUdpTable(ctx context.Context, p4RtC *client.Client,
-	podIpAddr []string, portID []uint16,
-	ModBlobPtrSnat uint32, action InterfaceType) error {
-	P4w = GetP4Wrapper(Env)
-	switch action {
-	case Insert, Update:
-		for i := 0; i < len(podIpAddr); i++ {
-			entryAdd := P4w.NewTableEntry(
-				p4RtC,
-				"k8s_dp_control.set_meta_udp",
-				map[string]client.MatchInterface{
-					"hdr.ipv4.dst_addr": &client.ExactMatch{
-						Value: Pack32BinaryIP4(podIpAddr[i]),
-					},
-					"hdr.udp.dst_port": &client.ExactMatch{
-						Value: ValueToBytes16(portID[i]),
-					},
-				},
-				P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.set_key_for_reverse_ct",
-					[][]byte{ValueToBytes(ModBlobPtrSnat)}),
-				nil,
-			)
-			if err := P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
-				log.Errorf("Cannot insert entry in 'set_meta_udp table': %v", err)
-				return err
-			}
+	oldInterfaceIDs := make([][]byte, 0)
+	for i := 0; i < len(oldIpAddrs); i++ {
+		ep := store.EndPoint{
+			PodIpAddress: oldIpAddrs[i],
 		}
-	case Delete:
-		for i := 0; i < len(podIpAddr); i++ {
-			entryDelete := P4w.NewTableEntry(
-				p4RtC,
-				"k8s_dp_control.set_meta_udp",
-				map[string]client.MatchInterface{
-					"hdr.ipv4.dst_addr": &client.ExactMatch{
-						Value: Pack32BinaryIP4(podIpAddr[i]),
-					},
-					"hdr.udp.dst_port": &client.ExactMatch{
-						Value: ValueToBytes16(portID[i]),
-					},
-				},
-				nil,
-				nil,
-			)
-			if err := P4w.DeleteTableEntry(ctx, p4RtC, entryDelete); err != nil {
-				log.Errorf("Cannot delete entry from 'set_meta_udp table': %v", err)
-				return err
-			}
+		entry := ep.GetFromStore()
+		if entry != nil {
+			epEntry := entry.(store.EndPoint)
+			oldInterfaceIDs = append(oldInterfaceIDs, ValueToBytes16(uint16(epEntry.InterfaceID)))
 		}
-	default:
-		log.Warnf("Invalid action %v", action)
-		err := fmt.Errorf("Invalid action %v", action)
-		return err
 	}
-	return nil
+
+	InterfaceIDs = append(InterfaceIDs, oldInterfaceIDs...)
+	modblobPtrDNAT = append(modblobPtrDNAT, oldModblobPtrDNAT...)
+
+	return modblobPtrDNAT, InterfaceIDs
 }
 
 func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	podIpAddr []string, portID []uint16, s store.Service,
 	update bool) (err error, service store.Service) {
-	var action InterfaceType
+	var actn InterfaceType
 	var epNum uint32
 	var groupID uint32
 
-	if update {
-		action = Update
-	} else {
-		action = Insert
-	}
+	svcmap := make(map[string][]UpdateTable)
+	key := make([]interface{}, 0)
+	action := make([]interface{}, 0)
 
-	memberID := make([]uint32, 0, len(podIpAddr))
-	modblobPtrDNAT := make([]uint32, 0, len(podIpAddr))
+	modblobptrdnatbyte := make([][]byte, 0)
+	oldmodblobptrdnatbyte := make([][]byte, 0)
+	oldIpAddrs := make([]string, 0)
+
+	podipByte := make([][]byte, 0)
+	portIDByte := make([][]byte, 0)
+	macByte := make([][]byte, 0)
+	InterfaceIDbyte := make([][]byte, 0)
+
 	service = s
 
+	log.Infof("=====Inserting to service tables======")
+
 	if update {
+		actn = Update
 		groupID = service.GroupID
 		epNum = service.NumEndPoints
+
+		for _, value := range s.ServiceEndPoint {
+			oldIpAddrs = append(oldIpAddrs, value.IpAddress)
+			oldmodblobptrdnatbyte = append(oldmodblobptrdnatbyte, ValueToBytes(value.ModBlobPtrDNAT))
+			fmt.Println("oldmodblobptrdnatbyte = ", oldmodblobptrdnatbyte) //Debug
+		}
 	} else {
+		actn = Insert
 		groupID = uuidFactory.getUUID()
 		service.GroupID = groupID
 		epNum = 0
@@ -511,99 +262,161 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 			err := fmt.Errorf("Invalid IP Address: %s", podIpAddr[i])
 			return err, store.Service{}
 		}
+		podipByte = append(podipByte, Pack32BinaryIP4(podIpAddr[i]))
+		portIDByte = append(portIDByte, ValueToBytes16(uint16(portID[i]))) //L4 port
 
 		id := uint32((groupID << 4) | ((epNum + 1) & 0xF))
+		modblobptrdnatbyte = append(modblobptrdnatbyte, ValueToBytes(id))
 
-		memberID = append(memberID, id)
-		modblobPtrDNAT = append(modblobPtrDNAT, id)
-		log.Debugf("modblobPtrDNAT: %d memberid: %d, pod ip: %s, portID: %d",
-			modblobPtrDNAT[i], memberID[i], podIpAddr[i], portID[i])
+		log.Debugf("modblobptrdnatbyte: %d, pod ip: %s, portID: %d",
+			modblobptrdnatbyte[i], podIpAddr[i], portID[i])
 
 		serviceEp := store.ServiceEndPoint{
 			IpAddress:      podIpAddr[i],
-			Port:           uint32(portID[i]),
-			MemberID:       id,
+			Port:           uint16(portID[i]), //L4 port
 			ModBlobPtrDNAT: id,
 		}
 		service.ServiceEndPoint[podIpAddr[i]] = serviceEp
+
+		ep := store.EndPoint{
+			PodIpAddress: podIpAddr[i],
+		}
+		entry := ep.GetFromStore()
+		if entry != nil {
+			epEntry := entry.(store.EndPoint)
+
+			podmac, _ := net.ParseMAC(epEntry.PodMacAddress)
+			macByte = append(macByte, podmac)
+
+			InterfaceIDbyte = append(InterfaceIDbyte, ValueToBytes16(uint16(epEntry.InterfaceID))) //L2 forwarding port
+		}
 	}
 	service.NumEndPoints = epNum
 
 	log.Debugf("group id: %d, service ip: %s, service mac: %s, service port: %d",
 		groupID, service.ClusterIp, service.MacAddr, service.Port)
 
-	if err = WriteDestIpTable(ctx, p4RtC, podIpAddr, portID,
-		modblobPtrDNAT, action); err != nil {
-		log.Errorf("Failed to WriteDestIpTable")
-		return err, store.Service{}
+	data := parseJson("service.json")
+	if data == nil {
+		err = fmt.Errorf("Error while parsing Json file")
+		return err, service
 	}
+
+	//inserting forwarding rules for service IP
+	IP, netIp, err := net.ParseCIDR(types.DefaultRoute)
+	if err != nil {
+		log.Errorf("Failed to get IP from the default route cidr %s", types.DefaultRoute)
+		return
+	}
+
+	_ = netIp
+
+	ip := IP.String()
+	if len(ip) == 0 {
+		log.Errorf("Empty value %s", types.DefaultRoute)
+		return
+	}
+
+	ep := store.EndPoint{
+		PodIpAddress: ip,
+	}
+	entry := ep.GetFromStore()
+	epEntry := entry.(store.EndPoint)
+	smacbyte, _ := net.ParseMAC(epEntry.PodMacAddress)
+	smac := []byte(smacbyte)
+
+	// The set_vip_flag or set_vip_flag_tcp action is invoked only once for each unique combination of service IP and service protocol.
+	vip_flag_key := service.ClusterIp + service.Proto
+	val, exists := flagMap[vip_flag_key]
+	if !exists || val == false {
+		key = append(key, Pack32BinaryIP4(service.ClusterIp))
+		if service.Proto == "TCP" {
+			updateTables("k8s_dp_control.ipv4_to_port_table_tx_tcp", data, svcmap, key, nil, 1)
+		} else {
+			updateTables("k8s_dp_control.ipv4_to_port_table_tx", data, svcmap, key, nil, 1)
+		}
+		flagMap[vip_flag_key] = true
+		resetSlices(&key, &action)
+	} else {
+		log.Debugf("vip flag already exists, skipping")
+	}
+
+	//inserting service tables
+
+	//write_dest_ip_table
+	key = append(key, modblobptrdnatbyte)
+	action = append(action, smac)
+	action = append(action, macByte)
+	action = append(action, podipByte)
+	action = append(action, portIDByte)
+	updateTables("k8s_dp_control.write_dest_ip_table", data, svcmap, key, action, len(podIpAddr))
+	resetSlices(&key, &action)
+
 	log.Debugf("Inserted into table WriteDestIpTable, pod ip addrs: %v, port id: %v, mod blob ptrs: %v",
-		podIpAddr, portID, modblobPtrDNAT)
+		podipByte, InterfaceIDbyte, modblobptrdnatbyte)
 
-	switch service.Proto {
-	case "TCP":
-		if err = AsSl3TcpTable(ctx, p4RtC, memberID, modblobPtrDNAT,
-			groupID, action); err != nil {
-			log.Errorf("Failed to AsSl3TcpTable")
-			return err, store.Service{}
-		}
-		log.Debugf("Inserted into table AsSl3TcpTable, member ids: %v, mod blob ptrs: %v, group id: %d",
-			memberID, modblobPtrDNAT, groupID)
+	//write_source_ip_table
+	if actn != Update {
+		key = append(key, ValueToBytes(groupID))
+		action = append(action, smac)
+		action = append(action, Pack32BinaryIP4(service.ClusterIp))
+		action = append(action, ValueToBytes16(uint16(service.Port)))
+		updateTables("k8s_dp_control.write_source_ip_table", data, svcmap, key, action, 1)
+		resetSlices(&key, &action)
 
-		if err = SetMetaTcpTable(ctx, p4RtC, podIpAddr, portID, groupID, action); err != nil {
-			log.Errorf("Failed to SetMetaTcpTable")
-			return err, store.Service{}
-		}
-		log.Debugf("Inserted into table SetMetaTcpTable, pod ip addrs: %v, port id: %d, group id: %d",
-			podIpAddr, portID, groupID)
-
-		if action != Update {
-			if err = TxBalanceTcpTable(ctx, p4RtC, service.ClusterIp,
-				uint16(service.Port), groupID, action); err != nil {
-				log.Errorf("Failed to TxBalanceTcpTable")
-				return err, store.Service{}
-			}
-			log.Debugf("Inserted into the table TxBalanceTcpTable, service ip: %s, service port: %d, group id: %d",
-				service.ClusterIp, uint16(service.Port), groupID)
-		}
-	case "UDP":
-		if err = AsSl3UdpTable(ctx, p4RtC, memberID, modblobPtrDNAT,
-			groupID, action); err != nil {
-			log.Errorf("Failed to AsSl3UdpTable")
-			return err, store.Service{}
-		}
-		log.Debugf("Inserted into table AsSl3UdpTable, member ids: %v, mod blob ptrs: %v, group id: %d",
-			memberID, modblobPtrDNAT, groupID)
-
-		if err = SetMetaUdpTable(ctx, p4RtC, podIpAddr, portID, groupID, action); err != nil {
-			log.Errorf("Failed to SetMetaUdpTable")
-			return err, store.Service{}
-		}
-		log.Debugf("Inserted into table SetMetaUdpTable, pod ip addrs: %v, port id: %d, group id: %d",
-			podIpAddr, portID, groupID)
-
-		if action != Update {
-			if err = TxBalanceUdpTable(ctx, p4RtC, service.ClusterIp,
-				uint16(service.Port), groupID, action); err != nil {
-				log.Errorf("Failed to TxBalanceUdpTable")
-				return err, store.Service{}
-			}
-			log.Debugf("Inserted into the table TxBalanceUdpTable, service ip: %s, service port: %d, group id: %d",
-				service.ClusterIp, uint16(service.Port), groupID)
-		}
-	default:
-		log.Errorf("Invalid protocol type")
-		return fmt.Errorf("Invalid protocol type"), store.Service{}
-	}
-
-	if action != Update {
-		if err = WriteSourceIpTable(ctx, p4RtC, groupID, service.ClusterIp,
-			uint16(service.Port), action); err != nil {
-			log.Errorf("Failed to WriteSourceIpTable")
-			return err, store.Service{}
-		}
 		log.Debugf("Inserted into table WriteSourceIpTable, group id: %d, service ip: %s, service port: %d",
 			groupID, service.ClusterIp, uint16(service.Port))
+	}
+
+	//rx_src_ip
+	key = append(key, podipByte)
+	if service.Proto == "TCP" {
+		key = append(key, ValueToBytes8(uint8(PROTO_TCP)))
+	} else {
+		key = append(key, ValueToBytes8(uint8(PROTO_UDP)))
+	}
+	key = append(key, portIDByte)
+	action = append(action, ValueToBytes(groupID))
+	updateTables("k8s_dp_control.rx_src_ip", data, svcmap, key, action, len(podIpAddr))
+	resetSlices(&key, &action)
+	log.Debugf("Inserted into table RxSrcIpTable, group id: %d, podipByte: %v, portIDByte: %v",
+		groupID, podipByte, portIDByte)
+
+	if actn == Update {
+		modblobptrdnatbyte, InterfaceIDbyte = concatOldEntries(modblobptrdnatbyte, oldmodblobptrdnatbyte, oldIpAddrs, InterfaceIDbyte)
+		log.Debugf("Update tx_balance table, modblobptrdnatbyte: %v, InterfaceIDbyte: %v",
+			modblobptrdnatbyte, InterfaceIDbyte)
+	}
+	//tx_balance
+	key = append(key, Pack32BinaryIP4(service.ClusterIp))
+	if service.Proto == "TCP" {
+		key = append(key, ValueToBytes8(uint8(PROTO_TCP)))
+	} else {
+		key = append(key, ValueToBytes8(uint8(PROTO_UDP)))
+	}
+	key = append(key, ValueToBytes16(uint16(service.Port))) //L4 port
+
+	for i := 0; i < 64; i++ {
+		key = append(key, ValueToBytes8(uint8(i)))
+
+		index := i % int(epNum)
+		action = append(action, InterfaceIDbyte[index])
+		action = append(action, modblobptrdnatbyte[index])
+
+		updateTables("k8s_dp_control.tx_balance", data, svcmap, key, action, 1)
+
+		//Remove last element from key
+		key = key[:len(key)-1]
+		action = nil
+	}
+	resetSlices(&key, &action)
+	log.Debugf("Inserted into the table TxBalance, service ip: %s, service port: %d",
+		service.ClusterIp, uint16(service.Port))
+
+	err = ConfigureTable(ctx, p4RtC, P4w, service_table_names, svcmap, service_action_names, true)
+	if err != nil {
+		fmt.Println("failed to make entries to service p4")
+		return err, service
 	}
 
 	return nil, service
@@ -614,10 +427,21 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 	var err error
 	var groupID uint32
 	var service store.Service
-	var podPortIDs []uint16
-	var podIpAddrs []string
-	var memberID []uint32
-	var modblobPtrDNAT []uint32
+
+	podipByte := make([][]byte, 0)
+	portIDByte := make([][]byte, 0)
+	modblobptrdnatbyte := make([][]byte, 0)
+
+	svcmap := make(map[string][]UpdateTable)
+	key := make([]interface{}, 0)
+
+	log.Infof("=====Deleting to service tables======")
+
+	data := parseJson("service.json")
+	if data == nil {
+		err = fmt.Errorf("Error while parsing Json file")
+		return err
+	}
 
 	res := s.GetFromStore()
 	if res == nil {
@@ -627,65 +451,80 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 
 	service = res.(store.Service)
 	groupID = service.GroupID
+	NumEp := int(service.NumEndPoints)
 
 	for _, ep := range service.ServiceEndPoint {
-		podIpAddrs = append(podIpAddrs, ep.IpAddress)
-		podPortIDs = append(podPortIDs, uint16(ep.Port))
-		memberID = append(memberID, ep.MemberID)
-		modblobPtrDNAT = append(modblobPtrDNAT, ep.ModBlobPtrDNAT)
-		log.Debugf("modblobPtrDNAT: %d memberid: %d, pod ip: %s, portID: %d",
-			ep.ModBlobPtrDNAT, ep.MemberID, ep.IpAddress, ep.Port)
+		podipByte = append(podipByte, Pack32BinaryIP4(ep.IpAddress))
+		portIDByte = append(portIDByte, ValueToBytes16(uint16(ep.Port)))
+		modblobptrdnatbyte = append(modblobptrdnatbyte, ValueToBytes(ep.ModBlobPtrDNAT))
+		log.Infof("modblobPtrDNAT: %d pod ip: %s, portID: %d",
+			ep.ModBlobPtrDNAT, ep.IpAddress, ep.Port)
 	}
 
-	switch service.Proto {
-	case "TCP":
-		log.Debugf("Deleting from table TxBalanceTcpTable, service ip: %s, service port: %d, group id: %d",
-			service.ClusterIp, uint16(service.Port), groupID)
-		if err = TxBalanceTcpTable(ctx, p4RtC, service.ClusterIp, uint16(service.Port), groupID, Delete); err != nil {
-			return err
+	// Deletion of the set_vip_flag or set_vip_flag_tcp action is executed once for each unique combination of service IP and service protocol.
+	vip_flag_key := service.ClusterIp + service.Proto
+	val, exists := flagMap[vip_flag_key]
+	if exists && val == true {
+		key = append(key, Pack32BinaryIP4(service.ClusterIp))
+		if service.Proto == "TCP" {
+			updateTables("k8s_dp_control.ipv4_to_port_table_tx_tcp", data, svcmap, key, nil, 1)
+			log.Debugf("Deleting from table ipv4_to_port_table_tx_tcp, service.ClusterIp: %s", service.ClusterIp)
+		} else {
+			updateTables("k8s_dp_control.ipv4_to_port_table_tx", data, svcmap, key, nil, 1)
+			log.Debugf("Deleting from table ipv4_to_port_table_tx, service.ClusterIp: %s", service.ClusterIp)
 		}
-		log.Debugf("Deleting from table AsSl3TcpTable, member ids: %v, mod blob ptrs: %v, group id: %d",
-			memberID, modblobPtrDNAT, groupID)
-		if err = AsSl3TcpTable(ctx, p4RtC, memberID, modblobPtrDNAT, groupID, Delete); err != nil {
-			return err
-		}
-		log.Debugf("Deleting from table SetMetaTcpTable, pod ip addrs: %v, port id: %d, group id: %d",
-			podIpAddrs, podPortIDs, groupID)
-		if err = SetMetaTcpTable(ctx, p4RtC, podIpAddrs, podPortIDs, groupID, Delete); err != nil {
-			return err
-		}
-
-	case "UDP":
-		log.Debugf("Deleting from table TxBalanceUdpTable, service ip: %s, service port: %d, group id: %d",
-			service.ClusterIp, uint16(service.Port), groupID)
-
-		if err = TxBalanceUdpTable(ctx, p4RtC, service.ClusterIp, uint16(service.Port), groupID, Delete); err != nil {
-			return err
-		}
-		log.Debugf("Deleting from AsSl3UdpTable, member ids: %v, mod blob ptrs: %v, group id: %d",
-			memberID, modblobPtrDNAT, groupID)
-		if err = AsSl3UdpTable(ctx, p4RtC, memberID, modblobPtrDNAT, groupID, Delete); err != nil {
-			return err
-		}
-		log.Debugf("Deleting from table SetMetaUdpTable, pod ip addrs: %v, port id: %d, group id: %d",
-			podIpAddrs, podPortIDs, groupID)
-		if err = SetMetaUdpTable(ctx, p4RtC, podIpAddrs, podPortIDs, groupID, Delete); err != nil {
-			return err
-		}
-	default:
-		log.Errorf("Invalid protocol type")
-		return fmt.Errorf("Invalid protocol type")
+		flagMap[vip_flag_key] = false
+		resetSlices(&key, nil)
 	}
 
-	log.Debugf("Deleting from table WriteDestIpTable, mod blob ptrs: %v", modblobPtrDNAT)
-	err = WriteDestIpTable(ctx, p4RtC, nil, nil, modblobPtrDNAT, Delete)
-	if err != nil {
-		return err
-	}
+	//write_dest_ip_table
+	log.Debugf("Deleting from table WriteDestIpTable, mod blob ptrs: %v", modblobptrdnatbyte)
+	key = append(key, modblobptrdnatbyte)
+	updateTables("k8s_dp_control.write_dest_ip_table", data, svcmap, key, nil, NumEp)
+	resetSlices(&key, nil)
 
+	//write_source_ip_table
 	log.Debugf("Deleting from table WriteSourceIpTable, group id: %d", groupID)
-	err = WriteSourceIpTable(ctx, p4RtC, groupID, "", 0, Delete)
+	key = append(key, ValueToBytes(groupID))
+	updateTables("k8s_dp_control.write_source_ip_table", data, svcmap, key, nil, 1)
+	resetSlices(&key, nil)
+
+	//rx_src_ip
+	log.Debugf("Deleting from table RxSrcIpTable, NumEp: %d, service ip: %s, service port: %d",
+		NumEp, podipByte, portIDByte)
+	key = append(key, podipByte)
+	if service.Proto == "TCP" {
+		key = append(key, ValueToBytes8(uint8(PROTO_TCP)))
+	} else {
+		key = append(key, ValueToBytes8(uint8(PROTO_UDP)))
+	}
+	key = append(key, portIDByte)
+	updateTables("k8s_dp_control.rx_src_ip", data, svcmap, key, nil, NumEp)
+	resetSlices(&key, nil)
+
+	//tx_balance
+	log.Debugf("Deleting from table TxBalanceTable, service ip: %s, service port: %d, service.Proto: %s",
+		service.ClusterIp, uint16(service.Port), service.Proto)
+
+	key = append(key, Pack32BinaryIP4(service.ClusterIp))
+	if service.Proto == "TCP" {
+		key = append(key, ValueToBytes8(uint8(PROTO_TCP)))
+	} else {
+		key = append(key, ValueToBytes8(uint8(PROTO_UDP)))
+	}
+	key = append(key, ValueToBytes16(uint16(service.Port)))
+
+	for i := 0; i < 64; i++ {
+		key = append(key, ValueToBytes8(uint8(i)))
+
+		updateTables("k8s_dp_control.tx_balance", data, svcmap, key, nil, 1)
+		key = key[:len(key)-1]
+	}
+	resetSlices(&key, nil)
+
+	err = ConfigureTable(ctx, p4RtC, P4w, service_table_names, svcmap, nil, false)
 	if err != nil {
+		fmt.Println("failed to delete entries")
 		return err
 	}
 

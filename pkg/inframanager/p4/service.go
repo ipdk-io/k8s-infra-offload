@@ -26,6 +26,11 @@ import (
 	"net"
 )
 
+func ServiceFlowPacketOptions(ctx context.Context, p4RtC *client.Client,
+	flags [][]byte, action InterfaceType) error {
+	return nil
+}
+
 func WriteDestIpTable(ctx context.Context, p4RtC *client.Client,
 	podIpAddr []string, portID []uint16, modBlobPtrDnat []uint32,
 	action InterfaceType) error {
@@ -521,7 +526,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 
 		serviceEp := store.ServiceEndPoint{
 			IpAddress:      podIpAddr[i],
-			Port:           uint32(portID[i]),
+			Port:           uint16(portID[i]),
 			MemberID:       id,
 			ModBlobPtrDNAT: id,
 		}

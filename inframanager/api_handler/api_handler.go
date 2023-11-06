@@ -44,6 +44,25 @@ import (
 var config *conf.Configuration
 var hostInterfaceMac string
 
+// To identify different tcp packets based on tcp flag
+// ACK RST SYN FIN
+var flags = [][]byte{{0x00, 0x00, 0x01, 0x00},
+	{0x00, 0x00, 0x00, 0x01},
+	{0x00, 0x00, 0x01, 0x01},
+	{0x00, 0x01, 0x00, 0x01},
+	{0x00, 0x01, 0x01, 0x01},
+	{0x01, 0x00, 0x00, 0x01},
+	{0x01, 0x00, 0x01, 0x01},
+	{0x01, 0x01, 0x00, 0x01},
+	{0x01, 0x01, 0x01, 0x01},
+	{0x00, 0x01, 0x00, 0x00},
+	{0x00, 0x01, 0x01, 0x00},
+	{0x01, 0x01, 0x00, 0x00},
+	{0x01, 0x01, 0x01, 0x00},
+	{0x01, 0x00, 0x00, 0x00},
+	{0x01, 0x00, 0x01, 0x00},
+	{0x00, 0x00, 0x00, 0x00}}
+
 type Protocol int
 
 const (
@@ -304,14 +323,15 @@ func InsertDefaultRule() {
 		return
 	}
 
+	macAddress, err := net.ParseMAC(config.InfraManager.ArpMac)
+	if err != nil {
+		log.Errorf("Invalid MAC Address: %s, err: %v", config.InfraManager.ArpMac, err)
+		return
+	}
+
 	if config.InterfaceType == types.TapInterface {
 		portID = types.ArpProxyDefaultPort
 	} else {
-		macAddress, err := net.ParseMAC(config.InfraManager.ArpMac)
-		if err != nil {
-			log.Errorf("Invalid MAC Address: %s, err: %v", config.InfraManager.ArpMac, err)
-			return
-		}
 		if portID, err = getPortID("dummy", macAddress); err != nil {
 			log.Errorf("Failed to get port id for %s, err: %v",
 				"dummy", err)
@@ -324,6 +344,32 @@ func InsertDefaultRule() {
 	if err := p4.ArptToPortTable(context.Background(), server.p4RtC, ip,
 		portID, true); err != nil {
 		log.Errorf("Failed to insert the default rule for arp-proxy")
+	}
+	//service default rule
+	ep := store.EndPoint{
+		PodIpAddress:  ip,
+		InterfaceID:   portID,
+		PodMacAddress: config.InfraManager.ArpMac,
+	}
+
+	entry := ep.GetFromStore()
+	if entry != nil {
+		log.Debugf("Entry %s %s %d already exists", macAddress, types.DefaultRoute, portID)
+	} else {
+		if ep.WriteToStore() != true {
+			err = fmt.Errorf("Failed to add mac: %s ip: %s port: %d  entry to the store",
+				macAddress, types.DefaultRoute, portID)
+		}
+	}
+
+	log.Infof("Inserting default gateway rule for service: ServiceFlowPacketOptions")
+	action := p4.Insert
+	if config.InterfaceType != types.TapInterface {
+		err = p4.ServiceFlowPacketOptions(context.Background(), server.p4RtC, flags, action)
+		if err != nil {
+			log.Errorf("Failed to insert ServiceFlowPacketOptions")
+			return
+		}
 	}
 	return
 }
@@ -541,10 +587,6 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 	out := &proto.Reply{
 		Successful: true,
 	}
-	/* Currently supporting services only for the dpdk target */
-	if config.InterfaceType != types.TapInterface {
-		return out, nil
-	}
 
 	update := false
 
@@ -581,28 +623,27 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 	}
 
 	// Use Host Interface MAC address for service
-
 	serviceMacAddr := hostInterfaceMac
 	serviceIpAddr := in.Endpoint.Ipv4Addr
 
 	service := store.Service{
 		ClusterIp: serviceIpAddr,
-		Port:      in.Endpoint.Port,
+		Port:      uint16(in.Endpoint.Port),
 		Proto:     in.Proto,
 	}
 
 	entry := service.GetFromStore()
-	//
+
 	//	Service already exists in the store.
 	//	Update with new endpoints.
-	//
+
 	if entry != nil {
 		logger.Infof("Incoming NatTranslationUpdate %+v", in)
 		logger.Debugf("Service ip %v and proto %v port %v , num of endpoints %v",
 			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port, len(in.Backends))
 
 		service = entry.(store.Service)
-		if service.Port != in.Endpoint.Port {
+		if service.Port != uint16(in.Endpoint.Port) {
 			logger.Errorf("Port mismatch for the service %v, old port: %v, new port : %v",
 				service.ClusterIp, service.Port, in.Endpoint.Port)
 			err = fmt.Errorf("Port mismatch for the service %v, old port: %v, new port : %v",
@@ -649,15 +690,17 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 		return out, err
 	}
 
-	if err, service = p4.InsertServiceRules(ctx, server.p4RtC, podIpAddrs,
-		podPortIDs, service, update); err != nil {
+	//Update: We need to handle in p4 layer.
+	err, service = p4.InsertServiceRules(ctx, server.p4RtC, podIpAddrs,
+		podPortIDs, service, update)
+	if err != nil {
 		logger.Errorf("Failed to insert the service entry %s:%s:%d, backends: %v, into the pipeline",
 			serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
 		out.Successful = false
 		return out, err
 	}
 	logger.Debugf("Inserted the service entry %s:%s:%d, backends: %v into the pipeline",
-		serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
+		serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs) //Debug
 
 	if update {
 		// Update only the endpoint details to the store
@@ -708,11 +751,6 @@ func (s *ApiServer) NatTranslationDelete(ctx context.Context, in *proto.NatTrans
 
 	defer recoverPanic(logger)
 
-	/* Currently supporting services only for the dpdk target */
-	if config.InterfaceType != types.TapInterface {
-		return out, nil
-	}
-
 	if in == nil || reflect.DeepEqual(*in, proto.NatTranslation{}) {
 		out.Successful = false
 		logger.Errorf("Empty NatTranslationDelete request")
@@ -723,7 +761,7 @@ func (s *ApiServer) NatTranslationDelete(ctx context.Context, in *proto.NatTrans
 
 	service := store.Service{
 		ClusterIp: in.Endpoint.Ipv4Addr,
-		Port:      in.Endpoint.Port,
+		Port:      uint16(in.Endpoint.Port),
 		Proto:     in.Proto,
 	}
 

@@ -1,0 +1,115 @@
+{
+    "k8s_dp_control.write_dest_ip_table": [
+        {
+            "tableName": "k8s_dp_control.write_dest_ip_table",
+            "actionName": "k8s_dp_control.update_dst_ip_mac",
+            "entryCount": 1,
+            "keyCount": 1,
+            "actionParamCount": 4,
+            "keyMatchType": ["Exact"],
+            "keyName": ["meta.common.mod_blob_ptr"],
+            "key": "",
+            "action": ""
+        }
+    ],
+    "k8s_dp_control.tx_balance": [
+        {
+            "tableName": "k8s_dp_control.tx_balance",
+            "actionName": "k8s_dp_control.set_default_lb_dest",
+            "entryCount": 64,
+            "keyCount": 4,
+            "actionParamCount": 2,
+            "keyMatchType": ["Exact", "Exact", "Exact", "Exact"],
+            "keyName": ["hdrs.ipv4[meta.common.depth].dst_ip", "hdrs.ipv4[meta.common.depth].protocol", "hdrs.l4_port[meta.common.depth].dport", "meta.common.hash[5:0]"],
+            "key": "",
+            "action": ""
+        }
+    ],
+    "k8s_dp_control.write_source_ip_table": [
+        {
+            "tableName": "k8s_dp_control.write_source_ip_table",
+            "actionName": "k8s_dp_control.update_src_ip_mac",
+            "entryCount": 1,
+            "keyCount": 1,
+            "actionParamCount": 3,
+            "keyMatchType": ["Exact"],
+            "keyName": ["meta.common.mod_blob_ptr"],
+            "key": "",
+            "action": ""
+        }
+    ],
+    "k8s_dp_control.rx_src_ip": [
+        {
+            "tableName": "k8s_dp_control.rx_src_ip",
+            "actionName": "k8s_dp_control.set_source_ip",
+            "entryCount": 1,
+            "keyCount": 3,
+            "actionParamCount": 1,
+            "keyMatchType": ["Exact", "Exact", "Exact"],
+            "keyName": ["hdrs.ipv4[meta.common.depth].src_ip", "hdrs.ipv4[meta.common.depth].protocol", "hdrs.l4_port[meta.common.depth].sport"],
+            "key": "",
+            "action": ""
+        }
+    ],
+    "k8s_dp_control.service_flow_packet_options": [
+        {
+            "tableName": "k8s_dp_control.service_flow_packet_options",
+            "actionName": "k8s_dp_control.tcp_fin_or_rst_packet",
+            "entryCount": 12,
+            "keyCount": 5,
+            "actionParamCount": 0,
+            "keyMatchType": ["Exact", "Exact", "Exact", "Exact", "Exact"],
+            "keyName": ["istd.direction", "hdrs.tcp.ack", "hdrs.tcp.rst", "hdrs.tcp.syn", "hdrs.tcp.fin"],
+            "key": "",
+            "action": ""
+        },
+        {
+            "tableName": "k8s_dp_control.service_flow_packet_options",
+            "actionName": "k8s_dp_control.tcp_other_packets",
+            "entryCount": 2,
+            "keyCount": 5,
+            "actionParamCount": 0,
+            "keyMatchType": ["Exact", "Exact", "Exact", "Exact", "Exact"],
+            "keyName": ["istd.direction", "hdrs.tcp.ack", "hdrs.tcp.rst", "hdrs.tcp.syn", "hdrs.tcp.fin"],
+            "key": "",
+            "action": ""
+        },
+        {
+            "tableName": "k8s_dp_control.service_flow_packet_options",
+            "actionName": "k8s_dp_control.tcp_syn_packet",
+            "entryCount": 1,
+            "keyCount": 5,
+            "actionParamCount": 0,
+            "keyMatchType": ["Exact", "Exact", "Exact", "Exact", "Exact"],
+            "keyName": ["istd.direction", "hdrs.tcp.ack", "hdrs.tcp.rst", "hdrs.tcp.syn", "hdrs.tcp.fin"],
+            "key": "",
+            "action": ""
+        }
+    ],
+    "k8s_dp_control.ipv4_to_port_table_tx": [
+        {
+            "tableName": "k8s_dp_control.ipv4_to_port_table_tx",
+            "actionName": "k8s_dp_control.set_vip_flag",
+            "entryCount": 1,
+            "keyCount": 1,
+            "actionParamCount": 0,
+            "keyMatchType": ["Exact"],
+            "keyName": ["hdrs.ipv4[meta.common.depth].dst_ip"],
+            "key": "",
+            "action": ""
+        }
+    ],
+    "k8s_dp_control.ipv4_to_port_table_tx_tcp": [
+        {
+            "tableName": "k8s_dp_control.ipv4_to_port_table_tx_tcp",
+            "actionName": "k8s_dp_control.set_vip_flag_tcp",
+            "entryCount": 1,
+            "keyCount": 1,
+            "actionParamCount": 0,
+            "keyMatchType": ["Exact"],
+            "keyName": ["hdrs.ipv4[meta.common.depth].dst_ip"],
+            "key": "",
+            "action": ""
+        }
+    ]
+}

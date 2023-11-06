@@ -19,190 +19,61 @@ package p4
 import (
 	"context"
 	"fmt"
+	"net"
+
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	log "github.com/sirupsen/logrus"
-	"net"
 )
 
-var Env string
-var P4w P4RtCWrapper
+var (
+	cni_table_names = []string{"k8s_dp_control.arp_to_port_table",
+		"k8s_dp_control.pod_gateway_mac_mod_table",
+		"k8s_dp_control.ipv4_to_port_table_tx",
+		"k8s_dp_control.ipv4_to_port_table_rx",
+		"k8s_dp_control.ipv4_to_port_table_tx_tcp",
+		"k8s_dp_control.ipv4_to_port_table_tx_service"}
+
+	cni_action_names = []string{"k8s_dp_control.set_dest_vport",
+		"k8s_dp_control.update_src_dst_mac",
+		"k8s_dp_control.set_dest_mac_vport",
+		"k8s_dp_control.set_dest_vport",
+		"k8s_dp_control.set_dest_mac_vport",
+		"k8s_dp_control.set_dest_mac_vport"}
+)
 
 func ArptToPortTable(ctx context.Context, p4RtC *client.Client, arpTpa string, port uint32, flag bool) error {
-	var err error
-	P4w = GetP4Wrapper(Env)
+	cniarpmap := make(map[string][]UpdateTable)
 
-	if flag == true {
-		entryAdd := P4w.NewTableEntry(
-			p4RtC,
-			"k8s_dp_control.arp_to_port_table",
-			map[string]client.MatchInterface{
-				"hdrs.arp.tpa": &client.ExactMatch{
-					Value: Pack32BinaryIP4(arpTpa),
-				},
-			},
-			P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.set_dest_vport",
-				[][]byte{ValueToBytes16(uint16(port))}),
-			nil,
-		)
-		if err = P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
-			log.Errorf("Cannot insert entry into arp_to_port_table table, ip: %s, port: %d, err: %v",
-				arpTpa, port, err)
-			return err
-		}
-		log.Infof("Inserted entry in 'ArptToPortTable', ip: %s, port: %d", arpTpa, port)
-	} else {
-		entryDelete := P4w.NewTableEntry(
-			p4RtC,
-			"k8s_dp_control.arp_to_port_table",
-			map[string]client.MatchInterface{
-				"hdrs.arp.tpa": &client.ExactMatch{
-					Value: Pack32BinaryIP4(arpTpa),
-				},
-			},
-			nil,
-			nil,
-		)
-		if err = P4w.DeleteTableEntry(ctx, p4RtC, entryDelete); err != nil {
-			log.Errorf("Cannot delete entry from arp_to_port_table table, ip: %s, err: %v",
-				arpTpa, err)
-			return err
-		}
+	P4w = GetP4Wrapper(Env)
+	tablenames := []string{"k8s_dp_control.arp_to_port_table"}
+	actionnames := []string{"k8s_dp_control.set_dest_vport"}
+
+	arpkeymatchtype := []string{"Exact"}
+	arpkeyNames := []string{"hdrs.arp.tpa"}
+	arpkeyparams := make([]interface{}, 0)
+	arpkeyparams = append(arpkeyparams, Pack32BinaryIP4(arpTpa))
+	arpactionparams := make([]interface{}, 0)
+	arpactionparams = append(arpactionparams, ValueToBytes16(uint16(port)))
+
+	arptbl := &Table{
+		TableName:        "k8s_dp_control.arp_to_port_table",
+		ActionName:       "k8s_dp_control.set_dest_vport",
+		EntryCount:       1,
+		KeyCount:         1,
+		ActionParamCount: 1,
+		KeyMatchType:     arpkeymatchtype,
+		KeyName:          arpkeyNames,
+		Key:              arpkeyparams,
+		Action:           arpactionparams,
 	}
+	PrepareTable(cniarpmap, arptbl)
 
-	return nil
-}
-
-func GWMacModTable(ctx context.Context, p4RtC *client.Client, ipAddr string,
-	port uint16, macAddr string, modPtr uint32, flag bool) error {
-
-	var err error
-	P4w = GetP4Wrapper(Env)
-
-	mac, err := net.ParseMAC(macAddr)
+	err := ConfigureTable(ctx, p4RtC, P4w, tablenames, cniarpmap, actionnames, flag)
 	if err != nil {
-		log.Errorf("Invalid format, failed to parse mac: %v", err)
+		log.Errorf("failed to insert default gateway rule")
 		return err
-	}
-
-	if flag == true {
-
-		entry := P4w.NewTableEntry(
-			p4RtC,
-			"k8s_dp_control.pod_gateway_mac_mod_table",
-			map[string]client.MatchInterface{
-				"meta.common.mod_blob_ptr": &client.ExactMatch{
-					Value: ValueToBytes(modPtr),
-				},
-			},
-			P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.update_src_dst_mac", [][]byte{mac}),
-			nil,
-		)
-		if err = P4w.InsertTableEntry(ctx, p4RtC, entry); err != nil {
-			log.Errorf("Failed to add entry in pod_gateway_mac_mod table: mod ptr: %d, mac: %s, err: %v", modPtr, mac, err)
-			return err
-		}
-
-	} else {
-
-		entry := P4w.NewTableEntry(
-			p4RtC,
-			"k8s_dp_control.pod_gateway_mac_mod_table",
-			map[string]client.MatchInterface{
-				"meta.common.mod_blob_ptr": &client.ExactMatch{
-					Value: ValueToBytes(modPtr),
-				},
-			},
-			nil,
-			nil,
-		)
-		if err = P4w.DeleteTableEntry(ctx, p4RtC, entry); err != nil {
-			log.Errorf("Failed to delete entry from pod_gateway_mac_mod table for mod ptr: %d, err: %v",
-				modPtr, err)
-			return err
-		}
-	}
-
-	return nil
-}
-
-func Ipv4ToPortTable(ctx context.Context, p4RtC *client.Client,
-	ipAddr string, port uint32, modPtr uint32, flag bool) error {
-	var err error
-	P4w = GetP4Wrapper(Env)
-
-	if flag == true {
-
-		entryAdd := P4w.NewTableEntry(
-			p4RtC,
-			"k8s_dp_control.ipv4_to_port_table_tx",
-			map[string]client.MatchInterface{
-				"hdrs.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
-					Value: Pack32BinaryIP4(ipAddr),
-				},
-			},
-			P4w.NewTableActionDirect(
-				p4RtC,
-				"k8s_dp_control.set_dest_mac_vport",
-				[][]byte{ValueToBytes16(uint16(port)), ValueToBytes(modPtr)}),
-			nil,
-		)
-		if err = P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
-			log.Errorf("Failed to add entry in ipv4_to_port tx table, ip addr: %s, modptr: %d, err: %v", ipAddr, modPtr, err)
-			return err
-		}
-
-		entry2 := P4w.NewTableEntry(
-			p4RtC,
-			"k8s_dp_control.ipv4_to_port_table_rx",
-			map[string]client.MatchInterface{
-				"hdrs.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
-					Value: Pack32BinaryIP4(ipAddr),
-				},
-			},
-			P4w.NewTableActionDirect(
-				p4RtC,
-				"k8s_dp_control.set_dest_vport",
-				[][]byte{ValueToBytes16(uint16(port))}),
-			nil,
-		)
-		if err := P4w.InsertTableEntry(ctx, p4RtC, entry2); err != nil {
-			log.Errorf("Failed to add entry in ipv4_to_port rx table, ip addr: %s, port: %d, err: %v", ipAddr, port, err)
-			return err
-		}
-	} else {
-
-		entry := P4w.NewTableEntry(
-			p4RtC,
-			"k8s_dp_control.ipv4_to_port_table_tx",
-			map[string]client.MatchInterface{
-				"hdrs.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
-					Value: Pack32BinaryIP4(ipAddr),
-				},
-			},
-			nil,
-			nil,
-		)
-		if err = P4w.DeleteTableEntry(ctx, p4RtC, entry); err != nil {
-			log.Errorf("Failed to delete entry %s from ipv4_to_port tx table: %v", ipAddr, err)
-			return err
-		}
-
-		entry2 := P4w.NewTableEntry(
-			p4RtC,
-			"k8s_dp_control.ipv4_to_port_table_rx",
-			map[string]client.MatchInterface{
-				"hdrs.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
-					Value: Pack32BinaryIP4(ipAddr),
-				},
-			},
-			nil,
-			nil,
-		)
-		if err = P4w.DeleteTableEntry(ctx, p4RtC, entry2); err != nil {
-			log.Errorf("Failed to delete entry %s from ipv4_to_port rx table: %v", ipAddr, err)
-			return err
-		}
 	}
 
 	return nil
@@ -211,33 +82,101 @@ func Ipv4ToPortTable(ctx context.Context, p4RtC *client.Client,
 func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint,
 	ifaceType InterfaceType) (store.EndPoint, error) {
 
+	cniupdatemap := make(map[string][]UpdateTable)
+	var err error
+	P4w = GetP4Wrapper(Env)
+
 	if net.ParseIP(ep.PodIpAddress) == nil {
-		err := fmt.Errorf("Invalid IP Address")
+		err = fmt.Errorf("Invalid IP Address")
 		return ep, err
 	}
 
-	_, err := net.ParseMAC(ep.PodMacAddress)
+	_, err = net.ParseMAC(ep.PodMacAddress)
 	if err != nil {
 		err = fmt.Errorf("Invalid MAC Address")
 		return ep, err
 	}
 
-	err = ArptToPortTable(ctx, p4RtC, ep.PodIpAddress, ep.InterfaceID, true)
-	if err != nil {
+	data := parseJson("cni.json")
+	if data == nil {
+		err = fmt.Errorf("Error while parsing Json file")
 		return ep, err
 	}
 
-	ep.ModPtr = uuidFactory.getUUID()
+	//To avoid overlapping with service modblob
+	var cni_modblob_offset uint32
+	cni_modblob_offset = 700
+	ep.ModPtr = cni_modblob_offset + uuidFactory.getUUID()
 
-	err = Ipv4ToPortTable(ctx, p4RtC, ep.PodIpAddress, ep.InterfaceID,
-		ep.ModPtr, true)
+	key := make([]interface{}, 0)
+	action := make([]interface{}, 0)
+
+	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
+	action = append(action, ValueToBytes16(uint16(ep.InterfaceID)))
+	updateTables("k8s_dp_control.arp_to_port_table", data, cniupdatemap, key, action, 1)
+	resetSlices(&key, &action)
+
+	//pod_gateway_mac_mod_table
+	key = append(key, ValueToBytes(ep.ModPtr))
+
+	IP, netIp, err := net.ParseCIDR(types.DefaultRoute)
 	if err != nil {
+		log.Errorf("Failed to get IP from the default route cidr %s", types.DefaultRoute)
 		return ep, err
 	}
 
-	err = GWMacModTable(ctx, p4RtC, ep.PodIpAddress, uint16(ep.InterfaceID),
-		ep.PodMacAddress, ep.ModPtr, true)
+	_ = netIp
+
+	ip := IP.String()
+	if len(ip) == 0 {
+		log.Errorf("Empty value %s, cannot program default gateway", types.DefaultRoute)
+		return ep, err
+	}
+	ep1 := store.EndPoint{
+		PodIpAddress: ip,
+	}
+	entry := ep1.GetFromStore()
+	epEntry := entry.(store.EndPoint)
+	smacbyte, _ := net.ParseMAC(epEntry.PodMacAddress)
+	smac := []byte(smacbyte)
+	action = append(action, smac)
+
+	dmacbyte, _ := net.ParseMAC(ep.PodMacAddress)
+	dmac := []byte(dmacbyte)
+	action = append(action, dmac)
+	updateTables("k8s_dp_control.pod_gateway_mac_mod_table", data, cniupdatemap, key, action, 1)
+	resetSlices(&key, &action)
+
+	//ipv4_to_port_table_tx
+	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
+	action = append(action, ValueToBytes16(uint16(ep.InterfaceID)))
+	action = append(action, ValueToBytes(ep.ModPtr))
+	updateTables("k8s_dp_control.ipv4_to_port_table_tx", data, cniupdatemap, key, action, 1)
+	resetSlices(&key, &action)
+
+	//ipv4_to_port_table_rx
+	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
+	action = append(action, ValueToBytes16(uint16(ep.InterfaceID)))
+	updateTables("k8s_dp_control.ipv4_to_port_table_rx", data, cniupdatemap, key, action, 1)
+	resetSlices(&key, &action)
+
+	//ipv4_to_port_table_tx_tcp
+	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
+	action = append(action, ValueToBytes16(uint16(ep.InterfaceID)))
+	action = append(action, ValueToBytes(ep.ModPtr))
+	updateTables("k8s_dp_control.ipv4_to_port_table_tx_tcp", data, cniupdatemap, key, action, 1)
+	resetSlices(&key, &action)
+
+	//ipv4_to_port_table_tx_service
+	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
+	action = append(action, ValueToBytes16(uint16(ep.InterfaceID)))
+	action = append(action, ValueToBytes(ep.ModPtr))
+	updateTables("k8s_dp_control.ipv4_to_port_table_tx_service", data, cniupdatemap, key, action, 1)
+	resetSlices(&key, &action)
+
+	err = ConfigureTable(ctx, p4RtC, P4w, cni_table_names, cniupdatemap, cni_action_names, true)
 	if err != nil {
+		fmt.Println("failed to make entries to cni p4")
 		return ep, err
 	}
 
@@ -246,29 +185,53 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 
 func DeleteCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint) error {
 
+	cniupdatemap := make(map[string][]UpdateTable)
+	var err error
+	P4w = GetP4Wrapper(Env)
+
+	log.Infof("DeleteCniRules Del request %s", ep.PodIpAddress)
+
 	if net.ParseIP(ep.PodIpAddress) == nil {
-		err := fmt.Errorf("Invalid IP Address")
+		err = fmt.Errorf("Invalid IP Address")
 		return err
 	}
 
-	if _, err := net.ParseMAC(ep.PodMacAddress); err != nil {
-		err = fmt.Errorf("Invalid MAC Address")
+	data := parseJson("cni.json")
+	if data == nil {
+		err = fmt.Errorf("Error while parsing Json file")
 		return err
 	}
 
-	err := ArptToPortTable(ctx, p4RtC, ep.PodIpAddress, 0, false)
+	key := make([]interface{}, 0)
+
+	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
+	updateTables("k8s_dp_control.arp_to_port_table", data, cniupdatemap, key, nil, 1)
+	resetSlices(&key, nil)
+
+	key = append(key, ValueToBytes(ep.ModPtr))
+	updateTables("k8s_dp_control.pod_gateway_mac_mod_table", data, cniupdatemap, key, nil, 1)
+	resetSlices(&key, nil)
+
+	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
+	updateTables("k8s_dp_control.ipv4_to_port_table_tx", data, cniupdatemap, key, nil, 1)
+	resetSlices(&key, nil)
+	key = nil
+
+	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
+	updateTables("k8s_dp_control.ipv4_to_port_table_rx", data, cniupdatemap, key, nil, 1)
+	resetSlices(&key, nil)
+
+	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
+	updateTables("k8s_dp_control.ipv4_to_port_table_tx_tcp", data, cniupdatemap, key, nil, 1)
+	resetSlices(&key, nil)
+
+	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
+	updateTables("k8s_dp_control.ipv4_to_port_table_tx_service", data, cniupdatemap, key, nil, 1)
+	resetSlices(&key, nil)
+
+	err = ConfigureTable(ctx, p4RtC, P4w, cni_table_names, cniupdatemap, nil, false)
 	if err != nil {
-		return err
-	}
-
-	err = Ipv4ToPortTable(ctx, p4RtC, ep.PodIpAddress, 0, 0, false)
-	if err != nil {
-		return err
-	}
-
-	err = GWMacModTable(ctx, p4RtC, ep.PodIpAddress, 0, ep.PodMacAddress,
-		ep.ModPtr, false)
-	if err != nil {
+		fmt.Println("failed to delete entries to cni p4")
 		return err
 	}
 
