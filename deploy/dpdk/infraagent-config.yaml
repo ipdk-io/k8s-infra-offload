@@ -1,2 +1,11 @@
 interfaceType: tap
 hostIfaceMTU: 1280
+# Possible debug levels
+#  "Panic"
+#  "Fatal"
+#  "Error"
+#  "Warn"
+#  "Info"
+#  "Debug" (Default)
+#  "Trace"
+logLevel: "Debug"

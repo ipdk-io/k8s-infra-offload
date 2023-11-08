@@ -56,6 +56,8 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 	viper.SetDefault("InfraManager.ca-cert", types.ManagerDefaultCACert)
 	viper.SetDefault("InfraManager.ciphersuites", utils.DefaultCipherSuites())
 
+	viper.SetDefault("LogLevel", "Debug")
+
 	if err := viper.ReadInConfig(); err != nil {
 		fmt.Printf("Error reading config file, %s", err)
 	}
@@ -72,5 +74,4 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 	fmt.Println("Infrap4dGNMI Server Con:\t", viper.GetString("Infrap4dGnmiServer.Conn"))
 	fmt.Println("InfraManager Addr:\t", viper.GetString("InfraManager.Addr"))
 	fmt.Println("InfraManager Con:\t", viper.GetString("InfraManager.Conn"))
-	fmt.Println("Log Level is set to :\t", viper.GetString("LogLevel"))
 }

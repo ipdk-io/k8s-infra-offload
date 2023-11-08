@@ -2,3 +2,12 @@ interfaceType: cdq
 interface: ens801f0
 mtls: true
 insecure: false
+# Possible debug levels
+#  "Panic"
+#  "Fatal"
+#  "Error"
+#  "Warn"
+#  "Info"
+#  "Debug" (Default)
+#  "Trace"
+logLevel: "Debug"

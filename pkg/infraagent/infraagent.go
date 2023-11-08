@@ -17,10 +17,8 @@ package infraagent
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/signal"
-	"path"
 	"syscall"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/cni"
@@ -38,8 +36,8 @@ type Agent interface {
 	Run()
 }
 
-func NewAgent(intfType string, ifName string, logDir string, client kubernetes.Interface) (Agent, error) {
-	err := logInit(logDir)
+func NewAgent(intfType string, logLevel string, ifName string, logDir string, client kubernetes.Interface) (Agent, error) {
+	err := utils.LogInit(logDir, logLevel)
 	if err != nil {
 		return nil, err
 	}
@@ -165,32 +163,6 @@ func (a *agent) setConfig() error {
 		return err
 	}
 	logger.Infof("cluster pods ip: %s service subnet %s", types.ClusterPodsCIDR, types.ClusterServicesSubnet)
-	return nil
-}
-
-func logInit(logDir string) error {
-	if err := os.MkdirAll(logDir, 0644); err != nil {
-		return err
-	}
-
-	logFilename := path.Join(logDir, types.InfraAgentCLIName+".log")
-	verifiedFileName, err := utils.VerifiedFilePath(logFilename, logDir)
-	if err != nil {
-		return err
-	}
-
-	logFile, err := os.OpenFile(verifiedFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	mw := io.MultiWriter(os.Stdout, logFile)
-	log.SetOutput(mw)
-	log.SetLevel(log.InfoLevel)
-	log.SetReportCaller(true)
-	log.SetFormatter(&log.TextFormatter{
-		PadLevelText:     true,
-		QuoteEmptyFields: true,
-	})
 	return nil
 }
 
