@@ -51,6 +51,17 @@ var supportedIntfTypes = []string{
 }
 var defaultIntfType = types.CDQInterface
 
+var supportedLogLevels = []string{
+	"Panic",
+	"Fatal",
+	"Error",
+	"Warn",
+	"Info",
+	"Debug", //default
+	"Trace",
+}
+var defaultLogLevel = "Debug"
+
 var rootCmd = &cobra.Command{
 	Use:   types.InfraAgentCLIName,
 	Short: "Infra Agent is daemon that exposes a calico CNI gRPC backend for Intel MEV",
@@ -67,6 +78,7 @@ It off-loads K8s dataplane to Infrastructure components.
 		types.HostInterfaceMTU = viper.GetInt("hostIfaceMTU")
 		types.InfraManagerAddr = viper.GetString("managerAddr")
 		types.InfraManagerPort = viper.GetString("managerPort")
+		logLevel := viper.GetString("logLevel")
 		config, err := utils.GetK8sConfig()
 		if err != nil {
 			exitWithError(err, 2)
@@ -76,7 +88,7 @@ It off-loads K8s dataplane to Infrastructure components.
 		if err != nil {
 			exitWithError(err, 3)
 		}
-		agent, err := infraagent.NewAgent(interfaceType, ifName, types.InfraAgentLogDir, client)
+		agent, err := infraagent.NewAgent(interfaceType, logLevel, ifName, types.InfraAgentLogDir, client)
 		if err != nil {
 			exitWithError(err, 4)
 		}
@@ -111,6 +123,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&config.caCert, "ca-cert", types.AgentDefaultCACert, "TLS Client CA Cert file")
 	rootCmd.PersistentFlags().StringVar(&types.InfraManagerAddr, "managerAddr", types.DefaultInfraManagerAddr, "Inframanager IP Address")
 	rootCmd.PersistentFlags().StringVar(&types.InfraManagerPort, "managerPort", types.DefaultInfraManagerPort, "Inframanager Port")
+	logLevelOpts := newFlagOpts(supportedLogLevels, defaultLogLevel)
+	rootCmd.PersistentFlags().Var(logLevelOpts, "logLevel", "Log Level (Panic|Fatal|Error|Warn|Info|Debug|Trace)")
 
 	if err := viper.BindPFlag("hostIfaceMTU", rootCmd.PersistentFlags().Lookup("hostIfaceMTU")); err != nil {
 		fmt.Fprintf(os.Stderr, "There was an error while binding flags '%s'", err)
@@ -157,6 +171,11 @@ func init() {
 		fmt.Fprintf(os.Stderr, "There was an error while binding managerPort flag '%s'", err)
 		os.Exit(1)
 	}
+	if err := viper.BindPFlag("logLevel", rootCmd.PersistentFlags().Lookup("logLevel")); err != nil {
+		fmt.Fprintf(os.Stderr, "There was an error while binding log level flags '%s'", err)
+		os.Exit(1)
+	}
+
 }
 
 func initConfig() {

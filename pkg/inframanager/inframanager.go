@@ -16,9 +16,6 @@ package inframanager
 
 import (
 	"fmt"
-	"io"
-	"os"
-	"path"
 	"strings"
 
 	api "github.com/ipdk-io/k8s-infra-offload/inframanager/api_handler"
@@ -35,54 +32,6 @@ const (
 	logDir = "/var/log/inframanager"
 )
 
-func logInit() {
-	logFilename := path.Join(logDir, path.Base(os.Args[0])+".log")
-	verifiedFileName, err := utils.VerifiedFilePath(logFilename, logDir)
-	if err != nil {
-		panic(err)
-	}
-
-	err = os.MkdirAll(logDir, 0644)
-	if err != nil {
-		panic(err)
-	}
-
-	logFile, err := os.OpenFile(verifiedFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		panic(err)
-	}
-
-	log.Println("Created log file ", verifiedFileName)
-
-	mw := io.MultiWriter(os.Stdout, logFile)
-	log.SetOutput(mw)
-
-	switch api.GetLogLevel() {
-	case "Panic":
-		log.SetLevel(log.PanicLevel)
-	case "Fatal":
-		log.SetLevel(log.FatalLevel)
-	case "Error":
-		log.SetLevel(log.ErrorLevel)
-	case "Warn":
-		log.SetLevel(log.WarnLevel)
-	case "Info":
-		log.SetLevel(log.InfoLevel)
-	case "Debug":
-		log.SetLevel(log.DebugLevel)
-	case "Trace":
-		log.SetLevel(log.TraceLevel)
-	default:
-		log.SetLevel(log.DebugLevel)
-	}
-
-	log.SetReportCaller(true)
-	log.SetFormatter(&log.TextFormatter{
-		PadLevelText:     true,
-		QuoteEmptyFields: true,
-	})
-}
-
 type Manager struct {
 	server *api.ApiServer
 	log    *log.Entry
@@ -92,7 +41,7 @@ type Manager struct {
 var manager *Manager
 
 func NewManager() {
-	logInit()
+	utils.LogInit(logDir, api.GetLogLevel())
 	utils.CreateCipherMap()
 	api.NewApiServer()
 

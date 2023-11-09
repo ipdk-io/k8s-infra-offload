@@ -16,7 +16,11 @@ package utils
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"path"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func GetNodeIPFromEnv() (ipAddr string, err error) {
@@ -25,4 +29,53 @@ func GetNodeIPFromEnv() (ipAddr string, err error) {
 		err = fmt.Errorf("NODE_IP env variable is not set")
 	}
 	return ipAddr, err
+}
+func LogInit(logDir string, logLevel string) error {
+	logFilename := path.Join(logDir, path.Base(os.Args[0])+".log")
+	verifiedFileName, err := VerifiedFilePath(logFilename, logDir)
+	if err != nil {
+		return err
+	}
+
+	err = os.MkdirAll(logDir, 0644)
+	if err != nil {
+		return err
+	}
+
+	logFile, err := os.OpenFile(verifiedFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+
+	log.Println("Log level set to ", logLevel)
+	log.Println("Created log file ", verifiedFileName)
+
+	mw := io.MultiWriter(os.Stdout, logFile)
+	log.SetOutput(mw)
+
+	switch logLevel {
+	case "Panic":
+		log.SetLevel(log.PanicLevel)
+	case "Fatal":
+		log.SetLevel(log.FatalLevel)
+	case "Error":
+		log.SetLevel(log.ErrorLevel)
+	case "Warn":
+		log.SetLevel(log.WarnLevel)
+	case "Info":
+		log.SetLevel(log.InfoLevel)
+	case "Debug":
+		log.SetLevel(log.DebugLevel)
+	case "Trace":
+		log.SetLevel(log.TraceLevel)
+	default:
+		log.SetLevel(log.DebugLevel)
+	}
+
+	log.SetReportCaller(true)
+	log.SetFormatter(&log.TextFormatter{
+		PadLevelText:     true,
+		QuoteEmptyFields: true,
+	})
+	return nil
 }
