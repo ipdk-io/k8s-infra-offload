@@ -51,7 +51,7 @@ func InitSetupStore(setFwdPipe bool) bool {
 	}
 
 	if _, err := os.Stat(StorePath); errors.Is(err, os.ErrNotExist) {
-		err := os.MkdirAll(StorePath, 0755)
+		err := os.MkdirAll(StorePath, 0700)
 		if err != nil {
 			log.Errorf("Failed to create directory %s, err: %s", StorePath, err)
 			return false
@@ -65,14 +65,18 @@ func InitSetupStore(setFwdPipe bool) bool {
 	}
 
 	/* Create the store file if it doesn't exist */
-	file, err := NewOpenFile(verifiedFileName, flags, 0755)
+	file, err := NewOpenFile(verifiedFileName, flags, 0700)
 	log.Info("store ep file path:", StoreSetupFile)
 	if err != nil {
 		log.Errorf("Failed to open %s, error: %s", StoreSetupFile, err)
 		return false
 	}
-	file.Close()
-
+	err = file.Close()
+	if err != nil {
+		log.Errorf("Failed to close file %s, error: %s",
+				StoreSetupFile, err)
+		return false
+	}
 	data, err := NewReadFile(StoreSetupFile)
 	if err != nil {
 		log.Errorf("Failed to read %s, error: %s", StoreSetupFile, err)
@@ -120,7 +124,7 @@ func RunSyncSetupInfo() bool {
 		return false
 	}
 
-	if err = NewWriteFile(StoreSetupFile, jsonStr, 0755); err != nil {
+	if err = NewWriteFile(StoreSetupFile, jsonStr, 0700); err != nil {
 		log.Errorf("Failed to write entries to %s, err %s",
 			StoreSetupFile, err)
 		return false
