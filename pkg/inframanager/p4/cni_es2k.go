@@ -137,11 +137,19 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 	}
 	entry := ep1.GetFromStore()
 	epEntry := entry.(store.EndPoint)
-	smacbyte, _ := net.ParseMAC(epEntry.PodMacAddress)
+	smacbyte, err := net.ParseMAC(epEntry.PodMacAddress)
+	if err != nil {
+		err = fmt.Errorf("Invalid MAC Address")
+		return ep, err
+	}
 	smac := []byte(smacbyte)
 	action = append(action, smac)
 
-	dmacbyte, _ := net.ParseMAC(ep.PodMacAddress)
+	dmacbyte, err := net.ParseMAC(ep.PodMacAddress)
+	if err != nil {
+		err = fmt.Errorf("Invalid MAC Address")
+		return ep, err
+	}
 	dmac := []byte(dmacbyte)
 	action = append(action, dmac)
 	updateTables("k8s_dp_control.pod_gateway_mac_mod_table", data, cniupdatemap, key, action, 1)

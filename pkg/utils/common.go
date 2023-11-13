@@ -37,12 +37,12 @@ func LogInit(logDir string, logLevel string) error {
 		return err
 	}
 
-	err = os.MkdirAll(logDir, 0644)
+	err = os.MkdirAll(logDir, 0600)
 	if err != nil {
 		return err
 	}
 
-	logFile, err := os.OpenFile(verifiedFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	logFile, err := os.OpenFile(verifiedFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
 	}
