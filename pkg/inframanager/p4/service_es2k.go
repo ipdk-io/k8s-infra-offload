@@ -233,7 +233,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 
 	service = s
 
-	if len(podIpAddr) == 0) {
+	if len(podIpAddr) == 0 {
 		err := fmt.Errorf("No Endpoints to program")
 		return err, store.Service{}
 	}
