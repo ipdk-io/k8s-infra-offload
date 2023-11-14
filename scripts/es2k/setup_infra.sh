@@ -54,7 +54,7 @@ function install_drivers () {
   modprobe vfio-pci
   modprobe vfio_iommu_type1
   # change this with insmod in case of new idpf host driver
-  modprobe idpf
+  insmod /root/CI/6526/Intel_IPU_SDK-6526/common/drivers/idpf/silicon/idpf_0.0.720/idpf/src/idpf.ko
 }
 
 # Get PCI device ID for IDPF
@@ -342,7 +342,7 @@ if [ $MODE = "host" ]; then
   echo "Setting up p4k8s on host"
   check_host_env SDE_INSTALL P4CP_INSTALL DEPEND_INSTALL K8S_RECIPE
   setup_host_dep_env
-  setup_run_env
+  #setup_run_env
   install_drivers
   #Wait for driver initialization to happen
   sleep 6

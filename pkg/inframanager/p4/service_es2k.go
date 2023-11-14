@@ -233,11 +233,17 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 
 	service = s
 
+	if len(podIpAddr) == 0) {
+		err := fmt.Errorf("No Endpoints to program")
+		return err, store.Service{}
+	}
+
 	log.Infof("=====Inserting to service tables======")
 
 	if update {
 		actn = Update
 		groupID = service.GroupID
+		epNum = service.NumEndPoints
 
 		for _, value := range s.ServiceEndPoint {
 			oldIpAddrs = append(oldIpAddrs, value.IpAddress)
@@ -248,9 +254,9 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		actn = Insert
 		groupID = uuidFactory.getUUID()
 		service.GroupID = groupID
+		epNum = 0
 	}
 
-	epNum = service.NumEndPoints
 	if net.ParseIP(s.ClusterIp) == nil {
 		err := fmt.Errorf("Invalid cluster IP: %s", s.ClusterIp)
 		return err, store.Service{}
