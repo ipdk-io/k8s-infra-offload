@@ -41,7 +41,10 @@ type Manager struct {
 var manager *Manager
 
 func NewManager() {
-	utils.LogInit(logDir, api.GetLogLevel())
+	err := utils.LogInit(logDir, api.GetLogLevel())
+	if err != nil {
+		return
+	}
 	utils.CreateCipherMap()
 	api.NewApiServer()
 

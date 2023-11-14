@@ -357,7 +357,7 @@ func InsertDefaultRule() {
 		log.Debugf("Entry %s %s %d already exists", macAddress, types.DefaultRoute, portID)
 	} else {
 		if ep.WriteToStore() != true {
-			err = fmt.Errorf("Failed to add mac: %s ip: %s port: %d  entry to the store",
+			log.Errorf("Failed to add mac: %s ip: %s port: %d  entry to the store",
 				macAddress, types.DefaultRoute, portID)
 		}
 	}
