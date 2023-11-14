@@ -6,7 +6,7 @@ require (
 	github.com/antoninbas/p4runtime-go-client v0.0.0-20230722004530-0c0dbfb137b1
 	github.com/containernetworking/cni v1.1.2
 	github.com/containernetworking/plugins v1.3.0
-	github.com/fsnotify/fsnotify v1.6.0
+	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.3
