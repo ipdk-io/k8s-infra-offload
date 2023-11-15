@@ -12,7 +12,7 @@ require (
 	github.com/golang/protobuf v1.5.3
 	github.com/mdlayher/arp v0.0.0-20220512170110-6706a2966875
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.27.10
+	github.com/onsi/gomega v1.30.0
 	github.com/p4lang/p4runtime v1.4.0-rc.5
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
@@ -39,7 +39,7 @@ require (
 	github.com/go-openapi/jsonreference v0.20.1 // indirect
 	github.com/go-openapi/swag v0.22.3 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
