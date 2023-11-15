@@ -74,7 +74,7 @@ func InitSetupStore(setFwdPipe bool) bool {
 	err = file.Close()
 	if err != nil {
 		log.Errorf("Failed to close file %s, error: %s",
-				StoreSetupFile, err)
+			StoreSetupFile, err)
 		return false
 	}
 	data, err := NewReadFile(StoreSetupFile)

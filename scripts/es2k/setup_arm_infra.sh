@@ -6,7 +6,7 @@
 ###########################
 # Globals
 ###########################
-P4K8S_INSTALL=/opt/p4/k8s
+P4K8S_INSTALL=/opt/p4/k8s/opt/infra
 P4CP=/opt/p4/p4-cp-nws
 
 # Check the status of a command and return
