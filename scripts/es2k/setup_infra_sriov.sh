@@ -44,12 +44,12 @@ function install_drivers () {
   modprobe mdev
   modprobe vfio-pci
   modprobe vfio_iommu_type1
-  # change this with the path where idpf is built from source
+  # change this to insmod & the path where idpf is built from source
   modprobe idpf
   sleep 1
   # change this with insmod in case of new idpf host driver
   dev_id=$(lspci | grep 1452 | cut -d ':' -f 1)
-  echo 8 > /sys/class/pci_bus/0000:af/device/0000:$dev_id:00.0/sriov_numvfs
+  echo $1 > /sys/class/pci_bus/0000:af/device/0000:$dev_id:00.0/sriov_numvfs
   #sriov vf devices take a long time to come up
   sleep 10
 }
@@ -208,7 +208,7 @@ if [ $MODE = "host" ]; then
   check_host_env SDE_INSTALL P4CP_INSTALL DEPEND_INSTALL K8S_RECIPE
   setup_host_dep_env
   setup_run_env
-  install_drivers
+  install_drivers $IF_MAX
   #Wait for driver initialization to happen
   sleep 6
   copy_certs
