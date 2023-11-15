@@ -238,7 +238,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		return err, store.Service{}
 	}
 
-	log.Infof("=====Inserting to service tables======")
+	log.Infof("Inserting to service tables")
 
 	if update {
 		actn = Update
@@ -248,7 +248,6 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		for _, value := range s.ServiceEndPoint {
 			oldIpAddrs = append(oldIpAddrs, value.IpAddress)
 			oldmodblobptrdnatbyte = append(oldmodblobptrdnatbyte, ValueToBytes(value.ModBlobPtrDNAT))
-			fmt.Println("oldmodblobptrdnatbyte = ", oldmodblobptrdnatbyte) //Debug
 		}
 	} else {
 		actn = Insert
@@ -448,7 +447,7 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 	svcmap := make(map[string][]UpdateTable)
 	key := make([]interface{}, 0)
 
-	log.Infof("=====Deleting to service tables======")
+	log.Infof("Deleting from service tables")
 
 	data := parseJson("service.json")
 	if data == nil {
