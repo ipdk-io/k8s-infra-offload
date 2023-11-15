@@ -73,7 +73,7 @@ function get_device_id () {
 function config_comms_channel_host () {
   IP_ADDR=$1
   pf_id=$(lspci | grep 1452 | cut -d ':' -f 1)
-  HCOMM_IFACE=$(grep PCI_SLOT_NAME /sys/class/net/*/device/uevent | grep $pf_id | grep d3 | cut -d'/' -f5)
+  HCOMM_IFACE=$(grep PCI_SLOT_NAME /sys/class/net/*/device/uevent | grep $pf_id |  grep  -E "d3\b" | cut -d'/' -f5)
   echo "$HCOMM_IFACE"
   ifconfig $HCOMM_IFACE $IP_ADDR/16 up
 }
@@ -279,7 +279,6 @@ usage() {
       comms channel \"([5,0],[4,0]),([4,2],[0,3])\". This must be specified
       in split mode. Script will assign an IP addresss from the same subnet
       on the Host side for connectivity."
-  echo "  -c  Name of the interface on Host side for connectivity to remote ACC-ARM"
   echo ""
   echo " Please set following env variables to setup paths prior to executing
       the script:"
