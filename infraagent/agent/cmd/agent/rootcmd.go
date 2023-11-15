@@ -251,7 +251,7 @@ func validateConfigs() error {
 		}
 	}
 	hostIfaceMTU := viper.GetInt("hostIfaceMTU")
-	if hostIfaceMTU < 576 || hostIfaceMTU > 1500 {
+	if hostIfaceMTU < 576 || hostIfaceMTU > 9000 {
 		err = fmt.Errorf("Invalid mtu size: %d", hostIfaceMTU)
 	}
 	return err

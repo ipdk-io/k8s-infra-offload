@@ -42,11 +42,9 @@ func doSriovNetwork(in *pb.AddRequest, res *types.InterfaceInfo) error {
 		return err
 	}
 
-	if in.GetSettings().Mtu > 0 {
-		if err = linkSetMTU(linkObj, int(in.GetSettings().Mtu)); err != nil {
-			logger.WithError(err).Errorf("not able to set MTU %v", in.GetSettings())
-			return err
-		}
+	if err := linkSetMTU(linkObj, types.HostInterfaceMTU); err != nil {
+		logger.WithError(err).Errorf("not able to set MTU %v", types.HostInterfaceMTU)
+		return err
 	}
 
 	if err = linkSetNsFd(linkObj, int(nn.Fd())); err != nil {
@@ -78,8 +76,12 @@ func configureSriovNamespace(in *pb.AddRequest, linkObj netlink.Link) error {
 			return fmt.Errorf("cannot set link up: %w", err)
 		}
 
-		if err := setupPodRoute(linkObj, in.ContainerRoutes, nonTargetIP); err != nil {
-			return fmt.Errorf("cannot setup routes: %w", err)
+		if err := setupGwRoute(linkObj, types.DefaultRoute); err != nil {
+			return fmt.Errorf("Cannot setup routes: %w", err)
+		}
+
+		if err := setupPodRoute(linkObj, in.ContainerRoutes, types.DefaultRoute); err != nil {
+			return fmt.Errorf("Cannot setup routes: %w", err)
 		}
 
 		return nil
