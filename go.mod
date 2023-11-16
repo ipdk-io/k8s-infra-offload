@@ -22,9 +22,9 @@ require (
 	google.golang.org/grpc v1.57.1
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637
-	k8s.io/api v0.28.3
-	k8s.io/apimachinery v0.28.3
-	k8s.io/client-go v0.28.3
+	k8s.io/api v0.28.4
+	k8s.io/apimachinery v0.28.4
+	k8s.io/client-go v0.28.4
 	sigs.k8s.io/controller-runtime v0.16.3
 )
 
