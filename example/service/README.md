@@ -13,6 +13,6 @@ This directory includes a service manifest file and a script to run the tests.
 - Create the iperf server and client   
   - # kubectl create -f iperf_tcp.yaml
 - Run the tests
-  - # ./run.sh
+  - # ./run.sh <client-pod-name>
 - Delete iperf server and client pods
   - # ./clean_up.sh
