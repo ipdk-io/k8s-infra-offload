@@ -233,7 +233,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 
 	service = s
 
-	if len(podIpAddr) == 0 {
+	if len(podIpAddr) <= 0 {
 		err := fmt.Errorf("No Endpoints to program")
 		return err, store.Service{}
 	}
@@ -330,7 +330,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	}
 	entry := ep.GetFromStore()
 	epEntry := entry.(store.EndPoint)
-	smacbyte, _ := net.ParseMAC(epEntry.PodMacAddress)
+	smacbyte, err := net.ParseMAC(epEntry.PodMacAddress)
 	if err != nil {
 		err = fmt.Errorf("Invalid MAC Address")
 		return
