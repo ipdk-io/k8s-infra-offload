@@ -530,7 +530,7 @@ Versions of Kubernetes, linux distros, docker and other third-party libraries te
 
 ### golang
 
-go1.20.8
+go1.21.4
 
 ### docker
 ```bash
