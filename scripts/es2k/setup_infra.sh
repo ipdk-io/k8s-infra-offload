@@ -183,6 +183,10 @@ function copy_config_to_remote() {
     echo "Error: Missing InfraManager config file."
     exit 1
   fi
+
+  launch_on_remote "mkdir -p /share/infra/jsonfiles" ""
+  scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $BASE_DIR/pkg/inframanager/p4/*.json $REMOTE_HOST:/share/infra/jsonfiles/.
+  check_status $? "scp $BASE_DIR/pkg/inframanager/p4/*.json root@$REMOTE_HOST:/share/infra/jsonfiles"
 }
 
 # Copy remote execution script to arm acc
