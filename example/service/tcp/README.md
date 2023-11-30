@@ -13,6 +13,10 @@ This directory includes a service manifest file and a script to run the tests.
 - Create the iperf server and client   
   - # kubectl create -f iperf_tcp.yaml
 - Run the tests
-  - # ./run.sh [client-pod-name]
+  - # ./run.sh \<client-pod-name\>
 - Delete iperf server and client pods
   - # ./clean_up.sh
+
+## iperf docker image details
+- https://github.com/lroktu/iperf
+- https://hub.docker.com/r/lroktu/iperf
