@@ -209,14 +209,20 @@ func (ipsetadd IpSet) WriteToStore() bool {
 
 func (ep PolicyWorkerEndPoint) WriteToStore() bool {
 
-	ip, ipset, err := net.ParseCIDR(ep.WorkerEp)
-	if err != nil {
-		log.Errorf("Invalid Cidr = %s, ip=%s, ipset=%s", ep.WorkerEp, ip, ipset)
-		return false
-	}
 	if reflect.DeepEqual(ep, PolicyWorkerEndPoint{}) {
 		return false
 	}
+
+	if len(ep.WorkerEp) == 0 {
+		log.Errorf("Invalid endpoint name = %s", ep.WorkerEp)
+		return false
+	}
+
+	if net.ParseIP(ep.WorkerIp) == nil {
+		log.Errorf("Invalid IP = %s", ep.WorkerIp)
+		return false
+	}
+
 	PolicySet.PolicyLock.Lock()
 	PolicySet.WorkerEpMap[ep.WorkerEp] = ep
 	PolicySet.PolicyLock.Unlock()
