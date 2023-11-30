@@ -49,7 +49,7 @@ function install_drivers () {
   sleep 1
   # change this with insmod in case of new idpf host driver
   dev_id=$(lspci | grep 1452 | cut -d ':' -f 1)
-  echo $1 > /sys/class/pci_bus/0000:af/device/0000:$dev_id:00.0/sriov_numvfs
+  echo $1 > /sys/class/pci_bus/0000:$dev_id/device/0000:$dev_id:00.0/sriov_numvfs
   #sriov vf devices take a long time to come up
   sleep 10
 }

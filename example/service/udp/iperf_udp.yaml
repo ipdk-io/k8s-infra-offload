@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iperf-server-deployment-udp
+  labels:
+    app: iperf-server-udp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: iperf-server-udp
+  template:
+    metadata:
+      labels:
+        app: iperf-server-udp
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: kubernetes.io/role
+                operator: In
+                values:
+                - master
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+      containers:
+      - name: iperf-server-udp
+        image: lroktu/iperf 
+        args: ['-s', '-u', '-p', '5202']
+        command: [iperf]
+        ports:
+        - containerPort: 5202
+          name: server
+          protocol: UDP
+      terminationGracePeriodSeconds: 0
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: iperf-server-udp
+spec:
+  selector:
+    app: iperf-server-udp
+  ports:
+  - protocol: UDP
+    port: 5202
+    targetPort: server
+    
+---
+    
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: iperf-client
+  labels:
+    app: iperf-client
+spec:
+  selector:
+    matchLabels:
+      app: iperf-client
+  template:
+    metadata:
+      labels:
+        app: iperf-client
+    spec:
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+      containers:
+      - name: iperf-client
+        image: lroktu/iperf
+        command: ['/bin/sh', '-c', 'sleep infinity']
+      terminationGracePeriodSeconds: 0
