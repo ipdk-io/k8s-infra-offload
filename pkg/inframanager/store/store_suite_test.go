@@ -1001,7 +1001,8 @@ var _ = Describe("Storepolicy", func() {
 
 			It("returns false when map is valid and not empty", func() {
 				data_valid := store.PolicyWorkerEndPoint{
-					WorkerEp:          "10.10.10.1/24",
+					WorkerEp:          "test-pod",
+					WorkerIp:          "10.10.10.1",
 					PolicyNameIngress: []string{"policy1", "policy2"},
 					PolicyNameEgress:  []string{"policy3", "policy4"},
 				}
@@ -1106,7 +1107,8 @@ var _ = Describe("Storepolicy", func() {
 
 				//WorkerEndPoint
 				data_valid2 := store.PolicyWorkerEndPoint{
-					WorkerEp:          "10.10.10.1/24",
+					WorkerEp:          "test-pod",
+					WorkerIp:          "10.10.10.1",
 					PolicyNameIngress: []string{"policy1", "policy2"},
 					PolicyNameEgress:  []string{"policy3", "policy4"},
 				}
@@ -1169,7 +1171,8 @@ var _ = Describe("Storepolicy", func() {
 
 				//WorkerEndPoint
 				data_valid2 := store.PolicyWorkerEndPoint{
-					WorkerEp:          "10.10.10.3/24",
+					WorkerEp:          "test-pod",
+					WorkerIp:          "10.10.10.3",
 					PolicyNameIngress: []string{"policy1", "policy2"},
 					PolicyNameEgress:  []string{"policy3", "policy4"},
 				}
@@ -1392,7 +1395,8 @@ var _ = Describe("Storepolicy", func() {
 			//Valid case 1
 			It("writes the data to the store if data is valid and returns true", func() {
 				data_valid := store.PolicyWorkerEndPoint{
-					WorkerEp:          "10.10.10.1/24",
+					WorkerEp:          "test-pod",
+					WorkerIp:          "10.10.10.1",
 					PolicyNameIngress: []string{"policy1", "policy2"},
 					PolicyNameEgress:  []string{"policy3", "policy4"},
 				}
@@ -1402,7 +1406,8 @@ var _ = Describe("Storepolicy", func() {
 			//Invalid case 1
 			It("returns error if WorkerEp is invalid", func() {
 				data_invalid1 := store.PolicyWorkerEndPoint{
-					WorkerEp:          "10.10.a.b/44",
+					WorkerEp:          "test-pod",
+					WorkerIp:          "10.10.a.b",
 					PolicyNameIngress: []string{"policy1", "policy2"},
 					PolicyNameEgress:  []string{"policy3", "policy4"},
 				}
@@ -1575,7 +1580,8 @@ var _ = Describe("Storepolicy", func() {
 			//Valid case 1
 			It("Deletes the data from the store and returns true if data is present in the store", func() {
 				data_valid := store.PolicyWorkerEndPoint{
-					WorkerEp:          "10.10.10.1/24",
+					WorkerEp:          "test-pod",
+					WorkerIp:          "10.10.10.1",
 					PolicyNameIngress: []string{"policy1", "policy2"},
 					PolicyNameEgress:  []string{"policy3", "policy4"},
 				}
@@ -1586,7 +1592,8 @@ var _ = Describe("Storepolicy", func() {
 			//Invalid case 1
 			It("returns error when data is not present in store", func() {
 				data_invalid := store.PolicyWorkerEndPoint{
-					WorkerEp:          "10.10.10.2/24",
+					WorkerEp:          "test-pod",
+					WorkerIp:          "10.10.10.2",
 					PolicyNameIngress: []string{"policy1", "policy2"},
 					PolicyNameEgress:  []string{"policy3", "policy4"},
 				}
@@ -1738,7 +1745,8 @@ var _ = Describe("Storepolicy", func() {
 			// Valid case 1
 			It("Gets the data from the store and returns true when input is valid", func() {
 				data_valid := store.PolicyWorkerEndPoint{
-					WorkerEp:          "10.10.10.1/24",
+					WorkerEp:          "test-pod",
+					WorkerIp:          "10.10.10.1",
 					PolicyNameIngress: []string{"policy1", "policy2"},
 					PolicyNameEgress:  []string{"policy3", "policy4"},
 				}
@@ -1749,7 +1757,8 @@ var _ = Describe("Storepolicy", func() {
 			//Invalid case 1
 			It("returns nil when data is not present", func() {
 				data_invalid := store.PolicyWorkerEndPoint{
-					WorkerEp:          "10.10.10.2/24",
+					WorkerEp:          "test-pod2",
+					WorkerIp:          "10.10.10.2",
 					PolicyNameIngress: []string{"policy1", "policy2"},
 					PolicyNameEgress:  []string{"policy3", "policy4"},
 				}
@@ -1949,7 +1958,7 @@ var _ = Describe("Storepolicy", func() {
 		})
 	})
 
-	//WorkerEp: UpdateToStore
+	//WorkerIp: UpdateToStore
 	Describe("UpdateToStore", func() {
 
 		Context("updates Policy-WorkerEp data to the store", func() {
@@ -1970,7 +1979,8 @@ var _ = Describe("Storepolicy", func() {
 			//Valid case 1
 			It("returns true if data is valid and update to store succeeds", func() {
 				data_valid := store.PolicyWorkerEndPoint{
-					WorkerEp:          "10.10.10.1/24",
+					WorkerEp:          "test-pod",
+					WorkerIp:          "10.10.10.1",
 					PolicyNameIngress: []string{"policy1", "policy2"},
 					PolicyNameEgress:  []string{"policy3", "policy4"},
 				}
@@ -1986,7 +1996,8 @@ var _ = Describe("Storepolicy", func() {
 				// This case is supposed to pass because if
 				// an entry isn't found, it is added instead
 				data_valid1 := store.PolicyWorkerEndPoint{
-					WorkerEp:          "10.10.10.2/24",
+					WorkerEp:          "test-pod",
+					WorkerIp:          "10.10.10.2",
 					PolicyNameIngress: []string{"policy1", "policy2"},
 					PolicyNameEgress:  []string{"policy3", "policy4"},
 				}
@@ -1999,7 +2010,8 @@ var _ = Describe("Storepolicy", func() {
 				// and it returns true if the same data exists
 				// even though no update is actually done.
 				data_valid2 := store.PolicyWorkerEndPoint{
-					WorkerEp:          "10.10.10.1/24",
+					WorkerEp:          "test-pod",
+					WorkerIp:          "10.10.10.1",
 					PolicyNameIngress: []string{"policy1", "policy2"},
 					PolicyNameEgress:  []string{"policy3", "policy4"},
 				}
@@ -2128,7 +2140,7 @@ var _ = Describe("Storepolicy", func() {
 		})
 	})
 
-	//WorkerEp: RunSyncWorkerEpInfo
+	//WorkerIp: RunSyncWorkerEpInfo
 	Describe("RunSyncWorkerEpInfo", func() {
 
 		Context("Writes to persistent storage", func() {
@@ -2144,7 +2156,8 @@ var _ = Describe("Storepolicy", func() {
 				store.StorePath = path.Join(tempDir, "inframanager")
 				store.WorkerepFile = path.Join(store.StorePath, "workerep_db.json")
 				data_valid := store.PolicyWorkerEndPoint{
-					WorkerEp:          "10.10.10.1/24",
+					WorkerEp:          "test-pod",
+					WorkerIp:          "10.10.10.1",
 					PolicyNameIngress: []string{"policy1", "policy2"},
 					PolicyNameEgress:  []string{"policy3", "policy4"},
 				}

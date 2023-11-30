@@ -78,7 +78,7 @@ var Env string
 var P4w P4RtCWrapper
 
 var (
-	P4FilePath = "/share/infra/p4files/"
+	JsonFilePath = "/share/infra/jsonfiles/"
 )
 
 // Structure reads table details from json file
@@ -95,7 +95,7 @@ type Table struct {
 }
 
 func parseJson(fileName string) map[string][]Table {
-	file := P4FilePath + fileName
+	file := JsonFilePath + fileName
 	fmt.Println(file)
 
 	data, err := os.ReadFile(file)

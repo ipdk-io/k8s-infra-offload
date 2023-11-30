@@ -813,6 +813,14 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 
 	logger.Infof("Incoming updatePolicy Request %+v", in)
 
+	/*
+		Currently supporting policies for dpdk target only
+	*/
+
+	if config.InterfaceType != "tap" {
+		return out, nil
+	}
+
 	server := NewApiServer()
 
 	ingress[tcp].RuleGroup.Protocol = p4.PROTO_TCP
@@ -1016,6 +1024,14 @@ func (s *ApiServer) ActivePolicyRemove(ctx context.Context, in *proto.ActivePoli
 
 	logger.Infof("Incoming deletePolicy Request %+v", in)
 
+	/*
+		Currently supporting policies for dpdk target only
+	*/
+
+	if config.InterfaceType != "tap" {
+		return out, nil
+	}
+
 	server := NewApiServer()
 
 	policy := store.Policy{
@@ -1115,6 +1131,14 @@ func (s *ApiServer) UpdateLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 
 	logger.Infof("Incoming UpdateLocalEndpoint Request %+v", in)
 
+	/*
+		Currently supporting policies for dpdk target only
+	*/
+
+	if config.InterfaceType != "tap" {
+		return out, nil
+	}
+
 	if len(in.Endpoint.Ipv4Nets) == 0 {
 		err := errors.New("No IP address assigned for the endpoint")
 		logger.Errorf("No IP addresses assigned for the endpoint")
@@ -1185,6 +1209,14 @@ func (s *ApiServer) RemoveLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 	}
 
 	logger.Infof("Incoming RemoveLocalEndpoint Request %+v", in)
+
+	/*
+		Currently supporting policies for dpdk target only
+	*/
+
+	if config.InterfaceType != "tap" {
+		return out, nil
+	}
 
 	server := NewApiServer()
 

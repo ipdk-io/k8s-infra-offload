@@ -25,8 +25,8 @@ RUN echo ${TAG} ${ARCH} && CGO_ENABLED=0 GOOS=linux GOARCH=$ARCH GO111MODULE=on 
 
 FROM alpine:3.16
 WORKDIR /
-RUN mkdir -p /share/infra/p4files /etc/infra /share/infra/k8s_dp
+RUN mkdir -p /share/infra/jsonfiles /etc/infra /share/infra/k8s_dp
 COPY --from=builder /workspace/bin/inframanager /inframanager
 COPY --from=builder /workspace/k8s_dp /share/infra/k8s_dp/
-COPY --from=builder /workspace/pkg/inframanager/p4/*.json /share/infra/p4files/
+COPY --from=builder /workspace/pkg/inframanager/p4/*.json /share/infra/jsonfiles/
 ENTRYPOINT ["/inframanager"]
