@@ -41,8 +41,8 @@ import (
 	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
 )
 
+var hostInterface store.Iface
 var config *conf.Configuration
-var hostInterfaceMac string
 
 // To identify different tcp packets based on tcp flag
 // ACK RST SYN FIN
@@ -74,8 +74,8 @@ const (
 func PutConf(c *conf.Configuration) {
 	config = c
 }
-func SetHostInterfaceMac() {
-	hostInterfaceMac = store.GetHostInterfaceMac()
+func SetHostInterface() {
+	hostInterface = store.GetHostInterface()
 }
 
 type RuleGroupIDX struct {
@@ -307,6 +307,13 @@ func InsertDefaultRule() {
 	var portID uint32
 	var err error
 
+	/*
+		If the default rule is already set, no need to program it again.
+	*/
+	if store.IsDefaultRuleSet() {
+		return
+	}
+
 	server := NewApiServer()
 
 	IP, netIp, err := net.ParseCIDR(types.DefaultRoute)
@@ -371,6 +378,8 @@ func InsertDefaultRule() {
 			return
 		}
 	}
+
+	store.SetDefaultRule()
 	return
 }
 
@@ -619,7 +628,7 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 		return out, nil
 	}
 
-	if len(hostInterfaceMac) == 0 {
+	if len(hostInterface.Mac) == 0 {
 		logger.Errorf("Host Interface is not yet setup. Cannot program rules for service %s:%s:%d",
 			in.Endpoint.Ipv4Addr, in.Proto, in.Endpoint.Port)
 		err = fmt.Errorf("Host Interface is not yet setup. Cannot program rules for service %s:%s:%d",
@@ -629,7 +638,7 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 	}
 
 	// Use Host Interface MAC address for service
-	serviceMacAddr := hostInterfaceMac
+	serviceMacAddr := hostInterface.Mac
 	serviceIpAddr := in.Endpoint.Ipv4Addr
 
 	service := store.Service{
@@ -1363,15 +1372,31 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 
 	logger.Infof("Incoming SetupHostInterface request %s", in.String())
 	server := NewApiServer()
+	updateHostIP := false
+	updateNodeIP := false
 
-	ipAddr := strings.Split(in.Ipv4Addr, "/")[0]
-	macAddr := in.MacAddr
-	macAddress, err := net.ParseMAC(in.MacAddr)
-	if err != nil {
-		logger.Errorf("Invalid MAC address: %s, err: %v", in.MacAddr, err)
+	if len(config.NodeIP) == 0 {
+		logger.Errorf("No node ip address configured")
+		err = fmt.Errorf("No node ip address configured")
 		out.Successful = false
 		return out, err
 	}
+
+	ipAddr := strings.Split(in.Ipv4Addr, "/")[0]
+	if net.ParseIP(ipAddr) == nil {
+		logger.Errorf("Invalid IP address: %s, err: %v", ipAddr, err)
+		out.Successful = false
+		return out, err
+	}
+
+	macAddr := in.MacAddr
+	macAddress, err := net.ParseMAC(macAddr)
+	if err != nil {
+		logger.Errorf("Invalid MAC address: %s, err: %v", macAddr, err)
+		out.Successful = false
+		return out, err
+	}
+
 	portID, err := getPortID(in.IfName, macAddress)
 	if err != nil {
 		logger.Errorf("Failed to get port id for %s, err: %v",
@@ -1382,32 +1407,97 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 
 	logger.Debugf("Interface: %s, port id: %d", in.IfName, portID)
 
-	if status, err := insertRule(s.log, ctx, server.p4RtC, macAddr,
-		ipAddr, portID, p4.HOST); err != nil {
-		logger.Errorf("Failed to insert rule to the pipeline ip: %s mac: %s port id: %d err: %v",
-			ipAddr, macAddr, portID, err)
-		out.Successful = status
-		return out, err
-	}
-	hostInterfaceMac = macAddr
-	store.SetHostInterfaceMac(macAddr)
+	/*
+		The inframanger has received the host interface information
+		for the first time. Update the pipeline with the entries
+	*/
 
-	if len(config.NodeIP) == 0 {
-		logger.Errorf("No node ip address configured")
-		err = fmt.Errorf("No node ip address configured")
-		out.Successful = false
-		return out, err
+	if len(hostInterface.Mac) == 0 {
+		updateHostIP = true
+		updateNodeIP = true
 	}
 
-	status, err := insertRule(s.log, ctx, server.p4RtC, hostInterfaceMac,
-		config.NodeIP, portID, p4.HOST)
-	if err != nil {
-		logger.Errorf("Failed to insert rule to the pipeline p: %s mac: %s port id: %d err: %v",
-			config.NodeIP, macAddr, portID, err)
-	}
-	out.Successful = status
+	/*
+		If the infraagent has been restarted for some reason,
+		the inframanager receives the request again. Check and match with
+		the new entries, delete and update the new ip and mac.
+	*/
+	if len(hostInterface.Ip) != 0 && hostInterface.Ip != ipAddr {
+		logger.Infof("Host Interface ip has changed")
 
-	return out, err
+		ep := store.EndPoint{
+			PodIpAddress: ipAddr,
+		}
+
+		entry := ep.GetFromStore()
+		if entry != nil {
+			epEntry := entry.(store.EndPoint)
+			logger.Infof("Deleting old ip entry")
+			// Delete the old host IP entry. Ignore any errors.
+			p4.DeleteCniRules(ctx, server.p4RtC, epEntry)
+		}
+		updateHostIP = true
+
+	}
+
+	if len(hostInterface.Mac) != 0 && hostInterface.Mac != macAddr {
+		logger.Infof("Host Interface mac has changed")
+
+		ep := store.EndPoint{
+			PodIpAddress: ipAddr,
+		}
+
+		entry := ep.GetFromStore()
+		if entry != nil {
+			epEntry := entry.(store.EndPoint)
+			logger.Infof("Deleting old mac entry with host ip")
+			// Delete the old host IP entry. Ignore any errors.
+			p4.DeleteCniRules(ctx, server.p4RtC, epEntry)
+		}
+
+		ep = store.EndPoint{
+			PodIpAddress: config.NodeIP,
+		}
+
+		entry = ep.GetFromStore()
+		if entry != nil {
+			epEntry := entry.(store.EndPoint)
+			logger.Infof("Deleting old mac entry with node ip")
+			// Delete the old node IP entry. Ignore any errors.
+			p4.DeleteCniRules(ctx, server.p4RtC, epEntry)
+		}
+		updateHostIP = true
+		updateNodeIP = true
+
+	}
+
+	if updateHostIP {
+		if status, err := insertRule(s.log, ctx, server.p4RtC, macAddr,
+			ipAddr, portID, p4.HOST); err != nil {
+			logger.Errorf("Failed to insert rule to the pipeline ip: %s mac: %s port id: %d err: %v",
+				ipAddr, macAddr, portID, err)
+			out.Successful = status
+			return out, err
+		}
+	}
+
+	if updateNodeIP {
+		status, err := insertRule(s.log, ctx, server.p4RtC, macAddr,
+			config.NodeIP, portID, p4.HOST)
+		if err != nil {
+			logger.Errorf("Failed to insert rule to the pipeline p: %s mac: %s port id: %d err: %v",
+				config.NodeIP, macAddr, portID, err)
+			out.Successful = status
+			return out, err
+		}
+	}
+	hostInterface.Ip = ipAddr
+	hostInterface.Mac = macAddr
+
+	/* Add to store */
+	store.SetHostInterface(ipAddr, macAddr)
+
+	return out, nil
 }
 
 // Check is used to check the status of GRPC service

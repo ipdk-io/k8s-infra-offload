@@ -35,8 +35,14 @@ type store interface {
 	UpdateToStore() bool
 }
 
+type Iface struct {
+	Ip  string
+	Mac string
+}
+
 type SetupData struct {
-	HostInterfaceMac string
+	HostInterface  Iface
+	SetDefaultRule bool
 }
 
 type EndPoint struct {
