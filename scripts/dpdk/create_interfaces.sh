@@ -29,8 +29,8 @@ check_infrap4d_env()
 }
 
 function set_env () {
-  if [ -f "$IPDK_RECIPE/scripts/dpdk/setup_env.sh" ]; then
-    source $IPDK_RECIPE/scripts/dpdk/setup_env.sh $IPDK_RECIPE $SDE_INSTALL $DEPEND_INSTALL
+  if [ -f "$IPDK_RECIPE/install/sbin/setup_env.sh" ]; then
+    source $IPDK_RECIPE/install/sbin/setup_env.sh $IPDK_RECIPE $SDE_INSTALL $DEPEND_INSTALL
     export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$IPDK_RECIPE/install/lib64
   else
     echo "Missing set_env script"
@@ -39,8 +39,8 @@ function set_env () {
 }
 
 function setup_run_env () {
-  $IPDK_RECIPE/scripts/dpdk/copy_config_files.sh $IPDK_RECIPE $SDE_INSTALL $DEPEND_INSTALL
-  $IPDK_RECIPE/scripts/dpdk/set_hugepages.sh
+  $IPDK_RECIPE/install/sbin/copy_config_files.sh $IPDK_RECIPE $SDE_INSTALL $DEPEND_INSTALL
+  $IPDK_RECIPE/install/sbin/set_hugepages.sh
 }
 
 function run_infrap4d () {
