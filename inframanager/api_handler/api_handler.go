@@ -1426,7 +1426,7 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 		logger.Infof("Host Interface ip has changed")
 
 		ep := store.EndPoint{
-			PodIpAddress: ipAddr,
+			PodIpAddress: hostInterface.Ip,
 		}
 
 		entry := ep.GetFromStore()
@@ -1444,7 +1444,7 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 		logger.Infof("Host Interface mac has changed")
 
 		ep := store.EndPoint{
-			PodIpAddress: ipAddr,
+			PodIpAddress: hostInterface.Ip,
 		}
 
 		entry := ep.GetFromStore()
