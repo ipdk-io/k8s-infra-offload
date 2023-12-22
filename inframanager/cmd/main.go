@@ -113,7 +113,7 @@ func main() {
 		}
 	}
 
-	api.SetHostInterfaceMac()
+	api.SetHostInterface()
 	// Starting inframanager gRPC server
 	waitCh := make(chan struct{})
 

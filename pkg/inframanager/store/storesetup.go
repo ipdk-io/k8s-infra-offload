@@ -96,11 +96,11 @@ func InitSetupStore(setFwdPipe bool) bool {
 	return true
 }
 
-func GetHostInterfaceMac() string {
-	return Setup.HostInterfaceMac
+func GetHostInterface() Iface {
+	return Setup.HostInterface
 }
 
-func SetHostInterfaceMac(mac string) bool {
+func SetHostInterface(ip string, mac string) bool {
 	if len(mac) == 0 {
 		log.Errorf("Invalid mac address %s", mac)
 		return false
@@ -110,11 +110,31 @@ func SetHostInterfaceMac(mac string) bool {
 		return false
 	}
 
+	if len(ip) == 0 {
+		log.Errorf("Invalid mac address %s", mac)
+		return false
+	}
+	if net.ParseIP(ip) == nil {
+		log.Errorf("Invalid ip address %s", ip)
+		return false
+	}
+
 	setupMutex.Lock()
-	Setup.HostInterfaceMac = mac
+	Setup.HostInterface.Ip = ip
+	Setup.HostInterface.Mac = mac
 	setupMutex.Unlock()
 
 	return true
+}
+
+func SetDefaultRule() {
+	setupMutex.Lock()
+	Setup.SetDefaultRule = true
+	setupMutex.Unlock()
+}
+
+func IsDefaultRuleSet() bool {
+	return Setup.SetDefaultRule
 }
 
 func RunSyncSetupInfo() bool {
