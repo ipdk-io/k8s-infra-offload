@@ -41,7 +41,7 @@ function run_infrap4d () {
   export PATH=$P4CP_INSTALL/bin:$P4CP_INSTALL/sbin:$PATH
   export SDE_INSTALL=/opt/p4/p4sde
   export LD_LIBRARY_PATH=$P4CP_INSTALL/lib:$P4CP_INSTALL/lib64:$SDE_INSTALL/lib64:$SDE_INSTALL/lib:/usr/lib64:/usr/lib:/usr/local/lib64:/usr/local/lib
-  $P4CP_INSTALL/sbin/infrap4d
+  $P4CP_INSTALL/sbin/infrap4d &
   check_status $? "sbin/infrap4d"
 }
 
@@ -88,9 +88,10 @@ NODE=$1
 echo "Host Node IP: \"$NODE\""
 setup_inframgr
 setup_p4cp_file
-run_infrap4d
 echo "This may take a while ..."
 run_infrap4d
 sleep 15
-run_inframgr $NODE
+echo "Please run inframanager after setting arp mac in config file and exporting NODE_IP=$NODE"
+echo "Setup Completed"
+#run_inframgr $NODE
 exit 0
