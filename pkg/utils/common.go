@@ -19,6 +19,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -78,4 +79,13 @@ func LogInit(logDir string, logLevel string) error {
 		QuoteEmptyFields: true,
 	})
 	return nil
+}
+
+func unixMilli(t time.Time) uint64 {
+	s := t.Round(time.Millisecond).UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
+	return uint64(s)
+}
+
+func MakeTimestampMilli() uint64 {
+	return unixMilli(time.Now())
 }
