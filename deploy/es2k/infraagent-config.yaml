@@ -11,3 +11,7 @@ insecure: false
 #  "Debug" (Default)
 #  "Trace"
 logLevel: "Debug"
+#Additional configurations for split mode
+#managerAddr reflects the ACC comms interface IP Addr
+#managerAddr : 10.10.0.2
+#managerPort : 50002

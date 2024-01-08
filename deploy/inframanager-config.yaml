@@ -28,6 +28,11 @@ Infrap4dGnmiServer:
 #      ca-cert: "/etc/pki/inframanager/client/ca.crt"
   conn: mtls
 
+# Possible manager addr configs
+#  split mode - IP address of the ACC comms interface.
+#               This is where inframanager listens for
+#               agent connections.
+#  host mode - loopback ip of local host
 InfraManager: 
   addr: 127.0.0.1:50002
 #  - arp-mac

@@ -131,6 +131,8 @@ func OpenP4RtC(ctx context.Context, high uint64, low uint64, stopCh <-chan struc
 	}
 	log.Infof("P4Runtime server version is %s", resp.P4RuntimeApiVersion)
 
+	low = utils.MakeTimestampMilli()
+
 	electionID := p4_v1.Uint128{High: high, Low: low}
 	server.p4RtC = client.NewClient(c, config.DeviceId, &electionID)
 	log.Infof("Device id is: %v", config.DeviceId)

@@ -58,24 +58,24 @@ spec:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: iperf-client
+  name: iperf-client-udp
   labels:
-    app: iperf-client
+    app: iperf-client-udp
 spec:
   selector:
     matchLabels:
-      app: iperf-client
+      app: iperf-client-udp
   template:
     metadata:
       labels:
-        app: iperf-client
+        app: iperf-client-udp
     spec:
       tolerations:
         - key: node-role.kubernetes.io/master
           operator: Exists
           effect: NoSchedule
       containers:
-      - name: iperf-client
+      - name: iperf-client-udp
         image: lroktu/iperf
         command: ['/bin/sh', '-c', 'sleep infinity']
       terminationGracePeriodSeconds: 0

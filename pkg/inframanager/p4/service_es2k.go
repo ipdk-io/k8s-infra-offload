@@ -297,12 +297,17 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 			macByte = append(macByte, podmac)
 
 			InterfaceIDbyte = append(InterfaceIDbyte, ValueToBytes16(uint16(epEntry.InterfaceID))) //L2 forwarding port
+		} else {
+			err := fmt.Errorf("Endpoint %s not found, cannot program service %s",
+				ep.PodIpAddress, service.ClusterIp)
+			return err, store.Service{}
 		}
+
 	}
 	service.NumEndPoints = epNum
 
-	log.Debugf("group id: %d, service ip: %s, service mac: %s, service port: %d",
-		groupID, service.ClusterIp, service.MacAddr, service.Port)
+	log.Debugf("group id: %d, service ip: %s, service mac: %s, service port: %d, endpoints: %d",
+		groupID, service.ClusterIp, service.MacAddr, service.Port, service.NumEndPoints)
 
 	data := parseJson("service.json")
 	if data == nil {
@@ -330,9 +335,13 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	}
 	entry := ep.GetFromStore()
 	epEntry := entry.(store.EndPoint)
+	if entry == nil {
+		err = fmt.Errorf("epEntry does not exist for DefaultRoute")
+		return
+	}
 	smacbyte, err := net.ParseMAC(epEntry.PodMacAddress)
 	if err != nil {
-		err = fmt.Errorf("Invalid MAC Address")
+		err = fmt.Errorf("Invalid MAC Address for DefaultRoute")
 		return
 	}
 	smac := []byte(smacbyte)
@@ -503,7 +512,7 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 
 	//rx_src_ip
 	log.Debugf("Deleting from table RxSrcIpTable, NumEp: %d, service ip: %s, service port: %d",
-		NumEp, podipByte, portIDByte)
+		NumEp, service.ClusterIp, uint16(service.Port))
 	key = append(key, podipByte)
 	if service.Proto == "TCP" {
 		key = append(key, ValueToBytes8(uint8(PROTO_TCP)))
