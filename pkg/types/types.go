@@ -60,6 +60,8 @@ const (
 	ManagerDefaultServerKey     = "/etc/pki/inframanager/server/tls.key"
 	ManagerDefaultCACert        = "/etc/pki/inframanager/client/ca.crt"
 	IfTtype                     = "cdq"
+	P4InfoPath                  = "/share/infra/k8s_dp/p4Info.txt"
+	P4BinPath                   = "/share/infra/k8s_dp/k8s_dp.pb.bin"
 )
 
 var (
