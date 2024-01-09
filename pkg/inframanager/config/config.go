@@ -67,6 +67,9 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 		fmt.Printf("Unable to decode into struct, %v", err)
 	}
 
+	conf.P4InfoPath = types.P4InfoPath
+	conf.P4BinPath = types.P4BinPath
+
 	// Reading variables without using the model
 	fmt.Println("Infrap4d GRPC Server Addr:\t", viper.GetString("Infrap4dGrpcServer.Addr"))
 	fmt.Println("Infrap4d GRPC Server Con:\t", viper.GetString("Infrap4dGrpcServer.Conn"))

@@ -84,8 +84,6 @@ InfraManager:
 # If none specified, defaults to cdq
 InterfaceType: cdq
 
-P4InfoPath: /share/infra/k8s_dp/p4Info.txt
-p4BinPath: /share/infra/k8s_dp/k8s_dp.pb.bin
 DeviceId: 1
 # Possible debug levels
 #  "Panic"
