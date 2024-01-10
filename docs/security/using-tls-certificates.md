@@ -48,4 +48,4 @@ respectively.
 
 
 For more information regarding default and non-default path, refer to
-[inframanager-config-file section](setup.md#inframanager-config-file-update)
+[inframanager-config-file section](../setup.md#inframanager-config-file-update)

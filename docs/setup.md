@@ -68,8 +68,8 @@ once mentioned dependencies are compiled and installed.
       ```
       bf-rt.json  context.json  k8s_dp.p4  k8s_dp.pb.bin  p4Info.txt
       ```
-      For generating the artifacts, use the
-      [compiling-p4-programs](guides/es2k/compiling-p4-programs.md) guide.
+      For generating the artifacts for ES2100, refer to the
+      [compiling-p4-programs](target-setup-es2k.md#compile-k8s-p4) section
 
    ii) By default, Makefile is configured to build for ES2K target. To build
       for P4-DPDK target, use "tagname=dpdk" argument for both make targets
