@@ -1,11 +1,12 @@
 # Kubernetes, Docker, Containerd Installation
  - [Prerequisites](#prerequisites)
- - [Set Up Kernel Modules and Kernel Settings](#Set-Up-Kernel-Modules-and-Kernel-Settings)
+ - [Set Up Kernel Modules and Kernel Settings](#set-up-kernel-modules-and-kernel-settings)
  - [Install, Configure, and Run Docker](#install-configure-and-run-docker)
  - [Install, Configure and Run Containerd](#install-configure-and-run-containerd)
  - [Install Kubernetes Components](#install-kubernetes-components)
 
-#### Prerequisites
+## Prerequisites
+
 Kubernetes is known to not work well with Linux swapping; as a result, swapping
 should be turned off.
 
@@ -15,7 +16,7 @@ Before installing Kubernetes, do the following:
    ```bash
    swapoff -a
    ```
- 
+
 2. For Fedora* 33, swapoff doesn't completely turn off the swapping after
    a reboot. Remove the following package:
    ```bash
@@ -35,7 +36,7 @@ Before installing Kubernetes, do the following:
 5. Remove any swap-specific entries from `/etc/fstab`.
 
 
-#### Set Up Kernel Modules and Kernel Settings
+## Set Up Kernel Modules and Kernel Settings
 1. Load the following kernel modules and add them to `modules-load` so they
    get automatically loaded during the reboot:
    ```bash
@@ -63,7 +64,7 @@ Before installing Kubernetes, do the following:
    getenforce
    ```
 
-#### Install, Configure, and Run Docker*
+## Install, Configure, and Run Docker*
 1. Install Docker*, configure associated settings, and start it. Docker is
    required when using older versions of Kubernetes (< v1.23) as dockerd talks
    to containerd to pull Kubernetes images. Docker is not required if CRI
@@ -119,7 +120,7 @@ Before installing Kubernetes, do the following:
            }
    }
    ```
- 
+
 6. Start the Docker daemon:
    ```bash
    systemctl start docker
@@ -136,7 +137,7 @@ Before installing Kubernetes, do the following:
    WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
    Configure a credential helper to remove this warning. See
    https://docs.docker.com/engine/reference/commandline/login/#credentials-store
- 
+
    Login Succeeded
    ```
    ```bash
@@ -148,7 +149,7 @@ Before installing Kubernetes, do the following:
     99d9b2ede2ea        registry:2          "/entrypoint.sh /etc…"   36 seconds ago      Up 35 seconds       0.0.0.0:5000->5000/tcp   registry
    ```
 
-#### Install, Configure, and Run Containerd
+## Install, Configure, and Run Containerd
 1. Create `/etc/crictl.yaml` with following contents:
    ```bash
    cat /etc/crictl.yaml
@@ -234,7 +235,7 @@ Before installing Kubernetes, do the following:
              CPU: 663ms
           CGroup: /system.slice/containerd.service
                   └─100769 /usr/bin/containerd
- 
+
      <...> level=info msg="Start subscribing containerd event"
      <...> level=info msg="Start recovering state"
      <...> level=info msg=serving... address=/run/containerd/container>
@@ -247,7 +248,7 @@ Before installing Kubernetes, do the following:
      <...> level=info msg="Start streaming server"
    ```
 
-#### Install Kubernetes Components
+## Install Kubernetes Components
 1. Set up the Kubernetes repo manager. Please follow the
    link[Install K8S](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/#install-using-native-package-management)
    Below is just a sample example to install version 1.25.

@@ -1,4 +1,4 @@
-IPDK Kubernetes* Infrastructure Offload Release Notes
+IPDK Kubernetes Infrastructure Offload Release Notes
 #############################################################
 
 IPDK 24.07

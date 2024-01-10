@@ -3,7 +3,7 @@
 ## Installing Kubernetes
 
 Kubernetes Infra Offload requires Kubernetes, Docker*, and containerd* to be
-installed. See [Kubernetes*, Docker*, and containerd* Installation](guides/k8s-docker-containerd-install.md)
+installed. See [Kubernetes, Docker, and containerd Installation](docker-containerd-install.md)
 for instructions. If these components are already installed on the machine,
 proceed to next step.
 
@@ -18,9 +18,9 @@ various functionalities on it (i.e. on the P4 data plane).
 
 The instructions to setup the target and install infrap4d and its dependencies,
 are different for the two targets.
-See [Target Setup for P4-DPDK](guides/setup/target-setup-dpdk.md) for instructions on
+See [Target Setup for P4-DPDK](target-setup-dpdk.md) for instructions on
 installation of SDE and InfraP4d on P4-DPDK target.
-See [Target Setup for Intel IPU ES2K](guides/setup/target-setup-es2k.md) for
+See [Target Setup for Intel IPU ES2K](target-setup-es2k.md) for
 installation of SDE and InfraP4d on Intel IPU ES2100 target.
 
 ### Set Up P4 Kubernetes
