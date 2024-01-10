@@ -12,114 +12,148 @@ Follow the SDE User Guide with all the steps until ipumgmtd is started.
 
 Perform following steps before starting ipumgmtd.
 
-### Copy Custom Package to IMC
-  Copy k8s_dp-0.9.pkg to IMC from the link partner machine and create a soft link.
+## Copy Custom Package and cp_init Config to IMC
+
+K8s uses a custom p4 package for the datapath. The p4 artifacts for
+this custom program are pre-generated in the package provided by Intel.
+
+Please use these artifacts and put them under k8s_dp/es2k dir of k8s source.
+If any modifications are made, use the following instructions on
+compilation under [Compile K8s P4](#compile-k8s-p4)
+section of this guide. The default cp_init.cfg file would need changes for subfunction support
+on the host. An example file called `cp_init_use_case_cdq.cfg` has been provided.
+
+Copy fxp-net_k8s-dp.pkg to IMC '/work/scripts' dir from the link partner machine.
+
   ```bash
-  scp k8s_dp-0.9.pkg 100.0.0.100:/etc/dpcp/package
+  scp fxp-net_k8s-dp.pkg 100.0.0.100:/work/scripts/.
+  scp cp_init.cfg 100.0.0.100:/work/scripts/.
   ```
+
   On IMC:
+  Modify load_custom_pkg.sh as below:
+
   ```bash
-  cd /etc/dpcp/package
-  rm default_pkg.pkg
-  ln -s k8s_dp-0.9.pkg default_pkg.pkg
+  cd /work/scripts
+  cp /etc/dpcp/cp_init_use_case_cdq.cfg cp_init.cfg
   ```
 
-### Enable CDQ Interface Creation
-  Edit the config file (/etc/dpcp/cfg/cp_init.cfg) on IMC to enable CDQ.
-  For details on this file and the specific edits required, refer to the
-  FXP P4 SDE User Guide document.
-
-### Run ipumgmtd
-  Run ipumgmtd and check the status of ports
   ```bash
-  /etc/init.d/run_default_init_app
-  ifconfig lo up
-  /usr/bin/cli_client -q -c -V
+  cat load_custom_pkg.sh
   ```
+  Modify the script `load_custom_pkg.sh`
+  so that it looks like the below
+
+  ```bash
+  #!/bin/sh
+  CP_INIT_CFG=/etc/dpcp/cfg/cp_init.cfg
+  echo "Checking for custom package..."
+  if [ -e fxp-net_k8s-dp.pkg ]; then
+      echo "Custom package p4_custom.pkg found. Overriding default package"
+      cp  fxp-net_k8s-dp.pkg /etc/dpcp/package/
+      cp  cp_init.cfg /etc/dpcp/cfg/
+      rm -rf /etc/dpcp/package/default_pkg.pkg
+      ln -s /etc/dpcp/package/fxp-net_k8s-dp.pkg /etc/dpcp/package/default_pkg.pkg
+      sed -i 's/sem_num_pages = 1;/sem_num_pages = 25;/g' $CP_INIT_CFG
+      sed -i 's/lem_num_pages = 1;/lem_num_pages = 25;/g' $CP_INIT_CFG
+  else
+      echo "No custom package found. Continuing with default package"
+  fi
+  ```
+
+The work directory on IMC is persistent so any config and package files
+copied here, will continue to exist over subsequent reboots.
 
 ## Set up Host
-Follow the steps listed in the FXP P4 SDE User Guide document, "Running from
-HOST" section. The steps include configuring Linux kernel boot parameters to
-enable IOMMU, ATE, etc.; installing ATE kernel and other RPMs; installing
-required third-party software; installing p4sde and p4-cp-nws; loading drivers
-and binding them to the device; configuring HugePages; and setting required
-environment variables (`PATH`, `LD_LIBRARY_PATH`, `SDE_INSTALL`, etc.).
 
-In order to run the K8S Infra Offload Solution, the host needs the following 
-additional setup.
-- Kernel 5.15: The host needs to have kernel 5.15 in order for the K8S solution
-  to work. Install kernel 5.15 on host from the RPM file included in the official
-  CI build.
-- iproute2 package (min version 5.19): Intel IDPF driver supports creation of CDQ
-  interfaces (dynamic ports) using the devlonk command which is part of the 
-  iproute2 package. In order for dynamic port creation to work, minimum version
-  of iproute2 needed is 5.19. iproute2 source tarball can be downloaded from 
-  this link: https://git.kernel.org/pub/scm/network/iproute2/iproute2.git/. 
-  Ensure the following dependencies are installed before building and installing
-  iproute2 from source: libnl3, libmnl. These can be installed on Fedora with
-  the following commands:
-  ```bash
-  dnf install libnl3-devel
-  dnf install libmnl-devel
-  ```
-  iproute2 can then be installed by running `make` and `make install` in the 
-  iproute2 source folder.
-- IDPF driver: Due to the requirement of kernel upgrade to 5.15, the IDPF driver
-  needs to be built from source. Before building the driver, install the kernel
-  header files and kernel sources from RPMs included in the CI build files. Get
-  the IDPF source also from included source RPM. Then run the following commands
-  build and install the IDPF driver.
-  ```bash
-  cd idpf         #IDPF source base directory
-  make -j silicon
-  make install
-  ```
+Follow the steps listed in the FXP P4 SDE User Guide document for host setup.
+The steps include configuring Linux kernel boot parameters to
+enable IOMMU, ATE, etc.; installing ATE kernel and other RPMs; installing
+required third-party software; installing p4sde and p4-cp-nws.
+
+## Install out-of-tree IDPF Driver
+
+IDPF driver creates subfunction interfaces which are allocated to Pods.
+Please refer to the IDPF documentation on how to install (or build if required for
+the right version). Documentation under features/networking/IDPF_Readme.rst in the 
+documentation tarball
 
 ## Install IPDK SDE and IPDK Networking Recipe
-IPDK infrap4d (P4 Control Plane) needs to be installed and run on the host
-natively. To install infrap4d and P4-SDE (components as per IPDK 23.07 release)
-individually, follow the instructions listed below. Note that, P4C is not
-required as this software includes P4C generated artifacts.
- 
-### P4-SDE
-  To install P4-SDE, follow its README instructions in the SDE package.
-  Make sure to checkout the appropriate branch or SHA meant for IPDK 23.07
-  release. The main steps can be summerized as:
 
-  Clone SDE repository, create install directory, setup environment variable and
-  then build
-  ```bash
-  git clone <SDE Git Repository Link>
-  cd p4-es2k-target
-  git checkout <Branch/SHA for IPDK 23.07>
-  git submodule update --init --recursive --force
-  mkdir install
-  export SDE=$PWD
-  cd ./tools/setup
-  source p4sde_env_setup.sh $SDE
-  cd $SDE
-  ./build-p4sde.sh -s $SDE_INSTALL
-  ```
+For K8s recipe on host, IPDK p4-cp-nws (p4-control) and p4-sde components need to be installed
+and run on the host natively.
+To install p4sde, follow the instructions in FXP P4SDE User Guide.
 
-### Infrap4d
-  To install infrap4d, follow instructions at
-  https://github.com/ipdk-io/networking-recipe/blob/main/docs/guides/setup/es2k-setup-guide.md
-  Make sure to checkout the appropriate
-  branch or SHA meant for IPDK 23.07 release. The main steps can be summarized as:
-  ```bash
-  git clone https://github.com/ipdk-io/networking-recipe.git ipdk.recipe
-  cd ipdk.recipe
-  git checkout <Branch/SHA for IPDK 23.07>
-  git submodule update --init --recursive
-  export IPDK_RECIPE=$PWD
-  mkdir install
-  export DEPEND_INSTALL=$PWD/install
-  cd $IPDK_RECIPE/setup
-  cmake -B build -DCMAKE_INSTALL_PREFIX=$DEPEND_INSTALL
-  cmake --build build [-j<njobs>]
+To install infrap4d which is the networking recipe, follow instructions at
+https://github.com/ipdk-io/networking-recipe/blob/main/docs/guides/setup/es2k-setup-guide.md
+Make sure to checkout the appropriate
 
-  cd $IPDK_RECIPE
-  source ./scripts/es2k/setup_env.sh $IPDK_RECIPE $SDE_INSTALL $DEPEND_INSTALL
-  ./make-all.sh --target=es2k
-  ./scripts/es2k/copy_config_files.sh $IPDK_RECIPE $SDE_INSTALL
-  ```
+## Install P4C
+
+P4 PNA compiler is used to build P4 compiled artifacts. The source distribution
+for CPT and P4C is under in the p4-programs tarball hw-p4-programs.xxxx.tgz.
+
+## Compile K8s P4
+
+To build the k8s datapath p4 artifacts, follow the instructions below once compiler
+is installed and all the env variables required by the makefile are set.
+
+```bash
+make fxp-net_k8s-dp
+```
+
+### Building p4runtime pipeline builder file
+This command is required to be run on all the artifacts. The pipeline builder serializes the artifacts to be sent over
+the p4runtime SetForwardingPipelineConfigRequest. This needs to be run on the ACC for split mode.
+
+```bash
+touch <file_path>/tofino.bin
+/opt/p4/p4-cp-nws/bin/tdi_pipeline_builder  -p4c_conf_file=/usr/share/stratum/es2k/es2k_skip_p4.conf  -bf_pipeline_config_binary_file=<file_path>/k8s_dp.pb.bin
+```
+
+## Generating certificates
+The system relies on mTLS (mutual TLS) for authentication.
+
+IPs of the servers using TLS, should be here. If in host mode,
+localhost is used so `127.0.0.1` works. But if in split mode,
+ensure that the IP is present here.
+in the list in the config openssl.cnf file :scripts/tls/openssl.cnf
+```bash
+DNS.1 = *.intel.com
+DNS.2 = k8s
+DNS.3 = kubernetes.default
+IP.1  = 127.0.0.1
+IP.2  = 10.10.0.2 # Inframanager server IP here for example
+```
+
+This config file is used to generate Certificate Signing Request (CSR)
+files for each
+1. Infraagent(client)
+2. Inframanager(server)
+3. Inframanager(client)
+4. Infrap4d
+
+Run the below from base directory.
+```bash
+make gen-certs
+```
+The files will be generated under
+```bash
+$BASE_DIR/tls/certs/infraagent/client   #Infraagent(client)
+$BASE_DIR/tls/certs/inframanager/server #Inframanager(server)
+$BASE_DIR/tls/certs/inframanager/client #Inframanager(client)
+$BASE_DIR/tls/certs/infrap4d #infrap4d
+```
+
+## Installing certificates
+
+`infrap4d` will check for server certificates in the default location
+`/usr/share/stratum/certs/`.
+
+inframanager and infraagent will be expecting certificates in the
+location `/etc/pki/inframanager/certs` and `/etc/pki/infraagent/certs`
+respectively.
+
+
+For more information regarding default and non-default path, refer to
+inframanager-config-file section in the Readme

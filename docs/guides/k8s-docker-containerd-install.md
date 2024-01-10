@@ -248,9 +248,12 @@ Before installing Kubernetes, do the following:
    ```
 
 #### Install Kubernetes Components
-1. Set up the Kubernetes repo manager:
+1. Set up the Kubernetes repo manager. Please follow the
+   link[Install K8S](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/#install-using-native-package-management)
+   Below is just a sample example to install version 1.25.
+
    ```bash
-   cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+   # cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
    [kubernetes]
    name=Kubernetes
    baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
@@ -261,39 +264,27 @@ Before installing Kubernetes, do the following:
    EOF
    # dnf install -y kubelet-1.25.1 kubeadm-1.25.1 kubectl-1.25.1 containernetworking-plugins cri-tools-1.25.0 --disableexcludes=kubernetes
    # dnf list installed | grep kube
-   ```
-   ```text
-   cri-tools.x86_64                                   1.25.0-0                            @kubernetes
-   kubeadm.x86_64                                     1.25.0-0                            @kubernetes
-   kubectl.x86_64                                     1.25.0-0                            @kubernetes
-   kubelet.x86_64                                     1.25.0-0                            @kubernetes
+   cri-tools.x86_64 1.25.0-0 @kubernetes
+   kubeadm.x86_64 1.25.8-0 @kubernetes
+   kubectl.x86_64 1.25.8-0 @kubernetes
+   kubelet.x86_64 1.25.8-0 @kubernetes
    ```
 
 2. Pull Kubernetes images and verify the downloaded images:
    ```bash
-   kubeadm config images pull
-   crictl images ls
-   ```
-   ```text
-   IMAGE                                TAG                 IMAGE ID            SIZE
-   docker.io/calico/cni                      v3.24.1             67fd9ab484510       87.4MB
-   docker.io/calico/kube-controllers         v3.24.1             f9c3c1813269c       31.1MB
-   docker.io/calico/node                     v3.24.1             75392e3500e36       80.2MB
-   localhost:5000/infraagent                 latest              0c33a598fd923       32.2MB
-   localhost:5000/inframanager               latest              56f21c0cc91a2       11MB
-   quay.io/tigera/operator                   v1.28.1             52468087127eb       18.8MB
-   registry.k8s.io/coredns/coredns           v1.9.3              5185b96f0becf       14.8MB
-   registry.k8s.io/etcd                      3.5.4-0             a8a176a5d5d69       102MB
-   registry.k8s.io/kube-apiserver            v1.25.0             4d2edfd10d3e3       34.2MB
-   registry.k8s.io/kube-controller-manager   v1.25.0             1a54c86c03a67       31.3MB
-   registry.k8s.io/kube-proxy                v1.25.0             58a9a0c6d96f2       20.3MB
-   registry.k8s.io/kube-scheduler            v1.25.0             bef2cf3115095       15.8MB
-   registry.k8s.io/pause                     3.8                 4873874c08efc       311kB
-   ```
-   ```bash
-   kubeadm config images list
-   ```
-   ```text
+   # kubeadm config images pull
+
+   # crictl images ls
+   IMAGE                                             TAG                 IMAGE ID            SIZE
+   registry.k8s.io/coredns/coredns                   v1.9.3              5185b96f0becf       14.8MB
+   registry.k8s.io/etcd                              3.5.6-0             fce326961ae2d       103MB
+   registry.k8s.io/kube-apiserver                    v1.25.16            1f1beb7697603       35.1MB
+   registry.k8s.io/kube-controller-manager           v1.25.16            008d3c66b06c6       31.9MB
+   registry.k8s.io/kube-proxy                        v1.25.16            8bcccb40c8da7       20.5MB
+   registry.k8s.io/kube-scheduler                    v1.25.16            37380a8f21afe       16.3MB
+   registry.k8s.io/pause                             3.8                 4873874c08efc       311kB
+
+   # kubeadm config images list
    registry.k8s.io/kube-apiserver:v1.25.0
    registry.k8s.io/kube-controller-manager:v1.25.0
    registry.k8s.io/kube-scheduler:v1.25.0
