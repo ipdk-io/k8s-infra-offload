@@ -20,8 +20,8 @@ The instructions to setup the target and install infrap4d and its dependencies,
 are different for the two targets.
 See [Target Setup for P4-DPDK](target-setup-dpdk.md) for instructions on
 installation of SDE and InfraP4d on P4-DPDK target.
-See [Target Setup for Intel IPU ES2K](target-setup-es2k.md) for
-installation of SDE and InfraP4d on Intel IPU ES2100 target.
+See [Target Setup for Intel IPU ES2100](target-setup-es2k.md) for host setup
+and compilation of P4-SDE and P4-CP on Intel IPU ES2100 target.
 
 ## Set Up P4 Kubernetes
 
@@ -55,12 +55,15 @@ once mentioned dependencies are compiled and installed.
    git checkout ipdk_v24.01
    ```
 
+   For building K8S recipe, follow the steps below.
+
 3. Build K8s P4 artifacts
 
    Notes:
-   i) For ES2K target, get the K8s P4 artifacts from ES2K release package and
+   i) For ES2100 target, get the K8s P4 artifacts and
       copy them into p4-k8s/k8s_dp/es2k/. This must be done before running
       below make commands. Ensure the following artifacts are present.
+
       ```bash
       cd k8s_dp/es2k/
       ls
@@ -68,18 +71,19 @@ once mentioned dependencies are compiled and installed.
       ```
       bf-rt.json  context.json  k8s_dp.p4  k8s_dp.pb.bin  p4Info.txt
       ```
+
       For generating the artifacts for ES2100, refer to the
       [compiling-p4-programs](target-setup-es2k.md#compile-k8s-p4) section
 
-   ii) By default, Makefile is configured to build for ES2K target. To build
+   ii) By default, Makefile is configured to build for ES2100 target. To build
       for P4-DPDK target, use "tagname=dpdk" argument for both make targets
       below.
 
-   Build Kubernetes binaries:
+      Build Kubernetes binaries:
 
-   ```bash
-   make build
-   ```
+      ```bash
+      make build
+      ```
 
 4. Generate the certificates required for the mTLS connection between infraagent,
    inframanager, and infrap4d:
@@ -315,11 +319,10 @@ modify the `scripts/mev/tls/gen_certs.sh` script accordingly before running
 cipher suites. These changes need to be done prior to the creation of container
 images in step 9 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 
-
-
 ## Deploy P4 Kubernetes
 
 1. Initialize and start the core Kubernetes components:
+
    ```bash
    kubeadm init --pod-network-cidr=<pod-cidr> --service-cidr=<service-cidr>
    ```
@@ -327,17 +330,21 @@ images in step 9 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 2. Once the Kubernetes control plane initialization has completed successfully,
    then do either of the following:
    - As a non-root user:
+
      ```bash
      mkdir -p $HOME/.kube
      cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
      chown $(id -u):$(id -g) $HOME/.kube/config
      ```
+
    - Or as root user:
+
      ```bash
      export KUBECONFIG=/etc/kubernetes/admin.conf
      ```
 
 3. Install and setup Calico plugin
+
    ```bash
     cd /usr/local/bin
     curl -L https://github.com/projectcalico/calico/releases/download/v3.24.1/calicoctl-linux-amd64 -o kubectl-calico
@@ -348,6 +355,7 @@ images in step 9 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
    For single node deployment, the node must be untainted to allow worker pods
    to share the node with control plane. The taint to remove is "control-plane"
    or "master" or both. These taints can be removed as shown:
+
    ```bash
    kubectl taint node <node-name> node-role.kubernetes.io/control-plane-
    kubectl taint node <node-name> node-role.kubernetes.io/master-
@@ -355,6 +363,7 @@ images in step 9 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 
 5. Create Kubernetes secrets from the generated certificates. The infraagent and
    inframanager read the certificates from the secrets.
+
    ```bash
    make tls-secrets
    ```
@@ -386,6 +395,7 @@ images in step 9 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
   and modify it to create pod with different name. For example, copy it as
   `test-pod2.yaml` and change the metadata name and container name to be
   `test-pod2`. The .yaml file for test-pod2 should look as below.
+
   ```yaml
   apiVersion: v1
   kind: Pod
@@ -401,15 +411,18 @@ images in step 9 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
   Then, carry out the following steps.
 
 1. Create both the test pods:
+
    ```bash
    kubectl create -f example/test_pod.yaml
    kubectl create -f example/test_pod2.yaml
    ```
 
    Check that the two test pods are ready and running:
+
    ```bash
    kubectl get pods -o wide
    ```
+
    ```none
    NAME        READY   STATUS    RESTARTS   AGE    IP               NODE    NOMINATED NODE   READINESS GATES
    test-pod    1/1     Running   0          10m    10.244.0.6       ins21   <none>           <none>
@@ -418,10 +431,12 @@ images in step 9 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 
 2. Use the IP address from above output or `ifconfig` to get the IP address
    assigned to one of the pods. Then, ping that address from the other pod:
+
    ```bash
    kubectl exec test-pod -- ifconfig eth0
    kubectl exec test-pod2 -- ping 10.244.0.6
    ```
+
    ```none
    PING 10.244.0.6 (10.244.0.6): 56 data bytes
    64 bytes from 10.244.0.6: seq=0 ttl=64 time=0.112 ms
@@ -432,6 +447,7 @@ images in step 9 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
    ```
 
 3. To delete above created test pods:
+
    ```bash
    kubectl delete pod test-pod test-pod2
    ```
@@ -477,6 +493,7 @@ images in step 9 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 ## Troubleshooting
 
 ### Debugging
+
 
 - The Kubernetes Infrastructure Offload software provides logging capabilities.
   Check logs emitted to stdout

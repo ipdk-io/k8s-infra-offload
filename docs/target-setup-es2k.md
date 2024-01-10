@@ -1,6 +1,7 @@
-# Target Setup for Intel IPU ES2K
+# Target Setup for Intel IPU ES2100
 
 ## Set Up Hardware Board
+
 Hardware setup requires the Intel IPU device to be connected to a link partner
 in a back-to-back manner. Refer to the setup topology in the
 FXP_P4_SDE_User_Guide.md included in the documentation in official release
@@ -10,13 +11,13 @@ instructions, and system settings, as well as other information.
 
 Follow the SDE User Guide with all the steps until ipumgmtd is started.
 
-Perform following steps before starting ipumgmtd.
+Perform following steps to setup k8s_dp custom package and node policy
+config file prior to rebooting imc.
 
 ## Copy Custom Package and cp_init Config to IMC
 
 K8s uses a custom p4 package for the datapath. The p4 artifacts for
 this custom program are pre-generated in the package provided by Intel.
-
 Please use these artifacts and put them under k8s_dp/es2k dir of k8s source.
 If any modifications are made, use the following instructions on
 compilation under [Compile K8s P4](#compile-k8s-p4)
