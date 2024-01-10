@@ -1,7 +1,7 @@
 IPDK Kubernetes Infrastructure Offload Release Notes
 #############################################################
 
-IPDK 24.07
+IPDK 24.01
 ************
 
 What's new in this Release
@@ -54,9 +54,6 @@ Component Feature Support
   * - Execution support in Split Mode with Inframanager running on ACC
     - Inframanager running on ACC but infraagent on host
     - Production ready
-  * - Socket extension to Felix for Network policy and routing offload.
-    - Addition of socket between Felix and Infraagent for policies.
-    - Production ready
   * - Automation scripts for cluster deployment
     - Example scripts for cluster deployment of Load balancing and CNI add
     - Production ready
@@ -67,7 +64,6 @@ Component Feature Support
 Resolved Issues
 ===========================
 
-- NODE_IP env is needed on ACC for inframanager to run
 - After deleting and creating multiple test pods, multiple times some of the pods are not
   getting created, with error "failed to get a CDQ interface for pod: no free resources left" on infraagent.
 - No Readme for TLS certificates and security guide
@@ -89,7 +85,7 @@ Known issues and limitations
   User may need to manually configure and execute instructions mentioned in the script.
 - The `setup_infra_sriov.sh` script doesn't support the `-r` option for remote IP for host IP on ACC.
   Only host mode is supported for this release as an engineering preview.
-- Max supported CDQ interfaces are 50 as max vport for host.
+- Max supported CDQ interfaces are 254 as max vport for host. The default max vport in the cdq use case cp_init file has been provided as 50 which can be configured.
 
 IPDK 23.07
 ************

@@ -23,7 +23,7 @@ installation of SDE and InfraP4d on P4-DPDK target.
 See [Target Setup for Intel IPU ES2K](target-setup-es2k.md) for
 installation of SDE and InfraP4d on Intel IPU ES2100 target.
 
-### Set Up P4 Kubernetes
+## Set Up P4 Kubernetes
 
 On the Intel IPU, k8s-infra-offload can run in two different modes, details of
 which are present in all relevant sections where mode based configurations are
@@ -34,6 +34,8 @@ a. The split mode, where the inframanager runs on IPU ARM cores for rule offload
 
 b. The host mode, where every component runs on the host and offload happens
    from host.
+
+On DPDK, only the host mode is supported.
 
 Following steps cover instructions on setting up P4-K8S in either modes,
 once mentioned dependencies are compiled and installed.
@@ -108,7 +110,7 @@ once mentioned dependencies are compiled and installed.
    sub-functions on ES2100), sets up the HugePages and starts infrap4d.
    The script supports infrastructure setup in two different modes.
 
-   a. The split mode, where the inframanager runs on IPU ARM cores(remote end)
+   a. The split mode on ES2100, where the inframanager runs on IPU ARM cores(remote end)
    while the infraagent runs on the host. In this mode, the communication channel
    between IPU ACC-ARM complex and host must pre-exist prior to execution of the
    script. This communication channel can be provisioned using node policy file
@@ -121,7 +123,7 @@ once mentioned dependencies are compiled and installed.
    of `10.10.0.2` for the remote end. Incase a different IP address is configured,
    update `scripts/tls/openssl.cnf` and re-execute step 4.
 
-   b. The host mode, where every component runs on the host(engineering
+   b. The host mode on both targets, where every component runs on the host(engineering
    preview).
 
    For CDQ interfaces :
@@ -257,7 +259,7 @@ once mentioned dependencies are compiled and installed.
     crictl pull localhost:5000/infraagent:latest
     ```
 
-#### infraagent config file update
+### infraagent config file update
 
 The config file `deploy/es2k/infraagent-config.yaml` is used to inform the
 infraagent which interface and interfacetype to use.
@@ -279,7 +281,7 @@ managerAddr : <IP address of comms channel on ACC>
 managerPort : 50002
 ```
 
-#### inframanager config file update
+### inframanager config file update
 
 The config file `deploy/inframanager-config.yaml` is used to define the parameters
 which the inframanager will use for the connection establishment with infrap4d
@@ -359,7 +361,7 @@ images in step 9 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 
 6. Start the deployments:
 
-   For split mode, run the below on the host
+   For split mode on the Intel IPU ES2100, run the below on the host
    ```bash
    make deploy-split
    make deploy-calico
@@ -472,15 +474,15 @@ images in step 9 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
    ...
    ```
 
-### Troubleshooting
+## Troubleshooting
 
-#### Debugging
+### Debugging
 
 - The Kubernetes Infrastructure Offload software provides logging capabilities.
   Check logs emitted to stdout
   and stderr using `"kubectl logs <pod> -n <namespace>"`.
 
-#### FAQs
+### FAQs
 
 1. idpf crash observed leading to host reboot
 
@@ -496,8 +498,7 @@ images in step 9 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 2. "failed to get a CDQ interface for pod: no free resources left" error is seen on infraagent and
     remaining pods do not come up
 
-    Reason : The wrong cp_init.cfg file was used in the IMC and the correct number of max_host_apfs
-    were not allocated. Or the cpf_host number to be used is not correct.
+    Reason : The wrong cp_init.cfg file was used in the IMC and the correct number of host apf under num_max_vport in the cp_init file needs to be at least 50.
     Solution : Use the cdq uses cases cp_init.cfg file
 
 3. CDQ interfaces not coming up
@@ -572,21 +573,21 @@ images in step 9 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
    pkill inframanager
    ```
 
-### Versions and Third-parties
+## Versions and Third-parties
 
 Versions of Kubernetes, linux distros, docker and other third-party libraries tested with (calico, felix)
 
-#### OS
+### OS
 
 - Linux
   - Rocky Linux 9.2
   - RHEL 9.2
 
-#### golang
+### golang
 
 go1.21.4
 
-#### docker
+### docker
 
 ```bash
 docker version
@@ -595,7 +596,7 @@ Client: Docker Engine - Community
  API version:       1.41
 ```
 
-#### containerd
+### containerd
 
 Tested on 1.6.x
 
@@ -603,7 +604,7 @@ Tested on 1.6.x
 ctr version
 ```
 
-#### kubernetes
+### kubernetes
 
 Versions tested and supported with
 
@@ -617,6 +618,6 @@ kubectl.x86_64                                   1.25.4-0
 kubelet.x86_64                                   1.25.4-0
 ```
 
-#### Calico
+### Calico
 
 v3.24.1

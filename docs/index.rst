@@ -19,7 +19,6 @@ Welcome to k8s-infra-offload's documentation!
    docker-containerd-install
    target-setup-dpdk
    target-setup-es2k
-   compiling-p4-programs
 
 .. toctree::
    :maxdepth: 2

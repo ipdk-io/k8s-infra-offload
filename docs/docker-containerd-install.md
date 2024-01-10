@@ -17,7 +17,7 @@ Before installing Kubernetes, do the following:
    swapoff -a
    ```
 
-2. For Fedora* 33, swapoff doesn't completely turn off the swapping after
+2. Swapoff doesn't completely turn off the swapping after
    a reboot. Remove the following package:
    ```bash
    dnf remove zram-generator-defaults
