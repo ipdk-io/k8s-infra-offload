@@ -7,10 +7,12 @@ IPDK 24.01
 What's new in this Release
 ===========================
 
-- Service Load Balancing: Addition of service type load-balancer feature.
-   Services (UDP/TCP) can be created and load-balanced to endpoints using
-   hash in the hardware. TCP and UDP flows are pinned to endpoint after
-   selection based on SYN packet.
+- Service Load Balancing: Support for K8s Service of type ClusterIP.
+   Kubeproxy implementation is now offloaded to hardware.
+   Services can be created and dynamically distributed to endpoints.
+   For TCP, only the SYN packet goes through the load-balancing logic.
+   Entry is added to hardware CT table for treatment of subsequent packets.
+   Support for dynamic scale-up of endpoints.
 - Support for Go version 1.21.4
 - Support for log level configuration from config files for Infraagent
 - SRIOV support for ES2K
@@ -55,7 +57,7 @@ Component Feature Support
     - Inframanager running on ACC but infraagent on host
     - Production ready
   * - Automation scripts for cluster deployment
-    - Example scripts for cluster deployment of Load balancing and CNI add
+    - Example scripts for cluster deployment of Load balancing and pod scale up
     - Production ready
   * - SRIOV interface support for ES2100
     - SRIOV support for ES2100 in host mode in addition to CDQ
@@ -83,12 +85,11 @@ Known issues and limitations
 - The setup_infra.sh automation script, works with the default configuration for certificate paths
   and artifact paths. Any changes in these paths will render the script unusable.
   User may need to manually configure and execute instructions mentioned in the script.
-- The `setup_infra_sriov.sh` script doesn't support the `-r` option for remote IP for host IP on ACC.
-  Only host mode is supported for this release as an engineering preview.
+- SRIOV is an experimental feature. The setup_infra_sriov.sh script doesn't support the -r option for remote IP for host IP on ACC. Host mode is supported for this release as an engineering preview.
 - Max supported CDQ interfaces are 254 as max vport for host. The default max vport in the cdq use case cp_init file has been provided as 50 which can be configured.
 
 IPDK 23.07
-************
+**************
 
 - This is the first release of K8s-Infra-Offload recipe that supports ES2K and DPDK targets.
 
@@ -128,7 +129,7 @@ Common Changes
 - Automatated build & integration test on each commit
 - Felix integration and communication with Infrastructure Offload Components.
 - Addition of DB to store state information.
-- Support for Fedora33
+- Support for building K8s Offload Recipe for Rocky Linux 9.1
 - Support for Go version 1.20.5
 - Support for logging per feature in components
 - Configurable MTU using config file

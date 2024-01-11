@@ -91,10 +91,13 @@ Make sure to checkout the appropriate
 ## Install P4C
 
 P4 PNA compiler is used to build P4 compiled artifacts. The source distribution
-for CPT and P4C is under in the p4-programs tarball hw-p4-programs.xxxx.tgz.
+for CPT and P4C is under in the p4-programs release tarball hw-p4-programs.xxxx.tgz.
 
 ## Compile K8s P4
 
+The P4 Programs User Guide describes how to build packages and
+artifacts for a sample P4 program. See the Build custom package
+chapter in the Intel P4 Programs Readme for detailed instructions.
 To build the k8s datapath p4 artifacts, follow the instructions below once compiler
 is installed and all the env variables required by the makefile are set.
 

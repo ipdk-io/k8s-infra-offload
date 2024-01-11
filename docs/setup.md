@@ -192,7 +192,7 @@ once mentioned dependencies are compiled and installed.
    ```
 
    This command is currently required for the core-dns component of kubernetes to function.
-   For CDQ, till ending with d3 are default sub-functions so first interface 
+   For CDQ, till ending with d3 are default sub-functions so first interface
    ending with d4 needs to be assigned to arp and d5 to host.
 
    For SRIOV - Frist VF interface wnding with v0 goes to arp and V1 goes to host
