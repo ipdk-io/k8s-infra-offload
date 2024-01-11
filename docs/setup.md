@@ -192,8 +192,10 @@ once mentioned dependencies are compiled and installed.
    ```
 
    This command is currently required for the core-dns component of kubernetes to function.
-   For CDQ till d3 are default sub-functions so first interface d4 needs to be assigned to arp and d5 to host.
-   For SRIOV - Frist VF vf0 goes to arp and VF1 goes to host
+   For CDQ, till ending with d3 are default sub-functions so first interface 
+   ending with d4 needs to be assigned to arp and d5 to host.
+
+   For SRIOV - Frist VF interface wnding with v0 goes to arp and V1 goes to host
 
 8. Run ARP-Proxy script, which creates a new namespace and assigns an interface
    from the pool of interfaces created in previous step.

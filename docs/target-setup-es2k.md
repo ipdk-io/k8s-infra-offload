@@ -28,7 +28,6 @@ Copy fxp-net_k8s-dp.pkg to IMC '/work/scripts' dir from the link partner machine
 
   ```bash
   scp fxp-net_k8s-dp.pkg 100.0.0.100:/work/scripts/.
-  scp cp_init.cfg 100.0.0.100:/work/scripts/.
   ```
 
   On IMC:
