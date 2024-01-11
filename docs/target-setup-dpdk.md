@@ -16,7 +16,7 @@ required as this software includes P4C generated artifacts.
   ```bash
   git clone https://github.com/p4lang/p4-dpdk-target.git
   cd p4-dpdk-target
-  git checkout tags/v24.01
+  git checkout <Branch/SHA for IPDK 24.01>
   git submodule update --init --recursive --force
   mkdir install
   export SDE=$PWD
