@@ -2,21 +2,21 @@
 
 ## Install IPDK SDE and IPDK Networking Recipe
 IPDK infrap4d (P4 Control Plane) needs to be installed and run on the host
-natively. To install infrap4d and P4-SDE (components as per IPDK 23.07 release)
+natively. To install infrap4d and P4-SDE
 individually, follow the instructions listed below. Note that, P4C is not
 required as this software includes P4C generated artifacts.
  
 ### P4-SDE
   To install P4-SDE, follow its README instructions at
   https://github.com/p4lang/p4-dpdk-target. Make sure to checkout the appropriate
-  branch or SHA meant for IPDK 23.07 release. The main steps can be summerized as:
+  branch or SHA meant for the right release. The main steps can be summerized as:
 
   Clone SDE repository, create install directory, setup environment variable and
   then build
   ```bash
   git clone https://github.com/p4lang/p4-dpdk-target.git
   cd p4-dpdk-target
-  git checkout <Branch/SHA for IPDK 23.07>
+  git checkout <Branch/SHA for IPDK 24.01>
   git submodule update --init --recursive --force
   mkdir install
   export SDE=$PWD
@@ -30,11 +30,11 @@ required as this software includes P4C generated artifacts.
   To install infrap4d, follow instructions at
   https://github.com/ipdk-io/networking-recipe/blob/main/docs/guides/dpdk-guide.md.
   Make sure to checkout the appropriate
-  branch or SHA meant for IPDK 23.07 release. The main steps can be summerized as:
+  branch or SHA meant for the right IPDK release. The main steps can be summerized as:
   ```bash
   git clone https://github.com/ipdk-io/networking-recipe.git ipdk.recipe
   cd ipdk.recipe
-  git checkout <Branch/SHA for IPDK 23.07>
+  git checkout <Branch/SHA for IPDK 24.01>
   git submodule update --init --recursive
   export IPDK_RECIPE=$PWD
   mkdir install
