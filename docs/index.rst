@@ -15,11 +15,10 @@ Welcome to k8s-infra-offload's documentation!
    :maxdepth: 1
    :caption: Setup Guides
 
-   Setup
-   guides/k8s-docker-containerd-install
-   guides/setup/target-setup-dpdk
-   guides/setup/target-setup-es2k
-   guides/es2k/compiling-p4-programs
+   setup
+   docker-containerd-install
+   target-setup-dpdk
+   target-setup-es2k
 
 .. toctree::
    :maxdepth: 2
@@ -32,6 +31,6 @@ Welcome to k8s-infra-offload's documentation!
    :maxdepth: 1
    :caption: Release notes
 
-   ReleaseNotes
+   release-notes
 
 

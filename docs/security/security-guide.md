@@ -24,6 +24,6 @@ confirmation but may not provide sufficient security for production systems.
 It is highly recommended to use well-known CAs, and generate certificates at
 multiple depth levels in order to conform to higher security standards.
 
-See [Using TLS Certificates](docs/guides/security/using-tls-certificates.md)
+See [Using TLS Certificates](using-tls-certificates.md)
 for step by step guide to generate and install TLS certificates
 

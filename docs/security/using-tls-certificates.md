@@ -9,7 +9,7 @@ The system relies on mTLS (mutual TLS) for authentication.
 IPs of the servers using TLS, should be here. If in host mode,
 localhost is used so `127.0.0.1` works. But if in split mode,
 ensure that the IP is present here.
-in the list in the config [openssl.cnf file](scripts/tls/openssl.cnf)
+in the list in the config `scripts/tls/openssl.cnf`
 ```bash
 DNS.1 = *.intel.com
 DNS.2 = k8s
@@ -48,4 +48,4 @@ respectively.
 
 
 For more information regarding default and non-default path, refer to
-[inframanager-config-file section](docs/setup.md#inframanager-config-file-update)
+[inframanager-config-file section](../setup.md#inframanager-config-file-update)
