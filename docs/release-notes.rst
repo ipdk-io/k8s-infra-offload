@@ -78,10 +78,10 @@ Resolved Issues
 - infra-manager pod not coming up due to problem in cleanup of kustomization.yaml after runnning split mode.
 - scripts/setup_infra.sh doesn't contain right changes to make in split mode for infraagent, inframanger
   and openssl conf files
-- Internal state wasn't being retained earlier for recovery purposes. Fixed
-- Sanity checks were missing for wrong configuration in case of missing node IP. Fixed
-- "One or more write operations failed" due to duplicate rules present when inframanager was restarted. Fixed
-- `setup_infra.sh` has infrap4d start twice in split mode. Fixed
+- Internal state wasn't being retained earlier for recovery purposes.
+- Sanity checks were missing for wrong configuration in case of missing node IP.
+- "One or more write operations failed" due to duplicate rules present when inframanager was restarted.
+- `setup_infra.sh` has infrap4d start twice in split mode.
 
 
 Known issues and limitations
