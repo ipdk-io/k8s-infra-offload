@@ -334,11 +334,11 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		PodIpAddress: ip,
 	}
 	entry := ep.GetFromStore()
-	epEntry := entry.(store.EndPoint)
 	if entry == nil {
-		err = fmt.Errorf("epEntry does not exist for DefaultRoute")
+		err = fmt.Errorf("entry does not exist for DefaultRoute")
 		return
 	}
+	epEntry := entry.(store.EndPoint)
 	smacbyte, err := net.ParseMAC(epEntry.PodMacAddress)
 	if err != nil {
 		err = fmt.Errorf("Invalid MAC Address for DefaultRoute")

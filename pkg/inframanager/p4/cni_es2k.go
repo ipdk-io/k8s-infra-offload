@@ -136,6 +136,10 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 		PodIpAddress: ip,
 	}
 	entry := ep1.GetFromStore()
+	if entry == nil {
+		err = fmt.Errorf("Entry not found in store")
+		return ep, err
+	}
 	epEntry := entry.(store.EndPoint)
 	smacbyte, err := net.ParseMAC(epEntry.PodMacAddress)
 	if err != nil {
