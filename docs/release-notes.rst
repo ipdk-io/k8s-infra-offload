@@ -78,6 +78,11 @@ Resolved Issues
 - infra-manager pod not coming up due to problem in cleanup of kustomization.yaml after runnning split mode.
 - scripts/setup_infra.sh doesn't contain right changes to make in split mode for infraagent, inframanger
   and openssl conf files
+- Internal state wasn't being retained earlier for recovery purposes. Fixed
+- Sanity checks were missing for wrong configuration in case of missing node IP. Fixed
+- "One or more write operations failed" due to duplicate rules present when inframanager was restarted. Fixed
+- `setup_infra.sh` has infrap4d start twice in split mode. Fixed
+
 
 Known issues and limitations
 ===============================
@@ -87,6 +92,9 @@ Known issues and limitations
   User may need to manually configure and execute instructions mentioned in the script.
 - SRIOV is an experimental feature. The setup_infra_sriov.sh script doesn't support the -r option for remote IP for host IP on ACC. Host mode is supported for this release as an engineering preview.
 - Max supported CDQ interfaces are 254 as max vport for host. The default max vport in the cdq use case cp_init file has been provided as 50 which can be configured.
+- RSS configuration in P4 isn't present and hence SRIOV throughput is seen slightly lower.
+- Service Load Balancing for TCP has few random session resets. Known issue and bugfix to be available in a future minor release.
+
 
 IPDK 23.07
 **************
