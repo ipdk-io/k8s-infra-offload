@@ -21,13 +21,15 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"sync"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	ServicesFile = path.Join(StorePath, "services_db.json")
+	ServicesFile     = path.Join(StorePath, "services_db.json")
+	serviceFileMutex = &sync.Mutex{}
 )
 
 func IsServiceStoreEmpty() bool {
@@ -194,6 +196,8 @@ func (s Service) UpdateToStore() bool {
 }
 
 func RunSyncServiceInfo() bool {
+
+	serviceFileMutex.Lock()
 	jsonStr, err := JsonMarshalIndent(ServiceSet.ServiceMap, "", " ")
 	if err != nil {
 		log.Errorf("Failed to marshal service entries map %s", err)
@@ -205,5 +209,7 @@ func RunSyncServiceInfo() bool {
 			ServicesFile, err)
 		return false
 	}
+	serviceFileMutex.Unlock()
+
 	return true
 }

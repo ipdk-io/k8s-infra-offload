@@ -27,15 +27,10 @@ import (
 
 var (
 	StoreSetupFile = path.Join(StorePath, "setup_db.json")
+	setupFileMutex = &sync.Mutex{}
 )
 
-var setupMutex = &sync.Mutex{}
-
 func InitSetupStore(setFwdPipe bool) bool {
-
-	onceSetup.Do(func() {
-		Setup = &SetupData{}
-	})
 
 	flags := os.O_CREATE
 
@@ -119,18 +114,18 @@ func SetHostInterface(ip string, mac string) bool {
 		return false
 	}
 
-	setupMutex.Lock()
+	Setup.mutex.Lock()
 	Setup.HostInterface.Ip = ip
 	Setup.HostInterface.Mac = mac
-	setupMutex.Unlock()
+	Setup.mutex.Unlock()
 
 	return true
 }
 
 func SetDefaultRule() {
-	setupMutex.Lock()
+	Setup.mutex.Lock()
 	Setup.SetDefaultRule = true
-	setupMutex.Unlock()
+	Setup.mutex.Unlock()
 }
 
 func IsDefaultRuleSet() bool {
@@ -138,6 +133,7 @@ func IsDefaultRuleSet() bool {
 }
 
 func RunSyncSetupInfo() bool {
+	setupFileMutex.Lock()
 	jsonStr, err := JsonMarshalIndent(Setup, "", " ")
 	if err != nil {
 		log.Errorf("Failed to marshal endpoint entries map %s", err)
@@ -149,6 +145,7 @@ func RunSyncSetupInfo() bool {
 			StoreSetupFile, err)
 		return false
 	}
+	setupFileMutex.Unlock()
 
 	return true
 }

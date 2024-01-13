@@ -26,7 +26,6 @@ import (
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
-	"github.com/antoninbas/p4runtime-go-client/pkg/signals"
 	api "github.com/ipdk-io/k8s-infra-offload/inframanager/api_handler"
 	mgr "github.com/ipdk-io/k8s-infra-offload/pkg/inframanager"
 )
@@ -45,7 +44,7 @@ func main() {
 	api.PutConf(config)
 
 	//Create a new manager object
-	mgr.NewManager()
+	mgr.NewManager(config.DBTicker)
 
 	if config.P4BinPath == "" || config.P4InfoPath == "" {
 		log.Fatalf("Missing .bin or P4Info")
@@ -63,7 +62,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	stopCh := signals.RegisterSignalHandlers()
+	stopCh := utils.RegisterSignalHandlers()
 
 	if err := api.OpenP4RtC(ctx, 0, 1, stopCh); err != nil {
 		log.Errorf("Failed to open p4 runtime client connection")

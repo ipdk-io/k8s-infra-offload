@@ -43,6 +43,7 @@ type Iface struct {
 type SetupData struct {
 	HostInterface  Iface
 	SetDefaultRule bool
+	mutex          *sync.Mutex
 }
 
 type EndPoint struct {
@@ -170,12 +171,21 @@ func NewPolicy() {
 	})
 }
 
+func NewSetup() {
+	onceSetup.Do(func() {
+		Setup = &SetupData{
+			mutex: &sync.Mutex{},
+		}
+	})
+}
+
 func Init(setFwdPipe bool) error {
 	var initErr error
 
 	NewEndPoint()
 	NewService()
 	NewPolicy()
+	NewSetup()
 
 	onceInit.Do(func() {
 		if err := InitSetupStore(setFwdPipe); !err {

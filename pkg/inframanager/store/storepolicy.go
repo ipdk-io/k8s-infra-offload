@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"sync"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	log "github.com/sirupsen/logrus"
@@ -21,9 +22,12 @@ const (
 )
 
 var (
-	PolicyFile   = path.Join(StorePath, "policy_db.json")
-	IpsetFile    = path.Join(StorePath, "ipset_db.json")
-	WorkerepFile = path.Join(StorePath, "workerep_db.json")
+	PolicyFile        = path.Join(StorePath, "policy_db.json")
+	IpsetFile         = path.Join(StorePath, "ipset_db.json")
+	WorkerepFile      = path.Join(StorePath, "workerep_db.json")
+	policyFileMutex   = &sync.Mutex{}
+	ipsetFileMutex    = &sync.Mutex{}
+	workerEpFileMutex = &sync.Mutex{}
 )
 
 func GetNewRuleGroupId() int {
@@ -111,9 +115,7 @@ func InitPolicyStore(setFwdPipe bool) bool {
 	ret, data := OpenPolicyStoreFiles(PolicyFile, flags)
 	if ret == Fail {
 		return false
-	} else if ret == Zerolength {
-		return true
-	} else {
+	} else if ret != Zerolength {
 		err := JsonUnmarshal(data, &PolicySet.PolicyMap)
 		if err != nil {
 			log.Errorf("Failed to unmarshal data from %s, err: %s", PolicyFile, err)
@@ -124,9 +126,7 @@ func InitPolicyStore(setFwdPipe bool) bool {
 	ret, data = OpenPolicyStoreFiles(IpsetFile, flags)
 	if ret == Fail {
 		return false
-	} else if ret == Zerolength {
-		return true
-	} else {
+	} else if ret != Zerolength {
 		err := JsonUnmarshal(data, &PolicySet.IpSetMap)
 		if err != nil {
 			log.Errorf("Failed to unmarshal data from %s, err: %s", IpsetFile, err)
@@ -137,17 +137,14 @@ func InitPolicyStore(setFwdPipe bool) bool {
 	ret, data = OpenPolicyStoreFiles(WorkerepFile, flags)
 	if ret == Fail {
 		return false
-	} else if ret == Zerolength {
-		return true
-	} else {
+	} else if ret != Zerolength {
 		err := JsonUnmarshal(data, &PolicySet.WorkerEpMap)
 		if err != nil {
 			log.Errorf("Failed to unmarshal data from %s, err: %s", WorkerepFile, err)
 			return false
 		}
-		return true
 	}
-
+	return true
 }
 
 func (policy Policy) WriteToStore() bool {
@@ -471,6 +468,7 @@ func (ep PolicyWorkerEndPoint) UpdateToStore() bool {
 }
 
 func RunSyncPolicyInfo() bool {
+	policyFileMutex.Lock()
 	jsonStr, err := JsonMarshalIndent(PolicySet.PolicyMap, "", " ")
 	if err != nil {
 		fmt.Println(err)
@@ -481,11 +479,13 @@ func RunSyncPolicyInfo() bool {
 		log.Errorf("Failed to write entries, err: %s", err)
 		return false
 	}
+	policyFileMutex.Unlock()
 
 	return true
 }
 
 func RunSyncIpSetInfo() bool {
+	ipsetFileMutex.Lock()
 	jsonStr, err := JsonMarshalIndent(PolicySet.IpSetMap, "", " ")
 	if err != nil {
 		fmt.Println(err)
@@ -496,11 +496,13 @@ func RunSyncIpSetInfo() bool {
 		log.Errorf("Failed to write entries, err: %s", err)
 		return false
 	}
+	ipsetFileMutex.Unlock()
 
 	return true
 }
 
 func RunSyncWorkerEpInfo() bool {
+	workerEpFileMutex.Lock()
 	jsonStr, err := JsonMarshalIndent(PolicySet.WorkerEpMap, "", " ")
 	if err != nil {
 		fmt.Println(err)
@@ -511,6 +513,7 @@ func RunSyncWorkerEpInfo() bool {
 		log.Errorf("Failed to write entries, err: %s", err)
 		return false
 	}
+	workerEpFileMutex.Lock()
 
 	return true
 }

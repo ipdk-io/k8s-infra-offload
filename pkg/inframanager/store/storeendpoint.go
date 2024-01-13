@@ -20,6 +20,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"sync"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	log "github.com/sirupsen/logrus"
@@ -27,6 +28,7 @@ import (
 
 var (
 	StoreEpFile = path.Join(StorePath, "cni_db.json")
+	epFileMutex = &sync.Mutex{}
 )
 
 func IsEndPointStoreEmpty() bool {
@@ -149,6 +151,8 @@ func (ep EndPoint) UpdateToStore() bool {
 }
 
 func RunSyncEndPointInfo() bool {
+
+	epFileMutex.Lock()
 	jsonStr, err := JsonMarshalIndent(EndPointSet.EndPointMap, "", " ")
 	if err != nil {
 		log.Errorf("Failed to marshal endpoint entries map %s", err)
@@ -160,6 +164,7 @@ func RunSyncEndPointInfo() bool {
 			StoreEpFile, err)
 		return false
 	}
+	epFileMutex.Unlock()
 
 	return true
 }
