@@ -106,12 +106,9 @@ func (ep EndPoint) WriteToStore() bool {
 		log.Errorf("Invalid MAC Address %s", ep.PodMacAddress)
 		return false
 	}
-	//aquire lock before adding entry into the map
 	EndPointSet.EndPointLock.Lock()
-	//append ep entry to the map
+	defer EndPointSet.EndPointLock.Unlock()
 	EndPointSet.EndPointMap[ep.PodIpAddress] = ep
-	//release lock after updating the map
-	EndPointSet.EndPointLock.Unlock()
 
 	return true
 }
@@ -122,12 +119,9 @@ func (ep EndPoint) DeleteFromStore() bool {
 		return false
 	}
 
-	//aquire lock before adding entry into the map
 	EndPointSet.EndPointLock.Lock()
-	//delete tmp entry from the map
+	defer EndPointSet.EndPointLock.Unlock()
 	delete(EndPointSet.EndPointMap, ep.PodIpAddress)
-	//release lock after updating the map
-	EndPointSet.EndPointLock.Unlock()
 	return true
 }
 
@@ -153,6 +147,7 @@ func (ep EndPoint) UpdateToStore() bool {
 func RunSyncEndPointInfo() bool {
 
 	epFileMutex.Lock()
+	defer epFileMutex.Unlock()
 	jsonStr, err := JsonMarshalIndent(EndPointSet.EndPointMap, "", " ")
 	if err != nil {
 		log.Errorf("Failed to marshal endpoint entries map %s", err)
@@ -164,7 +159,6 @@ func RunSyncEndPointInfo() bool {
 			StoreEpFile, err)
 		return false
 	}
-	epFileMutex.Unlock()
 
 	return true
 }

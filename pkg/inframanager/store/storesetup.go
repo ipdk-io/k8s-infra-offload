@@ -115,9 +115,9 @@ func SetHostInterface(ip string, mac string) bool {
 	}
 
 	Setup.mutex.Lock()
+	defer Setup.mutex.Unlock()
 	Setup.HostInterface.Ip = ip
 	Setup.HostInterface.Mac = mac
-	Setup.mutex.Unlock()
 
 	return true
 }
@@ -134,6 +134,7 @@ func IsDefaultRuleSet() bool {
 
 func RunSyncSetupInfo() bool {
 	setupFileMutex.Lock()
+	defer setupFileMutex.Unlock()
 	jsonStr, err := JsonMarshalIndent(Setup, "", " ")
 	if err != nil {
 		log.Errorf("Failed to marshal endpoint entries map %s", err)
@@ -145,7 +146,6 @@ func RunSyncSetupInfo() bool {
 			StoreSetupFile, err)
 		return false
 	}
-	setupFileMutex.Unlock()
 
 	return true
 }

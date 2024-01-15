@@ -469,6 +469,7 @@ func (ep PolicyWorkerEndPoint) UpdateToStore() bool {
 
 func RunSyncPolicyInfo() bool {
 	policyFileMutex.Lock()
+	defer policyFileMutex.Unlock()
 	jsonStr, err := JsonMarshalIndent(PolicySet.PolicyMap, "", " ")
 	if err != nil {
 		fmt.Println(err)
@@ -479,13 +480,13 @@ func RunSyncPolicyInfo() bool {
 		log.Errorf("Failed to write entries, err: %s", err)
 		return false
 	}
-	policyFileMutex.Unlock()
 
 	return true
 }
 
 func RunSyncIpSetInfo() bool {
 	ipsetFileMutex.Lock()
+	defer ipsetFileMutex.Unlock()
 	jsonStr, err := JsonMarshalIndent(PolicySet.IpSetMap, "", " ")
 	if err != nil {
 		fmt.Println(err)
@@ -496,13 +497,13 @@ func RunSyncIpSetInfo() bool {
 		log.Errorf("Failed to write entries, err: %s", err)
 		return false
 	}
-	ipsetFileMutex.Unlock()
 
 	return true
 }
 
 func RunSyncWorkerEpInfo() bool {
 	workerEpFileMutex.Lock()
+	defer workerEpFileMutex.Unlock()
 	jsonStr, err := JsonMarshalIndent(PolicySet.WorkerEpMap, "", " ")
 	if err != nil {
 		fmt.Println(err)
@@ -513,7 +514,6 @@ func RunSyncWorkerEpInfo() bool {
 		log.Errorf("Failed to write entries, err: %s", err)
 		return false
 	}
-	workerEpFileMutex.Lock()
 
 	return true
 }

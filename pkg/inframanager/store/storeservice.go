@@ -198,6 +198,7 @@ func (s Service) UpdateToStore() bool {
 func RunSyncServiceInfo() bool {
 
 	serviceFileMutex.Lock()
+	defer serviceFileMutex.Unlock()
 	jsonStr, err := JsonMarshalIndent(ServiceSet.ServiceMap, "", " ")
 	if err != nil {
 		log.Errorf("Failed to marshal service entries map %s", err)
@@ -209,7 +210,6 @@ func RunSyncServiceInfo() bool {
 			ServicesFile, err)
 		return false
 	}
-	serviceFileMutex.Unlock()
 
 	return true
 }
