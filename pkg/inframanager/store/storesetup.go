@@ -125,8 +125,9 @@ func SetHostInterface(ip string, mac string) bool {
 
 func SetDefaultRule() {
 	Setup.mutex.Lock()
+	defer Setup.mutex.Unlock()
 	Setup.SetDefaultRule = true
-	Setup.mutex.Unlock()
+	setupBufDirty = true
 }
 
 func IsDefaultRuleSet() bool {

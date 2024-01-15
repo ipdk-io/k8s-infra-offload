@@ -399,6 +399,7 @@ func (policy Policy) AddWorkerEp(workerEp string) bool {
 		p.WorkerEps = append(p.WorkerEps, workerEp)
 		PolicySet.PolicyLock.Lock()
 		PolicySet.PolicyMap[policy.Name] = p
+		policyBufDirty = true
 		PolicySet.PolicyLock.Unlock()
 		return true
 	}
