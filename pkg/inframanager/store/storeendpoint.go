@@ -29,6 +29,7 @@ import (
 var (
 	StoreEpFile = path.Join(StorePath, "cni_db.json")
 	epFileMutex = &sync.Mutex{}
+	epBufDirty  = false
 )
 
 func IsEndPointStoreEmpty() bool {
@@ -109,6 +110,7 @@ func (ep EndPoint) WriteToStore() bool {
 	EndPointSet.EndPointLock.Lock()
 	defer EndPointSet.EndPointLock.Unlock()
 	EndPointSet.EndPointMap[ep.PodIpAddress] = ep
+	epBufDirty = true
 
 	return true
 }
@@ -122,6 +124,7 @@ func (ep EndPoint) DeleteFromStore() bool {
 	EndPointSet.EndPointLock.Lock()
 	defer EndPointSet.EndPointLock.Unlock()
 	delete(EndPointSet.EndPointMap, ep.PodIpAddress)
+	epBufDirty = true
 	return true
 }
 
@@ -141,24 +144,40 @@ func (ep EndPoint) GetFromStore() store {
 
 func (ep EndPoint) UpdateToStore() bool {
 	fmt.Println("not implemented")
+	EndPointSet.EndPointLock.Lock()
+	defer EndPointSet.EndPointLock.Unlock()
+	epBufDirty = true
 	return true
 }
 
 func RunSyncEndPointInfo() bool {
 
+	/*
+		Flush the entries to the file only when there is an update
+	*/
+	if !epBufDirty {
+		return true
+	}
+
 	epFileMutex.Lock()
-	defer epFileMutex.Unlock()
 	jsonStr, err := JsonMarshalIndent(EndPointSet.EndPointMap, "", " ")
 	if err != nil {
 		log.Errorf("Failed to marshal endpoint entries map %s", err)
+		epFileMutex.Unlock()
 		return false
 	}
 
 	if err = NewWriteFile(StoreEpFile, jsonStr, 0755); err != nil {
 		log.Errorf("Failed to write entries to %s, err %s",
 			StoreEpFile, err)
+		epFileMutex.Unlock()
 		return false
 	}
+	epFileMutex.Unlock()
+
+	EndPointSet.EndPointLock.Lock()
+	defer EndPointSet.EndPointLock.Unlock()
+	epBufDirty = false
 
 	return true
 }
