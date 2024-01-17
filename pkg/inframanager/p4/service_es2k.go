@@ -213,7 +213,7 @@ func concatOldEntries(modblobPtrDNAT [][]byte, oldModblobPtrDNAT [][]byte, oldIp
 
 func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	podIpAddr []string, portID []uint16, s store.Service,
-	update bool) (err error, service store.Service) {
+	update bool, replay bool) (err error, service store.Service) {
 	var actn InterfaceType
 	var epNum uint32
 	var groupID uint32
@@ -240,7 +240,11 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 
 	log.Infof("Inserting to service tables")
 
-	if update {
+	if replay {
+		actn = Insert
+		groupID = service.GroupID
+		epNum = 0
+	} else if update {
 		actn = Update
 		groupID = service.GroupID
 		epNum = service.NumEndPoints

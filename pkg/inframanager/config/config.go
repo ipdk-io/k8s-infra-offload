@@ -57,6 +57,7 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 	viper.SetDefault("InfraManager.ciphersuites", utils.DefaultCipherSuites())
 
 	viper.SetDefault("LogLevel", "Debug")
+	viper.SetDefault("Infrap4dTimeout", types.Infrap4dTimeout)
 
 	if err := viper.ReadInConfig(); err != nil {
 		fmt.Printf("Error reading config file, %s", err)

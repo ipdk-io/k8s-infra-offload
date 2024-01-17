@@ -14,6 +14,8 @@
 
 package config
 
+import "time"
+
 // Configurations exported
 type Configuration struct {
 	Infrap4dGrpcServer ServerConf  `yaml:"Infrap4dGrpcServer"`
@@ -25,6 +27,8 @@ type Configuration struct {
 	P4InfoPath         string
 	P4BinPath          string
 	DeviceId           uint64
+	Infrap4dTimeout    time.Duration
+	StopCh             <-chan struct{}
 }
 
 // ServerConfigurations exported

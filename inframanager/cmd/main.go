@@ -42,11 +42,6 @@ func main() {
 	}
 	config.NodeIP = ip
 
-	api.PutConf(config)
-
-	//Create a new manager object
-	mgr.NewManager()
-
 	if config.P4BinPath == "" || config.P4InfoPath == "" {
 		log.Fatalf("Missing .bin or P4Info")
 	}
@@ -87,7 +82,7 @@ func main() {
 			api.CloseGNMIConn()
 			os.Exit(1)
 		}
-		if err := store.Init(false); err != nil {
+		if err := store.Init(false, false); err != nil {
 			log.Errorf("Failed to open endpoint store, err: %v", err)
 			api.CloseP4RtCCon()
 			api.CloseGNMIConn()
@@ -105,7 +100,7 @@ func main() {
 			api.CloseGNMIConn()
 			os.Exit(1)
 		}
-		if err := store.Init(true); err != nil {
+		if err := store.Init(true, false); err != nil {
 			log.Errorf("Failed to open endpoint store, err: %v", err)
 			api.CloseP4RtCCon()
 			api.CloseGNMIConn()
@@ -117,11 +112,15 @@ func main() {
 	// Starting inframanager gRPC server
 	waitCh := make(chan struct{})
 
+	config.StopCh = stopCh
+
+	//Create a new manager object
+	mgr.NewManager(config)
 	/*
 		Start the api server and program the default gateway rule
 		for arp-proxy
 	*/
-	go mgr.Run(stopCh, waitCh)
+	go mgr.Run(waitCh)
 
 	// Wait till manager is exited
 	<-waitCh

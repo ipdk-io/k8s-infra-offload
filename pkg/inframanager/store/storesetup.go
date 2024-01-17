@@ -100,7 +100,13 @@ func GetHostInterface() Iface {
 	return Setup.HostInterface
 }
 
-func SetHostInterface(ip string, mac string) bool {
+func SetHostInterface(ifName string, ip string, mac string) bool {
+
+	if len(ifName) == 0 {
+		log.Errorf("Invalid interface name %s", ifName)
+		return false
+	}
+
 	if len(mac) == 0 {
 		log.Errorf("Invalid mac address %s", mac)
 		return false
@@ -120,6 +126,7 @@ func SetHostInterface(ip string, mac string) bool {
 	}
 
 	setupMutex.Lock()
+	Setup.HostInterface.IfName = ifName
 	Setup.HostInterface.Ip = ip
 	Setup.HostInterface.Mac = mac
 	setupMutex.Unlock()
@@ -130,6 +137,12 @@ func SetHostInterface(ip string, mac string) bool {
 func SetDefaultRule() {
 	setupMutex.Lock()
 	Setup.SetDefaultRule = true
+	setupMutex.Unlock()
+}
+
+func ClearDefaultRule() {
+	setupMutex.Lock()
+	Setup.SetDefaultRule = false
 	setupMutex.Unlock()
 }
 

@@ -93,6 +93,10 @@ func InitEndPointStore(setFwdPipe bool) bool {
 	return true
 }
 
+func GetAllEndpoints() map[string]EndPoint {
+	return EndPointSet.EndPointMap
+}
+
 func (ep EndPoint) WriteToStore() bool {
 	if net.ParseIP(ep.PodIpAddress) == nil {
 		log.Errorf("Invalid IP Address %s", ep.PodIpAddress)

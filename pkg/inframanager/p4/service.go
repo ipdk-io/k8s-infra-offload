@@ -482,7 +482,7 @@ func SetMetaUdpTable(ctx context.Context, p4RtC *client.Client,
 
 func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	podIpAddr []string, portID []uint16, s store.Service,
-	update bool) (err error, service store.Service) {
+	update bool, replay bool) (err error, service store.Service) {
 	var action InterfaceType
 	var epNum uint32
 	var groupID uint32
@@ -497,7 +497,10 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	modblobPtrDNAT := make([]uint32, 0, len(podIpAddr))
 	service = s
 
-	if update {
+	if replay {
+		groupID = service.GroupID
+		epNum = 0
+	} else if update {
 		groupID = service.GroupID
 		epNum = service.NumEndPoints
 	} else {

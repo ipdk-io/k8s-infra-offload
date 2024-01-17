@@ -19,11 +19,72 @@ import (
 	"io"
 	"os"
 	"path"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
+type ServerStatus struct {
+	running bool
+	waitCh  chan struct{}
+	mutex   *sync.Mutex
+}
+
+func NewServerStatus() *ServerStatus {
+	return &ServerStatus{
+		running: false,
+		mutex:   &sync.Mutex{},
+	}
+}
+
+func (e *ServerStatus) Running() bool {
+	if e == nil {
+		return false
+	}
+	return e.running
+}
+
+func (e *ServerStatus) SetStopped() {
+	if e == nil {
+		return
+	}
+	e.mutex.Lock()
+	e.running = false
+	e.waitCh = make(chan struct{})
+	e.mutex.Unlock()
+}
+func (e *ServerStatus) SetRunning() {
+	if e == nil {
+		return
+	}
+	e.mutex.Lock()
+	e.running = true
+	if e.waitCh != nil {
+		close(e.waitCh)
+		e.waitCh = nil
+	}
+	e.mutex.Unlock()
+}
+
+func (e *ServerStatus) WaitToRestart(timeSlice time.Duration) bool {
+	timeout := timeSlice * time.Second
+	for {
+		select {
+		/*
+			Wait till timeout duration for the server to restart.
+			If not, return failure
+		*/
+		case <-time.After(timeout):
+			return false
+		default:
+			if e.waitCh != nil {
+				<-e.waitCh
+			}
+			return true
+		}
+	}
+}
 func GetNodeIPFromEnv() (ipAddr string, err error) {
 	ipAddr = os.Getenv("NODE_IP")
 	if len(ipAddr) == 0 {

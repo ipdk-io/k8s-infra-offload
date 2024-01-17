@@ -116,6 +116,10 @@ func getKey(s Service) (key string, ok bool) {
 	return key, true
 }
 
+func GetAllServices() map[string]Service {
+	return ServiceSet.ServiceMap
+}
+
 func (s Service) WriteToStore() bool {
 	if net.ParseIP(s.ClusterIp) == nil {
 		log.Errorf("Invalid cluster IP %s", s.ClusterIp)

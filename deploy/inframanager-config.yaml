@@ -84,6 +84,9 @@ InfraManager:
 # If none specified, defaults to cdq
 InterfaceType: cdq
 
+# Check and reestablish connection to infrap4d for every Infrap4dTimeout seconds.
+Infrap4dTimeout: 5
+
 DeviceId: 1
 # Possible debug levels
 #  "Panic"

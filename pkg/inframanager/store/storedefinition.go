@@ -36,8 +36,9 @@ type store interface {
 }
 
 type Iface struct {
-	Ip  string
-	Mac string
+	IfName string
+	Ip     string
+	Mac    string
 }
 
 type SetupData struct {
@@ -170,31 +171,37 @@ func NewPolicy() {
 	})
 }
 
-func Init(setFwdPipe bool) error {
+func InitAllStores(setFwdPipe bool) error {
+
+	if err := InitSetupStore(setFwdPipe); !err {
+		return errors.New("Failed to open endpoint store")
+	}
+	if err := InitEndPointStore(setFwdPipe); !err {
+		return errors.New("Failed to open endpoint store")
+	}
+	if err := InitServiceStore(setFwdPipe); !err {
+		return errors.New("Failed to open service store")
+	}
+	if err := InitPolicyStore(setFwdPipe); !err {
+		return errors.New("Failed to open policy store")
+	}
+	return nil
+}
+
+func Init(setFwdPipe bool, replay bool) error {
 	var initErr error
 
 	NewEndPoint()
 	NewService()
 	NewPolicy()
 
-	onceInit.Do(func() {
-		if err := InitSetupStore(setFwdPipe); !err {
-			initErr = errors.New("Failed to open endpoint store")
-			return
-		}
-		if err := InitEndPointStore(setFwdPipe); !err {
-			initErr = errors.New("Failed to open endpoint store")
-			return
-		}
-		if err := InitServiceStore(setFwdPipe); !err {
-			initErr = errors.New("Failed to open service store")
-			return
-		}
-		if err := InitPolicyStore(setFwdPipe); !err {
-			initErr = errors.New("Failed to open policy store")
-			return
-		}
-	})
+	if replay {
+		initErr = InitAllStores(setFwdPipe)
+	} else {
+		onceInit.Do(func() {
+			initErr = InitAllStores(setFwdPipe)
+		})
+	}
 
 	return initErr
 }
