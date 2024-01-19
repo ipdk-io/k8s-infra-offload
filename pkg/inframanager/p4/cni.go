@@ -135,11 +135,13 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 
 	err = ArptToPortTable(ctx, p4RtC, ep.PodIpAddress, ep.InterfaceID, true)
 	if err != nil {
+		log.Infof("Failed to insert into ArptToPortTable, err: %s", err)
 		return ep, err
 	}
 
 	err = Ipv4ToPortTable(ctx, p4RtC, ep.PodIpAddress, ep.PodMacAddress, ep.InterfaceID, true)
 	if err != nil {
+		log.Infof("Failed to insert into Ipv4ToPortTable, err: %s", err)
 		return ep, err
 	}
 

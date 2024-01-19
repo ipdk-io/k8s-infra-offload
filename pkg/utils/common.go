@@ -77,6 +77,10 @@ func (e *ServerStatus) WaitToRestart(timeSlice time.Duration) bool {
 		*/
 		case <-time.After(timeout):
 			return false
+		/*
+			Wait till the server is restarted.
+			On a successful restart, the wait channel will be closed.
+		*/
 		default:
 			if e.waitCh != nil {
 				<-e.waitCh

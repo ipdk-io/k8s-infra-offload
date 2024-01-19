@@ -60,13 +60,13 @@ func main() {
 	ctx := context.Background()
 	stopCh := signals.RegisterSignalHandlers()
 
-	if err := api.OpenP4RtC(ctx, 0, 1, stopCh); err != nil {
+	if err := api.OpenP4RtC(ctx, 0, 1, stopCh, *config); err != nil {
 		log.Errorf("Failed to open p4 runtime client connection")
 		os.Exit(1)
 	}
 	defer api.CloseP4RtCCon()
 
-	if err := api.OpenGNMICCon(); err != nil {
+	if err := api.OpenGNMICCon(*config); err != nil {
 		log.Errorf("Failed to open gNMI client connection")
 		os.Exit(1)
 	}

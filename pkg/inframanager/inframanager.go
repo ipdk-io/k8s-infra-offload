@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -29,7 +30,6 @@ import (
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	"github.com/spf13/viper"
-	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"gopkg.in/tomb.v2"
 
 	log "github.com/sirupsen/logrus"
@@ -40,28 +40,30 @@ const (
 )
 
 type Manager struct {
-	server   *api.ApiServer
-	conf     *config.Configuration
-	log      *log.Entry
-	infrap4d *utils.ServerStatus
-	t        tomb.Tomb
+	server *api.ApiServer
+	conf   *config.Configuration
+	log    *log.Entry
+	t      tomb.Tomb
 }
 
 var manager *Manager
 
 func NewManager(conf *config.Configuration) {
-	err := utils.LogInit(logDir, api.GetLogLevel())
+	err := utils.LogInit(logDir, conf.LogLevel)
 	if err != nil {
 		return
 	}
 	utils.CreateCipherMap()
-	api.NewApiServer()
 
 	manager = &Manager{
-		log:      log.WithField("pkg", "inframanager"),
-		conf:     conf,
-		infrap4d: utils.NewServerStatus(),
+		log:  log.WithField("pkg", "inframanager"),
+		conf: conf,
 	}
+	/*
+		Set infrap4d to running state by default
+	*/
+	api.Infrap4d.SetRunning()
+
 	mgrAddr := viper.GetString("InfraManager.Addr")
 	values := strings.Split(mgrAddr, ":")
 	types.InfraManagerAddr = values[0]
@@ -69,7 +71,7 @@ func NewManager(conf *config.Configuration) {
 }
 
 func (m *Manager) createAndStartServer() {
-	m.server = api.CreateServer(m.conf, m.infrap4d, m.log)
+	m.server = api.CreateServer(m.conf, m.log)
 	m.server.Start(&m.t)
 }
 
@@ -88,72 +90,48 @@ func (m *Manager) Infrap4dStatusCheck() {
 			logger.Infof("Manager is exiting. Stopping infrap4d status check")
 			return
 		default:
-			// Dial in to infrap4d grpc server
-			conn, err := utils.GrpcDial(m.conf.Infrap4dGrpcServer.Addr,
-				utils.GetConnType(m.conf.Infrap4dGrpcServer.Conn), utils.Infrap4dGrpcServer)
-			defer func() {
-				if conn == nil {
-					return
-				}
-				if err := conn.Close(); err != nil {
-					logger.Errorf("failed to close connection to infrap4d")
-				}
-			}()
-			if err != nil {
-				logger.Errorf("Cannot connect to infrap4d: %v, reconnecting..", err)
+			//Checking infrap4d server status
+			if !infrap4dRunning() {
+				logger.Errorf("Cannot connect to infrap4d, reconnecting..")
 				// Let api server know that the infrap4d is not running
-				m.infrap4d.SetStopped()
+				api.Infrap4d.SetStopped()
 				//Try reconnecting to infrap4d
-				m.reconnectInfrap4d()
-				//Reprogram all rules
-				m.server.ReplayRules()
-				continue
-			}
+				for {
+					logger.Infof("Try reconnecting to infrap4d")
+					if m.reconnectInfrap4d() {
+						logger.Infof("Successfully reconnected")
+						api.SetReplay()
 
-			// Check for infrap4d server status
-			resp, err := healthpb.NewHealthClient(conn).Check(context.Background(),
-				&healthpb.HealthCheckRequest{Service: ""})
-			if err != nil {
-				logger.Errorf("Cannot perform health check on infrap4d: %v, reconnecting..", err)
-				// Let api server know that the infrap4d is not running
-				m.infrap4d.SetStopped()
-				//Try reconnecting to infrap4d
-				m.reconnectInfrap4d()
-				//Reprogram all rules
-				m.server.ReplayRules()
-				continue
-			}
-			/*
-				Infrap4d is responding. Wait for a timeout and periodically check the
-				connection status
-			*/
-			if resp.Status == healthpb.HealthCheckResponse_SERVING {
+						logger.Infof("Reprogramming all rules")
+						//Reprogram all rules
+						api.ReplayRules()
 
-				/*
-					Infrap4d is running.
-					Check and set infrap4d to running state so that
-					the api server is aware
-				*/
-				if !m.infrap4d.Running() {
-					m.infrap4d.SetRunning()
+						api.ClearReplay()
+
+						// Set infrap4d to running state
+						api.Infrap4d.SetRunning()
+						break
+					}
+					time.Sleep(m.conf.Infrap4dTimeout * time.Second)
 				}
-
-				time.Sleep(m.conf.Infrap4dTimeout * time.Second)
-			} else {
-				logger.Errorf("Infrap4d is not in the serving state, wait and reconnect..: %v", err)
-				// Let api server know that the infrap4d is not running
-				m.infrap4d.SetStopped()
-				//Try reconnecting to infrap4d
-				m.reconnectInfrap4d()
-				//Reprogram all rules
-				m.server.ReplayRules()
 			}
+			time.Sleep(m.conf.Infrap4dTimeout * time.Second)
 		}
 	}
 }
 
-func (m *Manager) reconnectInfrap4d() {
+func infrap4dRunning() bool {
+	str := "ps ax | grep infrap4d | grep -v grep"
+	out, err := exec.Command("bash", "-c", str).Output()
+	if err != nil || len(out) == 0 {
+		return false
+	}
+	return true
+}
+
+func (m *Manager) reconnectInfrap4d() bool {
 	ctx := context.Background()
+
 	if m.conf.P4BinPath == "" || m.conf.P4InfoPath == "" {
 		log.Fatalf("Missing .bin or P4Info")
 		os.Exit(1)
@@ -163,24 +141,24 @@ func (m *Manager) reconnectInfrap4d() {
 	if err != nil {
 		log.Fatalf("Failed to get absolute representation of path %s",
 			m.conf.P4InfoPath)
+		os.Exit(1)
 	}
 	p4BinPath, err := filepath.Abs(m.conf.P4BinPath)
 	if err != nil {
 		log.Fatalf("Failed to get absolute representation of path %s",
 			m.conf.P4BinPath)
+		os.Exit(1)
 	}
 
-	if err := api.OpenP4RtC(ctx, 0, 1, m.conf.StopCh); err != nil {
+	if err := api.OpenP4RtC(ctx, 0, 1, m.conf.StopCh, *m.conf); err != nil {
 		log.Errorf("Failed to open p4 runtime client connection")
-		os.Exit(1)
+		return false
 	}
-	defer api.CloseP4RtCCon()
 
-	if err := api.OpenGNMICCon(); err != nil {
+	if err := api.OpenGNMICCon(*m.conf); err != nil {
 		log.Errorf("Failed to open gNMI client connection")
-		os.Exit(1)
+		return false
 	}
-	defer api.CloseGNMIConn()
 
 	log.Infof("getting pipeline if already set")
 	pipelineConfig, err := api.GetFwdPipe(ctx, client.GetFwdPipeAll)
@@ -201,18 +179,20 @@ func (m *Manager) reconnectInfrap4d() {
 			log.Errorf("Error when setting forwarding pipe, err: %v", err)
 			api.CloseP4RtCCon()
 			api.CloseGNMIConn()
-			os.Exit(1)
+			return false
 		}
 	}
+
+	return true
 }
 
 func Run(waitCh chan<- struct{}) {
 
-	// Insert the default rule for the arp-proxy
-	api.InsertDefaultRule()
-
 	// Start the api server
 	manager.createAndStartServer()
+
+	// Insert the default rule for the arp-proxy
+	api.InsertDefaultRule()
 
 	/*
 		Start a go routine to periodically check
@@ -225,8 +205,6 @@ func Run(waitCh chan<- struct{}) {
 	manager.stopServer()
 	store.SyncDB()
 
-	//if !manager.restart() {
 	close(waitCh)
-	//}
 
 }
