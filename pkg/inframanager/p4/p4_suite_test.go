@@ -585,7 +585,7 @@ var _ = Describe("service", func() {
 					Port:      10000,
 					Proto:     "TCP",
 				}
-				err, _ := p4.InsertServiceRules(ctx, p4RtC, podIpAddr, portID, service, false)
+				err, _ := p4.InsertServiceRules(ctx, p4RtC, podIpAddr, portID, service, false, false)
 				Expect(err).To(HaveOccurred())
 			})
 
