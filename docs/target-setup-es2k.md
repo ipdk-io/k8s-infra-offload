@@ -1,4 +1,4 @@
-# Target Setup for Intel IPU ES2100
+# Target Setup for Intel IPU E2100
 
 ## Set Up Hardware Board
 
@@ -96,8 +96,8 @@ for CPT and P4C is under in the p4-programs release tarball hw-p4-programs.xxxx.
 ## Compile K8s P4
 
 The P4 Programs User Guide describes how to build packages and
-artifacts for a sample P4 program. See the Build custom package
-chapter in the Intel P4 Programs Readme for detailed instructions.
+artifacts for a sample P4 program. See the Build Custom Package
+section in the Intel P4 Programs Readme for detailed instructions.
 To build the k8s datapath p4 artifacts, follow the instructions below once compiler
 is installed and all the env variables required by the makefile are set.
 
@@ -116,4 +116,4 @@ touch <file_path>/tofino.bin
 
 ## Generating certificates
 
-Refer to the file[security-guide.md](security/security-guide.md) for more details on generating and installing certificates
+Refer to the file [security-guide.md](security/security-guide.md) for more details on generating and installing certificates
