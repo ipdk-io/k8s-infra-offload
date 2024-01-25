@@ -1,24 +1,25 @@
 IPDK Kubernetes Infrastructure Offload Release Notes
-#############################################################
+====================================================
 
 IPDK 24.01
-************
+------------
 
 What's new in this Release
-===========================
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - Service Load Balancing: Support for K8s Service of type ClusterIP.
-   Kubeproxy implementation is now offloaded to hardware.
-   Services can be created and dynamically distributed to endpoints.
-   For TCP, only the SYN packet goes through the load-balancing logic.
-   Entry is added to hardware CT table for treatment of subsequent packets.
-   Support for dynamic scale-up of endpoints.
+  Kubeproxy implementation is now offloaded to hardware.
+  Services can be created and dynamically distributed to endpoints.
+  For TCP, only the SYN packet goes through the load-balancing logic.
+  Entry is added to hardware CT table for treatment of subsequent packets.
+  Support for dynamic scale-up of endpoints.
 - Support for Go version 1.21.4
 - Support for log level configuration from config files for Infraagent
-- SRIOV support for ES2K
+- SRIOV support for E2100
+
 
 Component Feature Support
-===========================
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :header-rows: 1
@@ -51,7 +52,7 @@ Component Feature Support
     - Support for UDP and TCP services. Fully functional DNS and Kubernetes API services.
     - Production ready
   * - Support for Device interfaces like subfunctions and native interfaces like ipvlan and Tap
-    - Subfunctions for ES2100; Tap for DPDK
+    - Subfunctions for E2100; Tap for DPDK
     - Production ready
   * - Execution support in Split Mode with Inframanager running on ACC
     - Inframanager running on ACC but infraagent on host
@@ -59,12 +60,13 @@ Component Feature Support
   * - Automation scripts for cluster deployment
     - Example scripts for cluster deployment of Load balancing and pod scale up
     - Production ready
-  * - SRIOV interface support for ES2100
-    - SRIOV support for ES2100 in host mode in addition to CDQ
+  * - SRIOV interface support for E2100
+    - SRIOV support for E2100 in host mode in addition to CDQ
     - Engineering preview
 
+
 Resolved Issues
-===========================
+~~~~~~~~~~~~~~~~
 
 - After deleting and creating multiple test pods, multiple times some of the pods are not
   getting created, with error "failed to get a CDQ interface for pod: no free resources left" on infraagent.
@@ -84,41 +86,43 @@ Resolved Issues
 - `setup_infra.sh` has infrap4d start twice in split mode.
 
 
-Known issues and limitations
-===============================
+Known Issues and Limitations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - The setup_infra.sh automation script, works with the default configuration for certificate paths
   and artifact paths. Any changes in these paths will render the script unusable.
   User may need to manually configure and execute instructions mentioned in the script.
 - SRIOV is an experimental feature. The setup_infra_sriov.sh script doesn't support the -r option for remote IP for host IP on ACC. Host mode is supported for this release as an engineering preview.
 - Max supported CDQ interfaces are 254 as max vport for host. The default max vport in the cdq use case cp_init file has been provided as 50 which can be configured.
-- RSS configuration in P4 isn't present and hence SRIOV throughput is seen slightly lower.
 - Service Load Balancing for TCP has few random session resets. Known issue and bugfix to be available in a future minor release.
 
 
 IPDK 23.07
-**************
+------------
 
-- This is the first release of K8s-Infra-Offload recipe that supports ES2K and DPDK targets.
+- This is the first release of K8s-Infra-Offload recipe that supports E2100
+  and DPDK targets.
 
 Highlights
-===============================
+~~~~~~~~~~
 
-ES2K target
-~~~~~~~~~~~~~
+
+E2100 Target
+^^^^^^^^^^^^^
 
 - Support for Kubernetes Container Network Interface (CNI) to deploy pods and
   enable pod-to-pod connectivity on a P4 target using hardware device interfaces.
 - Use of internal gateway with dummy MAC to enable layer-3 connectivity on the same node.
-- Support for dynamic Subfunctions on ES2K.
+- Support for dynamic Subfunctions on E2100.
   Subfunction is a lightweight function that has a parent PCI function on which it is
   deployed. It is created and deployed in a unit of 1. Unlike SRIOV VFs, a subfunction
   doesn't require its own PCI virtual function. A subfunction communicates with the
   hardware through the parent PCI function.
 - Infra Manager build support on ARM cores.
 
-DPDK target
-~~~~~~~~~~~~~
+
+DPDK Target
+^^^^^^^^^^^^
 
 - Support for internal gateway with dummy MAC to enable layer-3 connectivity on the
   same node.
@@ -130,8 +134,9 @@ DPDK target
   has been selected for the first packet.
 - DNS service provided by Core DNS pods to other pods.
 
+
 Common Changes
-===============================
+~~~~~~~~~~~~~~
 
 - Makefile target to support tls-secrets and certificate generation
 - Automatated build & integration test on each commit
@@ -143,7 +148,7 @@ Common Changes
 - Configurable MTU using config file
 
 Bug Fixes
-===============================
+~~~~~~~~~
 
 - "make undeploy" fails as a non-root user
 - Unable to deploy services after deploy/undeploy a few times
@@ -160,15 +165,14 @@ Bug Fixes
 - Setup infra fixes for vfio driver bind
 
 Known Issues
-===============================
-
+~~~~~~~~~~~~
 
 - This release does not support multi-tenant or multi-node deployments. At
   present, the underlying IPDK networking recipe needs to be run on bare metal
   on host CPU cores. The entire node, used for deployment, is assumed to be a
   trusted zone. However, gRPC/gNMI channels for communications are still
   secured using TLS.
-- ES2K feature set is limited to pod-to-pod connectivity.
+- E2100 feature set is limited to pod-to-pod connectivity.
 - Incomplete integration for Network Policies.
 - Infra agent fails to come up if interface name is not correct
 - Less than expected number of PODs are in Running state
@@ -183,9 +187,9 @@ Known Issues
 - Split mode feature where manager runs on es2k is experimental
 
 Coming Attractions
-===============================
+~~~~~~~~~~~~~~~~~~
 
-- ``[ES2K]`` Support for Service and Load balancing.
+- ``[E2100]`` Support for Service and Load balancing.
 
 - Support for Kubernetes Network Policy feature on both targets.
 
@@ -193,22 +197,22 @@ Coming Attractions
 
 - Support for natOutgoing for services with backends outside of the cluster.
 
-- ``[ES2K]`` support for Device creation and queue allocation on ARM
+- ``[E2100]`` support for Device creation and queue allocation on ARM
 
-- ``[ES2K]`` Infra Manager on ARM support
+- ``[E2100]`` Infra Manager on ARM support
 
 Installation and Build Instructions
-*****************************************
+-----------------------------------
 
 See the following for more information:
 - [Kubernetes*, Docker*, and containerd* Installation](k8s-docker-containerd-install.md)
 - [Kubernetes* Infrastructure Offload Readme](IPDK_K8s_Recipe_Readme.md)
 
-License, Notices, & Disclaimers
-*****************************************
+License, Notices, and Disclaimers
+---------------------------------
 
 Licensing
-===============================
+~~~~~~~~~
 
 For licensing information, see the file "LICENSE" in the root folder of the
 repository.

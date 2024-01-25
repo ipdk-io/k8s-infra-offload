@@ -1,6 +1,6 @@
 # Target Setup for P4-DPDK
 
-## Install IPDK SDE and IPDK Networking Recipe
+## Install IPDK SDE and IPDK Networking Recipe for host mode
 IPDK infrap4d (P4 Control Plane) needs to be installed and run on the host
 natively. To install infrap4d and P4-SDE
 individually, follow the instructions listed below. Note that, P4C is not

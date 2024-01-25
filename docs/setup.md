@@ -9,8 +9,8 @@ proceed to next step.
 
 ## Set Up Target and Dependencies
 
-Kubernetes Infra Offload supports two targets, viz. P4-DPDK and Intel IPU ES2100.
-The Intel IPU ES2100 target requires proper hardware setup and initialization.
+Kubernetes Infra Offload supports two targets, viz. P4-DPDK and Intel IPU E2100.
+The Intel IPU E2100 target requires proper hardware setup and initialization.
 On both these platforms, Kubernetes Infra Offload software depends upon the
 daemon InfraP4d of the IPDK networking recipe to be runnning in the background.
 Once InfraP4d is running, Kubernetes can load its P4 pipeline and offload
@@ -20,8 +20,8 @@ The instructions to setup the target and install infrap4d and its dependencies,
 are different for the two targets.
 See [Target Setup for P4-DPDK](target-setup-dpdk.md) for instructions on
 installation of SDE and InfraP4d on P4-DPDK target.
-See [Target Setup for Intel IPU ES2100](target-setup-es2k.md) for host setup
-and compilation of P4-SDE and P4-CP on Intel IPU ES2100 target.
+See [Target Setup for Intel IPU E2100](target-setup-es2k.md) for host setup
+and compilation of P4-SDE and P4-CP on Intel IPU E2100 target.
 
 ## Set Up P4 Kubernetes
 
@@ -60,7 +60,7 @@ once mentioned dependencies are compiled and installed.
 3. Build K8s P4 artifacts
 
    Notes:
-   i) For ES2100 target, get the K8s P4 artifacts and
+   i) For E2100 target, get the K8s P4 artifacts and
       copy them into p4-k8s/k8s_dp/es2k/. This must be done before running
       below make commands. Ensure the following artifacts are present.
 
@@ -72,10 +72,10 @@ once mentioned dependencies are compiled and installed.
       bf-rt.json  context.json  k8s_dp.p4  k8s_dp.pb.bin  p4Info.txt
       ```
 
-      For generating the artifacts for ES2100, refer to the
+      For generating the artifacts for E2100, refer to the
       [compiling-p4-programs](target-setup-es2k.md#compile-k8s-p4) section
 
-   ii) By default, Makefile is configured to build for ES2100 target. To build
+   ii) By default, Makefile is configured to build for E2100 target. To build
       for P4-DPDK target, use "tagname=dpdk" argument for both make targets
       below.
 
@@ -111,10 +111,10 @@ once mentioned dependencies are compiled and installed.
 
 6. Run the `setup_infra.sh` script, which in addition to creating the
    specified number of virtual interfaces (TAP type on DPDK target and IDPF
-   sub-functions on ES2100), sets up the HugePages and starts infrap4d.
+   sub-functions on E2100), sets up the HugePages and starts infrap4d.
    The script supports infrastructure setup in two different modes.
 
-   a. The split mode on ES2100, where the inframanager runs on IPU ARM cores(remote end)
+   a. The split mode on E2100, where the inframanager runs on IPU ARM cores(remote end)
    while the infraagent runs on the host. In this mode, the communication channel
    between IPU ACC-ARM complex and host must pre-exist prior to execution of the
    script. This communication channel can be provisioned using node policy file
@@ -170,7 +170,7 @@ once mentioned dependencies are compiled and installed.
    root     1254701       1 99 13:34 ?        00:13:10 /host/networking-recipe/install/sbin/infrap4d
    ```
 
-   On ES2100 target, this script will also load the IDPF driver. Verify the
+   On E2100 target, this script will also load the IDPF driver. Verify the
    presence of the PF:
 
    ```bash
@@ -181,7 +181,7 @@ once mentioned dependencies are compiled and installed.
    pci/0000:af:00.0
    ```
 
-7. For the Intel IPU ES2100, connect to IMC from host and run the following command on IMC:
+7. For the Intel IPU E2100, connect to IMC from host and run the following command on IMC:
    ```bash
    devmem 0x202920C100 64 0x8yy
    ```
@@ -195,11 +195,11 @@ once mentioned dependencies are compiled and installed.
    For CDQ, till ending with d3 are default sub-functions so first interface
    ending with d4 needs to be assigned to arp and d5 to host.
 
-   For SRIOV - Frist VF interface wnding with v0 goes to arp and V1 goes to host
+   For SRIOV - First VF interface ending with v0 goes to arp and V1 goes to host
 
 8. Run ARP-Proxy script, which creates a new namespace and assigns an interface
    from the pool of interfaces created in previous step.
-   On ES2100 target, user needs to explicitly configure the interface to be
+   On E2100 target, user needs to explicitly configure the interface to be
    assigned using IFACE environment variable.
 
    ```bash
@@ -270,7 +270,7 @@ once mentioned dependencies are compiled and installed.
 The config file `deploy/es2k/infraagent-config.yaml` is used to inform the
 infraagent which interface and interfacetype to use.
 
-The interfaceType should be `cdq` for ES2100 and the the interface name is the
+The interfaceType should be `cdq` for E2100 and the the interface name is the
 base name for PF for PCI device ID 1452.
 For SRIOV interfaces, the type should be `sriov`
 
@@ -372,7 +372,7 @@ images in step 9 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 
 6. Start the deployments:
 
-   For split mode on the Intel IPU ES2100, run the below on the host
+   For split mode on the Intel IPU E2100, run the below on the host
    ```bash
    make deploy-split
    make deploy-calico
@@ -496,7 +496,6 @@ images in step 9 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
 
 ### Debugging
 
-
 - The Kubernetes Infrastructure Offload software provides logging capabilities.
   Check logs emitted to stdout
   and stderr using `"kubectl logs <pod> -n <namespace>"`.
@@ -509,7 +508,7 @@ images in step 9 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
     then proceeds with creation of sub-functions. Under some circumtances,
     the sleep configured in the script is not sufficient. Driver is still busy
     allocating resources and initializing the base interfaces when the first subfunction
-    creation request comes in leading to crash.
+    creation request comes in, leading to crash.
 
     Solution : Increase the sleep time in the setup_infra.sh script after `"install_drivers"`
     function.
