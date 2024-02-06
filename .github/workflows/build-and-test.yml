@@ -41,7 +41,7 @@ jobs:
         make test
 
     - name: "Build ES2K"
-      run: make es2k && make install
+      run: make es2k && sudo make install
     - name: "Test ES2K"
       run: |
         make test
