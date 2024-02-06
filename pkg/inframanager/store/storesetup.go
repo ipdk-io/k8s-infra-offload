@@ -27,15 +27,11 @@ import (
 
 var (
 	StoreSetupFile = path.Join(StorePath, "setup_db.json")
+	setupFileMutex = &sync.Mutex{}
+	setupBufDirty  = false
 )
 
-var setupMutex = &sync.Mutex{}
-
 func InitSetupStore(setFwdPipe bool) bool {
-
-	onceSetup.Do(func() {
-		Setup = &SetupData{}
-	})
 
 	flags := os.O_CREATE
 
@@ -119,18 +115,19 @@ func SetHostInterface(ip string, mac string) bool {
 		return false
 	}
 
-	setupMutex.Lock()
+	Setup.mutex.Lock()
+	defer Setup.mutex.Unlock()
 	Setup.HostInterface.Ip = ip
 	Setup.HostInterface.Mac = mac
-	setupMutex.Unlock()
-
+	setupBufDirty = true
 	return true
 }
 
 func SetDefaultRule() {
-	setupMutex.Lock()
+	Setup.mutex.Lock()
+	defer Setup.mutex.Unlock()
 	Setup.SetDefaultRule = true
-	setupMutex.Unlock()
+	setupBufDirty = true
 }
 
 func IsDefaultRuleSet() bool {
@@ -138,17 +135,33 @@ func IsDefaultRuleSet() bool {
 }
 
 func RunSyncSetupInfo() bool {
+
+	/*
+		Flush the entries to the file only when there is an update
+	*/
+	if !setupBufDirty {
+		return true
+	}
+
+	setupFileMutex.Lock()
 	jsonStr, err := JsonMarshalIndent(Setup, "", " ")
 	if err != nil {
 		log.Errorf("Failed to marshal endpoint entries map %s", err)
+		setupFileMutex.Unlock()
 		return false
 	}
 
 	if err = NewWriteFile(StoreSetupFile, jsonStr, 0700); err != nil {
 		log.Errorf("Failed to write entries to %s, err %s",
 			StoreSetupFile, err)
+		setupFileMutex.Unlock()
 		return false
 	}
+	setupFileMutex.Unlock()
+
+	Setup.mutex.Lock()
+	defer Setup.mutex.Unlock()
+	setupBufDirty = false
 
 	return true
 }

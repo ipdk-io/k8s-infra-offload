@@ -85,6 +85,11 @@ InfraManager:
 InterfaceType: cdq
 
 DeviceId: 1
+
+# Time (in sec) to periodically sync
+# the p4 entries into the local store
+DBTicker: 5
+
 # Possible debug levels
 #  "Panic"
 #  "Fatal"

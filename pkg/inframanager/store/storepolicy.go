@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"sync"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	log "github.com/sirupsen/logrus"
@@ -21,9 +22,15 @@ const (
 )
 
 var (
-	PolicyFile   = path.Join(StorePath, "policy_db.json")
-	IpsetFile    = path.Join(StorePath, "ipset_db.json")
-	WorkerepFile = path.Join(StorePath, "workerep_db.json")
+	PolicyFile        = path.Join(StorePath, "policy_db.json")
+	IpsetFile         = path.Join(StorePath, "ipset_db.json")
+	WorkerepFile      = path.Join(StorePath, "workerep_db.json")
+	policyFileMutex   = &sync.Mutex{}
+	ipsetFileMutex    = &sync.Mutex{}
+	workerEpFileMutex = &sync.Mutex{}
+	policyBufDirty    = false
+	ipsetBufDirty     = false
+	workerEpBufDirty  = false
 )
 
 func GetNewRuleGroupId() int {
@@ -111,9 +118,7 @@ func InitPolicyStore(setFwdPipe bool) bool {
 	ret, data := OpenPolicyStoreFiles(PolicyFile, flags)
 	if ret == Fail {
 		return false
-	} else if ret == Zerolength {
-		return true
-	} else {
+	} else if ret != Zerolength {
 		err := JsonUnmarshal(data, &PolicySet.PolicyMap)
 		if err != nil {
 			log.Errorf("Failed to unmarshal data from %s, err: %s", PolicyFile, err)
@@ -124,9 +129,7 @@ func InitPolicyStore(setFwdPipe bool) bool {
 	ret, data = OpenPolicyStoreFiles(IpsetFile, flags)
 	if ret == Fail {
 		return false
-	} else if ret == Zerolength {
-		return true
-	} else {
+	} else if ret != Zerolength {
 		err := JsonUnmarshal(data, &PolicySet.IpSetMap)
 		if err != nil {
 			log.Errorf("Failed to unmarshal data from %s, err: %s", IpsetFile, err)
@@ -137,17 +140,14 @@ func InitPolicyStore(setFwdPipe bool) bool {
 	ret, data = OpenPolicyStoreFiles(WorkerepFile, flags)
 	if ret == Fail {
 		return false
-	} else if ret == Zerolength {
-		return true
-	} else {
+	} else if ret != Zerolength {
 		err := JsonUnmarshal(data, &PolicySet.WorkerEpMap)
 		if err != nil {
 			log.Errorf("Failed to unmarshal data from %s, err: %s", WorkerepFile, err)
 			return false
 		}
-		return true
 	}
-
+	return true
 }
 
 func (policy Policy) WriteToStore() bool {
@@ -180,8 +180,9 @@ func (policy Policy) WriteToStore() bool {
 	}
 
 	PolicySet.PolicyLock.Lock()
+	defer PolicySet.PolicyLock.Unlock()
 	PolicySet.PolicyMap[policy.Name] = policy
-	PolicySet.PolicyLock.Unlock()
+	policyBufDirty = true
 	return true
 }
 
@@ -202,8 +203,9 @@ func (ipsetadd IpSet) WriteToStore() bool {
 	}
 
 	PolicySet.PolicyLock.Lock()
+	defer PolicySet.PolicyLock.Unlock()
 	PolicySet.IpSetMap[ipsetadd.IpsetID] = ipsetadd
-	PolicySet.PolicyLock.Unlock()
+	ipsetBufDirty = true
 	return true
 }
 
@@ -224,8 +226,10 @@ func (ep PolicyWorkerEndPoint) WriteToStore() bool {
 	}
 
 	PolicySet.PolicyLock.Lock()
+	defer PolicySet.PolicyLock.Unlock()
 	PolicySet.WorkerEpMap[ep.WorkerEp] = ep
-	PolicySet.PolicyLock.Unlock()
+	workerEpBufDirty = true
+
 	return true
 }
 
@@ -255,23 +259,31 @@ func (policy Policy) DeleteFromStore() bool {
 			if ipsetid != "" {
 				PolicySet.PolicyLock.Lock()
 				delete(PolicySet.IpSetMap, ipsetid)
+				ipsetBufDirty = true
 				PolicySet.PolicyLock.Unlock()
 			}
 		}
 	}
 	PolicySet.PolicyLock.Lock()
 	delete(PolicySet.PolicyMap, policy.Name)
+	policyBufDirty = true
 	PolicySet.PolicyLock.Unlock()
 
 	//delete corresponding policy name from worker ep map as well
 	for ep, val := range PolicySet.WorkerEpMap {
 		val.PolicyNameIngress, f = remove(val.PolicyNameIngress, policy.Name)
 		if f {
+			PolicySet.PolicyLock.Lock()
 			PolicySet.WorkerEpMap[ep] = val
+			workerEpBufDirty = true
+			PolicySet.PolicyLock.Unlock()
 		}
 		val.PolicyNameEgress, f = remove(val.PolicyNameEgress, policy.Name)
 		if f {
+			PolicySet.PolicyLock.Lock()
 			PolicySet.WorkerEpMap[ep] = val
+			workerEpBufDirty = true
+			PolicySet.PolicyLock.Unlock()
 		}
 	}
 
@@ -304,8 +316,9 @@ func (ipsetdel IpSet) DeleteFromStore() bool {
 	}
 
 	PolicySet.PolicyLock.Lock()
+	defer PolicySet.PolicyLock.Unlock()
 	delete(PolicySet.IpSetMap, ipsetdel.IpsetID)
-	PolicySet.PolicyLock.Unlock()
+	ipsetBufDirty = true
 
 	return true
 }
@@ -318,8 +331,9 @@ func (workerepdel PolicyWorkerEndPoint) DeleteFromStore() bool {
 	}
 
 	PolicySet.PolicyLock.Lock()
+	defer PolicySet.PolicyLock.Unlock()
 	delete(PolicySet.WorkerEpMap, workerepdel.WorkerEp)
-	PolicySet.PolicyLock.Unlock()
+	workerEpBufDirty = true
 	return true
 }
 
@@ -365,6 +379,7 @@ func (policy Policy) DeleteWorkerEp(workerEp string) bool {
 		p.WorkerEps = utils.RemoveStr(workerEp, p.WorkerEps)
 		PolicySet.PolicyLock.Lock()
 		PolicySet.PolicyMap[policy.Name] = p
+		policyBufDirty = true
 		PolicySet.PolicyLock.Unlock()
 		return true
 	}
@@ -384,6 +399,7 @@ func (policy Policy) AddWorkerEp(workerEp string) bool {
 		p.WorkerEps = append(p.WorkerEps, workerEp)
 		PolicySet.PolicyLock.Lock()
 		PolicySet.PolicyMap[policy.Name] = p
+		policyBufDirty = true
 		PolicySet.PolicyLock.Unlock()
 		return true
 	}
@@ -471,46 +487,91 @@ func (ep PolicyWorkerEndPoint) UpdateToStore() bool {
 }
 
 func RunSyncPolicyInfo() bool {
+	/*
+		Flush the entries to the file only when there is an update
+	*/
+	if !policyBufDirty {
+		return true
+	}
+
+	policyFileMutex.Lock()
 	jsonStr, err := JsonMarshalIndent(PolicySet.PolicyMap, "", " ")
 	if err != nil {
 		fmt.Println(err)
+		policyFileMutex.Unlock()
 		return false
 	}
 
 	if err = NewWriteFile(PolicyFile, jsonStr, 0755); err != nil {
 		log.Errorf("Failed to write entries, err: %s", err)
+		policyFileMutex.Unlock()
 		return false
 	}
+	policyFileMutex.Unlock()
+
+	PolicySet.PolicyLock.Lock()
+	defer PolicySet.PolicyLock.Unlock()
+	policyBufDirty = false
 
 	return true
 }
 
 func RunSyncIpSetInfo() bool {
+	/*
+		Flush the entries to the file only when there is an update
+	*/
+	if !ipsetBufDirty {
+		return true
+	}
+
+	ipsetFileMutex.Lock()
 	jsonStr, err := JsonMarshalIndent(PolicySet.IpSetMap, "", " ")
 	if err != nil {
 		fmt.Println(err)
+		ipsetFileMutex.Unlock()
 		return false
 	}
 
 	if err = NewWriteFile(IpsetFile, jsonStr, 0755); err != nil {
 		log.Errorf("Failed to write entries, err: %s", err)
+		ipsetFileMutex.Unlock()
 		return false
 	}
+	ipsetFileMutex.Unlock()
+
+	PolicySet.PolicyLock.Lock()
+	defer PolicySet.PolicyLock.Unlock()
+	ipsetBufDirty = false
 
 	return true
 }
 
 func RunSyncWorkerEpInfo() bool {
+	/*
+		Flush the entries to the file only when there is an update
+	*/
+	if !workerEpBufDirty {
+		return true
+	}
+
+	workerEpFileMutex.Lock()
 	jsonStr, err := JsonMarshalIndent(PolicySet.WorkerEpMap, "", " ")
 	if err != nil {
 		fmt.Println(err)
+		workerEpFileMutex.Unlock()
 		return false
 	}
 
 	if err = NewWriteFile(WorkerepFile, jsonStr, 0755); err != nil {
 		log.Errorf("Failed to write entries, err: %s", err)
+		workerEpFileMutex.Unlock()
 		return false
 	}
+	workerEpFileMutex.Unlock()
+
+	PolicySet.PolicyLock.Lock()
+	defer PolicySet.PolicyLock.Unlock()
+	workerEpBufDirty = false
 
 	return true
 }
