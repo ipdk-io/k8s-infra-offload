@@ -27,7 +27,7 @@ jobs:
       with:
         go-version: 1.21.6
 
-    - name: "Build"
+    - name: "Build DPDK"
       run: make dpdk
 
     - name: Change Permissions
@@ -36,7 +36,13 @@ jobs:
        sudo chmod 777 -R /var/lib/cni/inframanager
        ls -ltr /var/lib/cni
 
-    - name: "Test"
+    - name: "Test DPDK"
+      run: |
+        make test
+
+    - name: "Build ES2K"
+      run: make es2k
+    - name: "Test ES2K"
       run: |
         make test
 
