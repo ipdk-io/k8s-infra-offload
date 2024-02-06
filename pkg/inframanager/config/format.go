@@ -16,31 +16,31 @@ package config
 
 // Configurations exported
 type Configuration struct {
-	Infrap4dGrpcServer ServerConf  `yaml:"Infrap4dGrpcServer"`
-	Infrap4dGnmiServer ServerConf  `yaml:"Infrap4dGnmiServer"`
-	InfraManager       ManagerConf `yaml:"InfraManager"`
-	InterfaceType      string      `yaml:"InterfaceType"`
-	NodeIP             string
-	LogLevel           string
-	P4InfoPath         string
-	P4BinPath          string
-	DeviceId           uint64
+	Infrap4dGrpcServer ServerConf  `yaml:"Infrap4dGrpcServer,omitempty"`
+	Infrap4dGnmiServer ServerConf  `yaml:"Infrap4dGnmiServer,omitempty"`
+	InfraManager       ManagerConf `yaml:"InfraManager,omitempty"`
+	InterfaceType      string      `yaml:"InterfaceType,omitempty"`
+	NodeIP             string      `yaml:"NodeIP,omitempty"`
+	LogLevel           string      `yaml:"LogLevel,omitempty"`
+	P4InfoPath         string      `yaml:"P4InfoPath,omitempty"`
+	P4BinPath          string      `yaml:"P4BinPath,omitempty"`
+	DeviceId           uint64      `yaml:"DeviceID,omitempty"`
 }
 
 // ServerConfigurations exported
 type ServerConf struct {
-	Addr       string `mapstructure:"addr"`
-	Conn       string `mapstructure:"conn"`
-	ClientCert string `mapstructure:"client-cert"`
-	ClientKey  string `mapstructure:"client-key"`
-	CACert     string `mapstructure:"ca-cert"`
+	Addr       string `yaml:"addr,omitempty"`
+	Conn       string `yaml:"conn,omitempty"`
+	ClientCert string `yaml:"client-cert,omitempty"`
+	ClientKey  string `yaml:"client-key,omitempty"`
+	CACert     string `yaml:"ca-cert,omitempty"`
 }
 type ManagerConf struct {
-	Addr         string   `mapstructure:"addr"`
-	ArpMac       string   `mapstructure:"arp-mac"`
-	Conn         string   `mapstructure:"conn"`
-	ServerCert   string   `mapstructure:"server-cert"`
-	ServerKey    string   `mapstructure:"server-key"`
-	CACert       string   `mapstructure:"ca-cert"`
-	CipherSuites []string `mapstructure:"ciphersuites"`
+	Addr         string   `yaml:"addr,omitempty"`
+	ArpMac       string   `yaml:"arp-mac,omitempty"`
+	Conn         string   `yaml:"conn,omitempty"`
+	ServerCert   string   `yaml:"server-cert,omitempty"`
+	ServerKey    string   `yaml:"server-key,omitempty"`
+	CACert       string   `yaml:"ca-cert,omitempty"`
+	CipherSuites []string `yaml:"ciphersuites,flow,omitempty"`
 }

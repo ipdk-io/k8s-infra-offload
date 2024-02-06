@@ -62,6 +62,8 @@ const (
 	IfTtype                     = "cdq"
 	P4InfoPath                  = "/share/infra/k8s_dp/p4Info.txt"
 	P4BinPath                   = "/share/infra/k8s_dp/k8s_dp.pb.bin"
+	AgentConf                   = "/etc/infra/infraagent-config.yaml"
+	DefaultMTU                  = 1500
 )
 
 var (

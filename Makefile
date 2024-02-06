@@ -71,18 +71,18 @@ build:
 ifeq ($(tagname),es2k)
 	cp -f k8s_dp/es2k/*  k8s_dp/.
 	cp -f scripts/es2k/* scripts/.
-	cp -f deploy/es2k/infraagent-config.yaml deploy/.
 	cp -f hack/cicd/es2k/run-tests.sh hack/cicd/.
 else
 	cp -f k8s_dp/dpdk/* k8s_dp/.
 	cp -f scripts/dpdk/* scripts/.
-	cp -f deploy/dpdk/infraagent-config.yaml deploy/.
 	cp -f hack/cicd/dpdk/run-tests.sh hack/cicd/.
 endif
+	go build -v -x -gcflags="all=-N -l" -o ./bin/generate-config ./genconf/generate_config.go
 	go build -o ./bin/infraagent ./infraagent/agent/main.go
 	go build -o ./bin/felix-api-proxy ./infraagent/felix_api_proxy/main.go
 	go build -tags $(tagname) -o ./bin/inframanager ./inframanager/cmd/main.go 
 	go build -o ./bin/arp-proxy ./arp-proxy/cmd/main.go
+	./bin/generate-config
 
 BUILDFILES=k8s_dp/*.* scripts/*.sh deploy/infraagent-config.yaml hack/cicd/run-tests.sh
 
