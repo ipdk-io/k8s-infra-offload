@@ -1498,6 +1498,7 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 
 	/* Add to store */
 	store.SetHostInterface(ipAddr, macAddr)
+	store.RunSyncSetupInfo()
 
 	return out, nil
 }

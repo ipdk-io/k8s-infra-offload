@@ -18,7 +18,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"path"
+	"syscall"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -88,4 +90,38 @@ func unixMilli(t time.Time) uint64 {
 
 func MakeTimestampMilli() uint64 {
 	return unixMilli(time.Now())
+}
+
+var capturedSignals = []os.Signal{
+	// SIGKILL, SIGSTOP cannot be caught
+	syscall.SIGHUP,
+	syscall.SIGINT,
+	syscall.SIGQUIT,
+	syscall.SIGILL,
+	syscall.SIGABRT,
+	syscall.SIGFPE,
+	syscall.SIGSEGV,
+	syscall.SIGTERM,
+}
+
+// RegisterSignalHandlers registers a signal handler for capturedSignals and starts a goroutine that
+// will block until a signal is received. The first signal received will cause the stopCh channel to
+// be closed, giving the opportunity to the program to exist gracefully. If a second signal is
+// received before then, we will force exit with code 1.
+func RegisterSignalHandlers() <-chan struct{} {
+	notifyCh := make(chan os.Signal, 2)
+	stopCh := make(chan struct{})
+
+	go func() {
+		sig := <-notifyCh
+		log.Infof("Received first signal: %v", sig)
+		close(stopCh)
+		sig = <-notifyCh
+		log.Infof("Received second signal: %v, will force exit", sig)
+		os.Exit(1)
+	}()
+
+	signal.Notify(notifyCh, capturedSignals...)
+
+	return stopCh
 }
