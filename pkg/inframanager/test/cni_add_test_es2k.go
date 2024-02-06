@@ -57,7 +57,7 @@ func Ipv4ToPortTableT(ctx context.Context, p4RtC *client.Client) error {
 					Value: p4.Pack32BinaryIP4(ipAddress[i]),
 				},
 			},
-			p4RtC.NewTableActionDirect("k8s_dp_control.set_dest_mac_vport", [][]byte{p4.ValueToBytes16(port[i]), p4.ValueToBytes(modPtr[i])}),
+			p4RtC.NewTableActionDirect("k8s_dp_control.set_dest_mac_vport", [][]byte{p4.ToBytes(port[i]), p4.ToBytes(modPtr[i])}),
 			nil,
 		)
 		if err := p4RtC.InsertTableEntry(ctx, entry1); err != nil {
@@ -75,7 +75,7 @@ func Ipv4ToPortTableT(ctx context.Context, p4RtC *client.Client) error {
 			},
 			p4RtC.NewTableActionDirect(
 				"k8s_dp_control.set_dest_vport",
-				[][]byte{p4.ValueToBytes16(port[i])}),
+				[][]byte{p4.ToBytes(port[i])}),
 			nil,
 		)
 
@@ -97,7 +97,7 @@ func ArptToPortTableT(ctx context.Context, p4RtC *client.Client) error {
 				Value: p4.Pack32BinaryIP4(tpa),
 			},
 		},
-		p4RtC.NewTableActionDirect("k8s_dp_control.set_dest_vport", [][]byte{p4.ValueToBytes16(tpaPort)}),
+		p4RtC.NewTableActionDirect("k8s_dp_control.set_dest_vport", [][]byte{p4.ToBytes(tpaPort)}),
 		nil,
 	)
 
@@ -119,7 +119,7 @@ func GWMacModTableT(ctx context.Context, p4RtC *client.Client) error {
 		"k8s_dp_control.pod_gateway_mac_mod_table",
 		map[string]client.MatchInterface{
 			"meta.common.mod_blob_ptr": &client.ExactMatch{
-				Value: p4.ValueToBytes(modPtr[0]),
+				Value: p4.ToBytes(modPtr[0]),
 			},
 		},
 		p4RtC.NewTableActionDirect("k8s_dp_control.update_src_dst_mac", [][]byte{dmac}),

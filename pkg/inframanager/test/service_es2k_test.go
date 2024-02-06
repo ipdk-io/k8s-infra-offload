@@ -19,8 +19,8 @@ package test
 import (
 	"context"
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
-	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
 	p4 "github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/p4"
+	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
 	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
 	"testing"
 
@@ -41,6 +41,7 @@ func TestP4Services(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "P4 Suite")
 }
+
 var _ = Describe("service", func() {
 
 	var deviceID uint64
@@ -110,9 +111,9 @@ var _ = Describe("service", func() {
 					MemberID:  2,
 				}
 				service := store.Service{
-					ClusterIp: "10.100.1.1",
-					Port:      10000,
-					Proto:     "TCP",
+					ClusterIp:       "10.100.1.1",
+					Port:            10000,
+					Proto:           "TCP",
 					ServiceEndPoint: make(map[string]store.ServiceEndPoint),
 				}
 				service.ServiceEndPoint["10.10.10.1"] = ep1
@@ -168,9 +169,9 @@ var _ = Describe("service", func() {
 					MemberID:  2,
 				}
 				service := store.Service{
-					ClusterIp: "10.100.1.1",
-					Port:      10000,
-					Proto:     "TCP",
+					ClusterIp:       "10.100.1.1",
+					Port:            10000,
+					Proto:           "TCP",
 					ServiceEndPoint: make(map[string]store.ServiceEndPoint),
 				}
 				service.ServiceEndPoint["10.10.10.1"] = ep1

@@ -38,7 +38,7 @@ func ArptToPortTable(ctx context.Context, p4RtC *client.Client, arpTpa string, p
 					Value: Pack32BinaryIP4(arpTpa),
 				},
 			},
-			P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.set_dest_vport", [][]byte{ValueToBytes(port)}),
+			P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.set_dest_vport", [][]byte{ToBytes(port)}),
 			nil,
 		)
 		if err = P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
@@ -88,7 +88,7 @@ func Ipv4ToPortTable(ctx context.Context, p4RtC *client.Client, ipAddr string, m
 				},
 			},
 			//TODO: properly handle k8s_dp_control.send
-			P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.set_dest_mac_vport", [][]byte{ValueToBytes(port), dmac}),
+			P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.set_dest_mac_vport", [][]byte{ToBytes(port), dmac}),
 			nil,
 		)
 		if err = P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
@@ -122,7 +122,7 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 		TODO. Distinguish for interface type
 		and program the rules accordingly.
 	*/
-	if net.ParseIP(ep.PodIpAddress) == nil {
+	if CheckIPAddress(ep.PodIpAddress) != nil {
 		err := fmt.Errorf("Invalid IP Address")
 		return ep, err
 	}
@@ -147,7 +147,7 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 }
 
 func DeleteCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint) error {
-	if net.ParseIP(ep.PodIpAddress) == nil {
+	if CheckIPAddress(ep.PodIpAddress) != nil {
 		err := fmt.Errorf("Invalid IP Address")
 		return err
 	}
