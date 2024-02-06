@@ -20,6 +20,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	log "github.com/sirupsen/logrus"
@@ -94,6 +95,11 @@ func InitEndPointStore(setFwdPipe bool) bool {
 }
 
 func (ep EndPoint) WriteToStore() bool {
+	if strings.TrimSpace(ep.PodIpAddress) == "" || len(ep.PodIpAddress) == 0 {
+		log.Errorf("Empty IP address srting")
+		return false
+	}
+
 	if net.ParseIP(ep.PodIpAddress) == nil {
 		log.Errorf("Invalid IP Address %s", ep.PodIpAddress)
 		return false
@@ -115,6 +121,11 @@ func (ep EndPoint) WriteToStore() bool {
 }
 
 func (ep EndPoint) DeleteFromStore() bool {
+	if strings.TrimSpace(ep.PodIpAddress) == "" || len(ep.PodIpAddress) == 0 {
+		log.Errorf("Empty IP address srting")
+		return false
+	}
+
 	if net.ParseIP(ep.PodIpAddress) == nil {
 		log.Errorf("Invalid IP Address %s", ep.PodIpAddress)
 		return false
@@ -130,6 +141,11 @@ func (ep EndPoint) DeleteFromStore() bool {
 }
 
 func (ep EndPoint) GetFromStore() store {
+	if strings.TrimSpace(ep.PodIpAddress) == "" || len(ep.PodIpAddress) == 0 {
+		log.Errorf("Empty IP address srting")
+		return nil
+	}
+
 	if net.ParseIP(ep.PodIpAddress) == nil {
 		log.Errorf("Invalid IP Address %s", ep.PodIpAddress)
 		return nil

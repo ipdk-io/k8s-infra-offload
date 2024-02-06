@@ -55,7 +55,7 @@ func ArptToPortTable(ctx context.Context, p4RtC *client.Client, arpTpa string, p
 	arpkeyparams := make([]interface{}, 0)
 	arpkeyparams = append(arpkeyparams, Pack32BinaryIP4(arpTpa))
 	arpactionparams := make([]interface{}, 0)
-	arpactionparams = append(arpactionparams, ValueToBytes16(uint16(port)))
+	arpactionparams = append(arpactionparams, ToBytes(uint16(port)))
 
 	arptbl := &Table{
 		TableName:        "k8s_dp_control.arp_to_port_table",
@@ -86,7 +86,7 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 	var err error
 	P4w = GetP4Wrapper(Env)
 
-	if net.ParseIP(ep.PodIpAddress) == nil {
+	if CheckIPAddress(ep.PodIpAddress) != nil {
 		err = fmt.Errorf("Invalid IP Address")
 		return ep, err
 	}
@@ -112,14 +112,14 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 	action := make([]interface{}, 0)
 
 	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
-	action = append(action, ValueToBytes16(uint16(ep.InterfaceID)))
+	action = append(action, ToBytes(uint16(ep.InterfaceID)))
 	updateTables("k8s_dp_control.arp_to_port_table", data, cniupdatemap, key, action, 1)
 	resetSlices(&key, &action)
 
 	//pod_gateway_mac_mod_table
-	key = append(key, ValueToBytes(ep.ModPtr))
+	key = append(key, ToBytes(ep.ModPtr))
 
-	IP, netIp, err := net.ParseCIDR(types.DefaultRoute)
+	IP, netIp, err := ParseIPCIDR(types.DefaultRoute)
 	if err != nil {
 		log.Errorf("Failed to get IP from the default route cidr %s", types.DefaultRoute)
 		return ep, err
@@ -161,28 +161,28 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 
 	//ipv4_to_port_table_tx
 	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
-	action = append(action, ValueToBytes16(uint16(ep.InterfaceID)))
-	action = append(action, ValueToBytes(ep.ModPtr))
+	action = append(action, ToBytes(uint16(ep.InterfaceID)))
+	action = append(action, ToBytes(ep.ModPtr))
 	updateTables("k8s_dp_control.ipv4_to_port_table_tx", data, cniupdatemap, key, action, 1)
 	resetSlices(&key, &action)
 
 	//ipv4_to_port_table_rx
 	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
-	action = append(action, ValueToBytes16(uint16(ep.InterfaceID)))
+	action = append(action, ToBytes(uint16(ep.InterfaceID)))
 	updateTables("k8s_dp_control.ipv4_to_port_table_rx", data, cniupdatemap, key, action, 1)
 	resetSlices(&key, &action)
 
 	//ipv4_to_port_table_tx_tcp
 	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
-	action = append(action, ValueToBytes16(uint16(ep.InterfaceID)))
-	action = append(action, ValueToBytes(ep.ModPtr))
+	action = append(action, ToBytes(uint16(ep.InterfaceID)))
+	action = append(action, ToBytes(ep.ModPtr))
 	updateTables("k8s_dp_control.ipv4_to_port_table_tx_tcp", data, cniupdatemap, key, action, 1)
 	resetSlices(&key, &action)
 
 	//ipv4_to_port_table_tx_service
 	key = append(key, Pack32BinaryIP4(ep.PodIpAddress))
-	action = append(action, ValueToBytes16(uint16(ep.InterfaceID)))
-	action = append(action, ValueToBytes(ep.ModPtr))
+	action = append(action, ToBytes(uint16(ep.InterfaceID)))
+	action = append(action, ToBytes(ep.ModPtr))
 	updateTables("k8s_dp_control.ipv4_to_port_table_tx_service", data, cniupdatemap, key, action, 1)
 	resetSlices(&key, &action)
 
@@ -203,7 +203,7 @@ func DeleteCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 
 	log.Infof("DeleteCniRules Del request %s", ep.PodIpAddress)
 
-	if net.ParseIP(ep.PodIpAddress) == nil {
+	if CheckIPAddress(ep.PodIpAddress) != nil {
 		err = fmt.Errorf("Invalid IP Address")
 		return err
 	}
@@ -220,7 +220,7 @@ func DeleteCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 	updateTables("k8s_dp_control.arp_to_port_table", data, cniupdatemap, key, nil, 1)
 	resetSlices(&key, nil)
 
-	key = append(key, ValueToBytes(ep.ModPtr))
+	key = append(key, ToBytes(ep.ModPtr))
 	updateTables("k8s_dp_control.pod_gateway_mac_mod_table", data, cniupdatemap, key, nil, 1)
 	resetSlices(&key, nil)
 
