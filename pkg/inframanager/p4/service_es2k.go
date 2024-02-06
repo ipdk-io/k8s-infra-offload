@@ -434,6 +434,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	log.Debugf("Inserted into the table TxBalance, service ip: %s, service port: %d",
 		service.ClusterIp, uint16(service.Port))
 
+	P4w = GetP4Wrapper(Env)
 	err = ConfigureTable(ctx, p4RtC, P4w, service_table_names, svcmap, service_action_names, true)
 	if err != nil {
 		fmt.Println("failed to make entries to service p4")
