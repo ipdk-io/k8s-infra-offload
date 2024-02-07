@@ -77,7 +77,7 @@ else
 	cp -f scripts/dpdk/* scripts/.
 	cp -f hack/cicd/dpdk/run-tests.sh hack/cicd/.
 endif
-	go build -v -x -gcflags="all=-N -l" -o ./bin/generate-config ./genconf/generate_config.go
+	go build -o ./bin/generate-config ./genconf/generate_config.go
 	go build -o ./bin/infraagent ./infraagent/agent/main.go
 	go build -o ./bin/felix-api-proxy ./infraagent/felix_api_proxy/main.go
 	go build -tags $(tagname) -o ./bin/inframanager ./inframanager/cmd/main.go 
