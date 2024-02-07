@@ -19,11 +19,12 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"math/big"
 	"net"
 	"os"
 	"reflect"
+	"strings"
 
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
 	log "github.com/sirupsen/logrus"
@@ -45,7 +46,7 @@ const (
 )
 
 const (
-	MAXUINT32              = 4294967295
+	MAXMODVAL              = (4095 - 1)
 	DEFAULT_UUID_CNT_CACHE = 512
 	PROTO_TCP              = 6
 	PROTO_UDP              = 17
@@ -77,6 +78,89 @@ var tblupdate *UpdateTable
 var Env string
 var P4w P4RtCWrapper
 
+// Checks needed for empty or small strings
+// For MAC the net library checks for len(s) < 14 so no need
+func CheckIPAddress(ip string) error {
+	if strings.TrimSpace(ip) == "" || len(ip) == 0 {
+		log.Errorf("Empty IP address srting")
+		return errors.New("Empty IP Address")
+	}
+
+	if net.ParseIP(ip) == nil {
+		log.Errorf("IP Address: %s - Invalid", ip)
+		return errors.New("Invalid IP Address")
+	}
+	return nil
+}
+
+func ParseIPCIDR(cidr string) (net.IP, *net.IPNet, error) {
+	if strings.TrimSpace(cidr) == "" || len(cidr) == 0 {
+		log.Errorf("IP CIDR is empty: %s - Invalid", cidr)
+		return nil, nil, errors.New("empty CIDR")
+	}
+
+	ipv4Addr, ipv4Net, err := net.ParseCIDR(cidr)
+	if err != nil {
+		log.Errorf("invalid CIDR format: %v", err)
+		return nil, nil, err
+	}
+	return ipv4Addr, ipv4Net, err
+}
+
+// Binary conversion functions for int and strings
+func ToBytes(data interface{}) []byte {
+	buf := new(bytes.Buffer)
+
+	switch v := data.(type) {
+	case uint8, uint16, uint32, uint64:
+		err := binary.Write(buf, binary.BigEndian, v)
+		if err != nil {
+			log.Errorf("Failed to converttobytestream")
+			return []byte{0x00}
+		}
+	case int8, int16, int32, int64:
+		err := binary.Write(buf, binary.BigEndian, v)
+		if err != nil {
+			log.Errorf("Failed to converttobytestream")
+			return []byte{0x00}
+		}
+	case string:
+		return []byte(v)
+
+	default:
+		log.Errorf("unsupported data type")
+		return []byte{0x00}
+	}
+	return buf.Bytes()
+}
+
+// Binary conversion function for flags
+func converttobytestream(value uint8) []byte {
+	if value == 0x00 {
+		buf0 := []byte{0x00}
+		return buf0
+	} else {
+		buf1 := []byte{0x01}
+		return buf1
+	}
+}
+
+func IP4toInt(IPv4Address net.IP) int64 {
+	IPv4Int := big.NewInt(0)
+	IPv4Int.SetBytes(IPv4Address.To4())
+	return IPv4Int.Int64()
+}
+
+// Binary conversion function for IPaddress strings
+func Pack32BinaryIP4(ip4Address string) []byte {
+	if len(ip4Address) == 0 {
+		log.Errorf("IP address string received is Empty")
+		ip4Address = "0.0.0.0"
+	}
+	ipv4Decimal := IP4toInt(net.ParseIP(ip4Address))
+	return ToBytes(uint32(ipv4Decimal))
+}
+
 var (
 	JsonFilePath = "/share/infra/jsonfiles/"
 )
@@ -96,22 +180,19 @@ type Table struct {
 
 func parseJson(fileName string) map[string][]Table {
 	file := JsonFilePath + fileName
-	fmt.Println(file)
+	log.Debugf("Json file - %s ", file)
 
 	data, err := os.ReadFile(file)
 	if err != nil {
-		fmt.Println("Error reading file:", err)
+		log.Errorf("File read failed: %v", err)
 		return nil
 	}
-
 	tableData := make(map[string][]Table)
-
 	err = json.Unmarshal(data, &tableData)
 	if err != nil {
-		fmt.Println("Error unmarshaling JSON:", err)
+		log.Infof("Error unmarshaling JSON: %v", err)
 		return nil
 	}
-
 	return tableData
 }
 
@@ -151,6 +232,7 @@ func updateTables(tableName string, tableData map[string][]Table, svcmap map[str
 
 // This function utilizes the data from the Table struct
 // To prepare UpdateTable struct and then adds each instances to map.
+// TODO - Add all KeyMatch interfaces
 func PrepareTable(tblaction map[string][]UpdateTable, tbl *Table) {
 	tblmap := newUpdateTable()
 
@@ -169,7 +251,7 @@ func PrepareTable(tblaction map[string][]UpdateTable, tbl *Table) {
 			case []byte:
 				value = in.Bytes()
 			default:
-				fmt.Println("inside default")
+				log.Infof("Invalid datatype received")
 			}
 			if tbl.KeyMatchType[j] == "Exact" {
 				keydata[tbl.KeyName[j]] = &client.ExactMatch{
@@ -195,7 +277,7 @@ func PrepareTable(tblaction map[string][]UpdateTable, tbl *Table) {
 				case []byte:
 					value = in.Bytes()
 				default:
-					fmt.Println("inside default")
+					log.Infof("Unknown datatype recieved")
 				}
 				action = append(action, value)
 			}
@@ -292,7 +374,7 @@ func newUUIDGenerator() *UUIDGenerator {
 func (this *UUIDGenerator) startGen() {
 	go func() {
 		for {
-			if this.idGen == MAXUINT32 {
+			if this.idGen == MAXMODVAL {
 				this.idGen = 1
 			} else {
 				this.idGen += 1
@@ -308,77 +390,6 @@ func (this *UUIDGenerator) getUUID() uint32 {
 }
 
 var uuidFactory = newUUIDGenerator()
-
-func ValueToBytes(value uint32) []byte {
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.BigEndian, value)
-	if err != nil {
-		fmt.Println("binary.Write failed:", err)
-	}
-	fmt.Printf("% x", buf.Bytes())
-	return buf.Bytes()
-}
-
-func ValueToBytes8(value uint8) []byte {
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.BigEndian, value)
-	if err != nil {
-		fmt.Println("binary.Write failed:", err)
-	}
-	fmt.Printf("% x", buf.Bytes())
-	return buf.Bytes()
-}
-
-func ValueToBytes16(value uint16) []byte {
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.BigEndian, value)
-	if err != nil {
-		fmt.Println("binary.Write failed:", err)
-	}
-	fmt.Printf("% x", buf.Bytes())
-	return buf.Bytes()
-}
-
-func valueToBytesStr(value string) []byte {
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.BigEndian, value)
-	if err != nil {
-		fmt.Println("binary.Write failed:", err)
-	}
-	fmt.Printf("% x", buf.Bytes())
-	return buf.Bytes()
-}
-
-func converttobytestream(value uint8) []byte {
-	if value == 0x00 {
-		buf0 := []byte{0x00}
-		return buf0
-	} else {
-		buf1 := []byte{0x01}
-		return buf1
-	}
-}
-
-func IP4toInt(IPv4Address net.IP) int64 {
-	IPv4Int := big.NewInt(0)
-	IPv4Int.SetBytes(IPv4Address.To4())
-	return IPv4Int.Int64()
-}
-
-func Pack32BinaryIP4(ip4Address string) []byte {
-	ipv4Decimal := IP4toInt(net.ParseIP(ip4Address))
-
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.BigEndian, uint32(ipv4Decimal))
-
-	if err != nil {
-		fmt.Println("Unable to write to buffer:", err)
-	}
-
-	// present in hexadecimal format
-	//fmt.Sprintf("%x", buf.Bytes())
-	return buf.Bytes()
-}
 
 var Mask = []uint8{1, 2, 4, 8, 16, 32, 64, 128}
 

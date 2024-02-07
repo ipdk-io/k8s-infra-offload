@@ -61,7 +61,7 @@ func ServiceFlowPacketOptions(ctx context.Context, p4RtC *client.Client,
 				"k8s_dp_control.service_flow_packet_options",
 				map[string]client.MatchInterface{
 					"istd.direction": &client.ExactMatch{
-						Value: ValueToBytes8(uint8(1)),
+						Value: ToBytes(uint8(1)),
 					},
 					"hdrs.tcp.ack": &client.ExactMatch{
 						Value: converttobytestream(flags[i][0]),
@@ -92,7 +92,7 @@ func ServiceFlowPacketOptions(ctx context.Context, p4RtC *client.Client,
 				"k8s_dp_control.service_flow_packet_options",
 				map[string]client.MatchInterface{
 					"istd.direction": &client.ExactMatch{
-						Value: ValueToBytes8(uint8(1)),
+						Value: ToBytes(uint8(1)),
 					},
 					"hdrs.tcp.ack": &client.ExactMatch{
 						Value: converttobytestream(flags[i][0]),
@@ -123,7 +123,7 @@ func ServiceFlowPacketOptions(ctx context.Context, p4RtC *client.Client,
 			"k8s_dp_control.service_flow_packet_options",
 			map[string]client.MatchInterface{
 				"istd.direction": &client.ExactMatch{
-					Value: ValueToBytes8(uint8(1)),
+					Value: ToBytes(uint8(1)),
 				},
 				"hdrs.tcp.ack": &client.ExactMatch{
 					Value: converttobytestream(flags[0][0]),
@@ -155,7 +155,7 @@ func ServiceFlowPacketOptions(ctx context.Context, p4RtC *client.Client,
 				"k8s_dp_control.service_flow_packet_options",
 				map[string]client.MatchInterface{
 					"istd.direction": &client.ExactMatch{
-						Value: ValueToBytes8(uint8(1)),
+						Value: ToBytes(uint8(1)),
 					},
 					"hdrs.tcp.ack": &client.ExactMatch{
 						Value: converttobytestream(flags[i][0]),
@@ -201,7 +201,7 @@ func concatOldEntries(modblobPtrDNAT [][]byte, oldModblobPtrDNAT [][]byte, oldIp
 		entry := ep.GetFromStore()
 		if entry != nil {
 			epEntry := entry.(store.EndPoint)
-			oldInterfaceIDs = append(oldInterfaceIDs, ValueToBytes16(uint16(epEntry.InterfaceID)))
+			oldInterfaceIDs = append(oldInterfaceIDs, ToBytes(uint16(epEntry.InterfaceID)))
 		}
 	}
 
@@ -247,7 +247,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 
 		for _, value := range s.ServiceEndPoint {
 			oldIpAddrs = append(oldIpAddrs, value.IpAddress)
-			oldmodblobptrdnatbyte = append(oldmodblobptrdnatbyte, ValueToBytes(value.ModBlobPtrDNAT))
+			oldmodblobptrdnatbyte = append(oldmodblobptrdnatbyte, ToBytes(value.ModBlobPtrDNAT))
 		}
 	} else {
 		actn = Insert
@@ -256,21 +256,21 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		epNum = 0
 	}
 
-	if net.ParseIP(s.ClusterIp) == nil {
+	if CheckIPAddress(s.ClusterIp) != nil {
 		err := fmt.Errorf("Invalid cluster IP: %s", s.ClusterIp)
 		return err, store.Service{}
 	}
 
 	for i := 0; i < len(podIpAddr); i, epNum = i+1, epNum+1 {
-		if net.ParseIP(podIpAddr[i]) == nil {
+		if CheckIPAddress(podIpAddr[i]) != nil {
 			err := fmt.Errorf("Invalid IP Address: %s", podIpAddr[i])
 			return err, store.Service{}
 		}
 		podipByte = append(podipByte, Pack32BinaryIP4(podIpAddr[i]))
-		portIDByte = append(portIDByte, ValueToBytes16(uint16(portID[i]))) //L4 port
+		portIDByte = append(portIDByte, ToBytes(uint16(portID[i]))) //L4 port
 
 		id := uint32((groupID << 4) | ((epNum + 1) & 0xF))
-		modblobptrdnatbyte = append(modblobptrdnatbyte, ValueToBytes(id))
+		modblobptrdnatbyte = append(modblobptrdnatbyte, ToBytes(id))
 
 		log.Debugf("modblobptrdnatbyte: %d, pod ip: %s, portID: %d",
 			modblobptrdnatbyte[i], podIpAddr[i], portID[i])
@@ -296,7 +296,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 			}
 			macByte = append(macByte, podmac)
 
-			InterfaceIDbyte = append(InterfaceIDbyte, ValueToBytes16(uint16(epEntry.InterfaceID))) //L2 forwarding port
+			InterfaceIDbyte = append(InterfaceIDbyte, ToBytes(uint16(epEntry.InterfaceID))) //L2 forwarding port
 		} else {
 			err := fmt.Errorf("Endpoint %s not found, cannot program service %s",
 				ep.PodIpAddress, service.ClusterIp)
@@ -316,7 +316,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	}
 
 	//inserting forwarding rules for service IP
-	IP, netIp, err := net.ParseCIDR(types.DefaultRoute)
+	IP, netIp, err := ParseIPCIDR(types.DefaultRoute)
 	if err != nil {
 		log.Errorf("Failed to get IP from the default route cidr %s", types.DefaultRoute)
 		return
@@ -378,10 +378,10 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 
 	//write_source_ip_table
 	if actn != Update {
-		key = append(key, ValueToBytes(groupID))
+		key = append(key, ToBytes(groupID))
 		action = append(action, smac)
 		action = append(action, Pack32BinaryIP4(service.ClusterIp))
-		action = append(action, ValueToBytes16(uint16(service.Port)))
+		action = append(action, ToBytes(uint16(service.Port)))
 		updateTables("k8s_dp_control.write_source_ip_table", data, svcmap, key, action, 1)
 		resetSlices(&key, &action)
 
@@ -392,12 +392,12 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	//rx_src_ip
 	key = append(key, podipByte)
 	if service.Proto == "TCP" {
-		key = append(key, ValueToBytes8(uint8(PROTO_TCP)))
+		key = append(key, ToBytes(uint8(PROTO_TCP)))
 	} else {
-		key = append(key, ValueToBytes8(uint8(PROTO_UDP)))
+		key = append(key, ToBytes(uint8(PROTO_UDP)))
 	}
 	key = append(key, portIDByte)
-	action = append(action, ValueToBytes(groupID))
+	action = append(action, ToBytes(groupID))
 	updateTables("k8s_dp_control.rx_src_ip", data, svcmap, key, action, len(podIpAddr))
 	resetSlices(&key, &action)
 	log.Debugf("Inserted into table RxSrcIpTable, group id: %d, podipByte: %v, portIDByte: %v",
@@ -411,14 +411,14 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	//tx_balance
 	key = append(key, Pack32BinaryIP4(service.ClusterIp))
 	if service.Proto == "TCP" {
-		key = append(key, ValueToBytes8(uint8(PROTO_TCP)))
+		key = append(key, ToBytes(uint8(PROTO_TCP)))
 	} else {
-		key = append(key, ValueToBytes8(uint8(PROTO_UDP)))
+		key = append(key, ToBytes(uint8(PROTO_UDP)))
 	}
-	key = append(key, ValueToBytes16(uint16(service.Port))) //L4 port
+	key = append(key, ToBytes(uint16(service.Port))) //L4 port
 
 	for i := 0; i < 64; i++ {
-		key = append(key, ValueToBytes8(uint8(i)))
+		key = append(key, ToBytes(uint8(i)))
 
 		index := i % int(epNum)
 		action = append(action, InterfaceIDbyte[index])
@@ -434,6 +434,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	log.Debugf("Inserted into the table TxBalance, service ip: %s, service port: %d",
 		service.ClusterIp, uint16(service.Port))
 
+	P4w = GetP4Wrapper(Env)
 	err = ConfigureTable(ctx, p4RtC, P4w, service_table_names, svcmap, service_action_names, true)
 	if err != nil {
 		fmt.Println("failed to make entries to service p4")
@@ -466,7 +467,7 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 
 	res := s.GetFromStore()
 	if res == nil {
-		err = fmt.Errorf("No GroupID found")
+		err = fmt.Errorf("No service found in store")
 		return err
 	}
 
@@ -476,8 +477,8 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 
 	for _, ep := range service.ServiceEndPoint {
 		podipByte = append(podipByte, Pack32BinaryIP4(ep.IpAddress))
-		portIDByte = append(portIDByte, ValueToBytes16(uint16(ep.Port)))
-		modblobptrdnatbyte = append(modblobptrdnatbyte, ValueToBytes(ep.ModBlobPtrDNAT))
+		portIDByte = append(portIDByte, ToBytes(uint16(ep.Port)))
+		modblobptrdnatbyte = append(modblobptrdnatbyte, ToBytes(ep.ModBlobPtrDNAT))
 		log.Infof("modblobPtrDNAT: %d pod ip: %s, portID: %d",
 			ep.ModBlobPtrDNAT, ep.IpAddress, ep.Port)
 	}
@@ -506,7 +507,7 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 
 	//write_source_ip_table
 	log.Debugf("Deleting from table WriteSourceIpTable, group id: %d", groupID)
-	key = append(key, ValueToBytes(groupID))
+	key = append(key, ToBytes(groupID))
 	updateTables("k8s_dp_control.write_source_ip_table", data, svcmap, key, nil, 1)
 	resetSlices(&key, nil)
 
@@ -515,9 +516,9 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 		NumEp, service.ClusterIp, uint16(service.Port))
 	key = append(key, podipByte)
 	if service.Proto == "TCP" {
-		key = append(key, ValueToBytes8(uint8(PROTO_TCP)))
+		key = append(key, ToBytes(uint8(PROTO_TCP)))
 	} else {
-		key = append(key, ValueToBytes8(uint8(PROTO_UDP)))
+		key = append(key, ToBytes(uint8(PROTO_UDP)))
 	}
 	key = append(key, portIDByte)
 	updateTables("k8s_dp_control.rx_src_ip", data, svcmap, key, nil, NumEp)
@@ -529,14 +530,14 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 
 	key = append(key, Pack32BinaryIP4(service.ClusterIp))
 	if service.Proto == "TCP" {
-		key = append(key, ValueToBytes8(uint8(PROTO_TCP)))
+		key = append(key, ToBytes(uint8(PROTO_TCP)))
 	} else {
-		key = append(key, ValueToBytes8(uint8(PROTO_UDP)))
+		key = append(key, ToBytes(uint8(PROTO_UDP)))
 	}
-	key = append(key, ValueToBytes16(uint16(service.Port)))
+	key = append(key, ToBytes(uint16(service.Port)))
 
 	for i := 0; i < 64; i++ {
-		key = append(key, ValueToBytes8(uint8(i)))
+		key = append(key, ToBytes(uint8(i)))
 
 		updateTables("k8s_dp_control.tx_balance", data, svcmap, key, nil, 1)
 		key = key[:len(key)-1]

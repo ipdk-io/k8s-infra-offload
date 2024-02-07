@@ -21,13 +21,16 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"sync"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	ServicesFile = path.Join(StorePath, "services_db.json")
+	ServicesFile     = path.Join(StorePath, "services_db.json")
+	serviceFileMutex = &sync.Mutex{}
+	svcBufDirty      = false
 )
 
 func IsServiceStoreEmpty() bool {
@@ -127,12 +130,11 @@ func (s Service) WriteToStore() bool {
 		return false
 	}
 
-	//aquire lock before adding entry into the map
 	ServiceSet.ServiceLock.Lock()
-	//append tmp entry to the map
+	defer ServiceSet.ServiceLock.Unlock()
 	ServiceSet.ServiceMap[key] = s
-	//release lock after updating the map
-	ServiceSet.ServiceLock.Unlock()
+	svcBufDirty = true
+
 	return true
 }
 
@@ -147,13 +149,10 @@ func (s Service) DeleteFromStore() bool {
 		return false
 	}
 
-	//aquire lock before adding entry into the map
 	ServiceSet.ServiceLock.Lock()
-	//delete tmp entry from the map
+	defer ServiceSet.ServiceLock.Unlock()
 	delete(ServiceSet.ServiceMap, key)
-
-	//release lock after updating the map
-	ServiceSet.ServiceLock.Unlock()
+	svcBufDirty = true
 	return true
 }
 
@@ -194,16 +193,33 @@ func (s Service) UpdateToStore() bool {
 }
 
 func RunSyncServiceInfo() bool {
+
+	/*
+		Flush the entries to the file only when there is an update
+	*/
+	if !svcBufDirty {
+		return true
+	}
+
+	serviceFileMutex.Lock()
 	jsonStr, err := JsonMarshalIndent(ServiceSet.ServiceMap, "", " ")
 	if err != nil {
 		log.Errorf("Failed to marshal service entries map %s", err)
+		serviceFileMutex.Unlock()
 		return false
 	}
 
 	if err = NewWriteFile(ServicesFile, jsonStr, 0755); err != nil {
 		log.Errorf("Failed to write entries to %s, err %s",
 			ServicesFile, err)
+		serviceFileMutex.Unlock()
 		return false
 	}
+	serviceFileMutex.Unlock()
+
+	ServiceSet.ServiceLock.Lock()
+	defer ServiceSet.ServiceLock.Unlock()
+	svcBufDirty = false
+
 	return true
 }

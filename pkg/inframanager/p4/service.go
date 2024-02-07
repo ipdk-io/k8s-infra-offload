@@ -23,7 +23,6 @@ import (
 	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
 	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
 	log "github.com/sirupsen/logrus"
-	"net"
 )
 
 func ServiceFlowPacketOptions(ctx context.Context, p4RtC *client.Client,
@@ -43,12 +42,12 @@ func WriteDestIpTable(ctx context.Context, p4RtC *client.Client,
 				"k8s_dp_control.write_dest_ip_table",
 				map[string]client.MatchInterface{
 					"meta.mod_blob_ptr_dnat": &client.ExactMatch{
-						Value: ValueToBytes(modBlobPtrDnat[i]),
+						Value: ToBytes(modBlobPtrDnat[i]),
 					},
 				},
 				P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.update_dst_ip",
 					[][]byte{Pack32BinaryIP4(podIpAddr[i]),
-						ValueToBytes16(portID[i])}),
+						ToBytes(portID[i])}),
 				nil,
 			)
 			if err := P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
@@ -63,7 +62,7 @@ func WriteDestIpTable(ctx context.Context, p4RtC *client.Client,
 				"k8s_dp_control.write_dest_ip_table",
 				map[string]client.MatchInterface{
 					"meta.mod_blob_ptr_dnat": &client.ExactMatch{
-						Value: ValueToBytes(modBlobPtrDnat[i]),
+						Value: ToBytes(modBlobPtrDnat[i]),
 					},
 				},
 				nil,
@@ -119,7 +118,7 @@ func AsSl3TcpTable(ctx context.Context, p4RtC *client.Client,
 			"k8s_dp_control.as_sl3_tcp",
 			memberID[i],
 			"k8s_dp_control.set_default_lb_dest",
-			[][]byte{ValueToBytes(modBlobPtr[i])},
+			[][]byte{ToBytes(modBlobPtr[i])},
 		)
 		switch action {
 		case Insert, Update:
@@ -195,7 +194,7 @@ func AsSl3UdpTable(ctx context.Context, p4RtC *client.Client,
 			"k8s_dp_control.as_sl3_udp",
 			memberID[i],
 			"k8s_dp_control.set_default_lb_dest",
-			[][]byte{ValueToBytes(modBlobPtr[i])},
+			[][]byte{ToBytes(modBlobPtr[i])},
 		)
 		switch action {
 		case Insert, Update:
@@ -246,7 +245,7 @@ func TxBalanceTcpTable(ctx context.Context, p4RtC *client.Client,
 			Value: Pack32BinaryIP4(serviceIpAddr),
 		},
 		"hdr.tcp.dst_port": &client.ExactMatch{
-			Value: ValueToBytes16(servicePort),
+			Value: ToBytes(servicePort),
 		},
 	}
 	entryTcp := P4w.NewTableEntry(
@@ -287,7 +286,7 @@ func TxBalanceUdpTable(ctx context.Context, p4RtC *client.Client,
 			Value: Pack32BinaryIP4(serviceIpAddr),
 		},
 		"hdr.udp.dst_port": &client.ExactMatch{
-			Value: ValueToBytes16(servicePort),
+			Value: ToBytes(servicePort),
 		},
 	}
 	entryUdp := P4w.NewTableEntry(
@@ -329,12 +328,12 @@ func WriteSourceIpTable(ctx context.Context, p4RtC *client.Client,
 			"k8s_dp_control.write_source_ip_table",
 			map[string]client.MatchInterface{
 				"meta.mod_blob_ptr_snat": &client.ExactMatch{
-					Value: ValueToBytes(ModBlobPtrSnat),
+					Value: ToBytes(ModBlobPtrSnat),
 				},
 			},
 			P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.update_src_ip",
 				[][]byte{Pack32BinaryIP4(serviceIpAddr),
-					ValueToBytes16(servicePort)}),
+					ToBytes(servicePort)}),
 			nil,
 		)
 		if err := P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
@@ -347,7 +346,7 @@ func WriteSourceIpTable(ctx context.Context, p4RtC *client.Client,
 			"k8s_dp_control.write_source_ip_table",
 			map[string]client.MatchInterface{
 				"meta.mod_blob_ptr_snat": &client.ExactMatch{
-					Value: ValueToBytes(ModBlobPtrSnat),
+					Value: ToBytes(ModBlobPtrSnat),
 				},
 			},
 			nil,
@@ -383,11 +382,11 @@ func SetMetaTcpTable(ctx context.Context, p4RtC *client.Client,
 						Value: Pack32BinaryIP4(podIpAddr[i]),
 					},
 					"hdr.tcp.dst_port": &client.ExactMatch{
-						Value: ValueToBytes16(portID[i]),
+						Value: ToBytes(portID[i]),
 					},
 				},
 				P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.set_key_for_reverse_ct",
-					[][]byte{ValueToBytes(ModBlobPtrSnat)}),
+					[][]byte{ToBytes(ModBlobPtrSnat)}),
 				nil,
 			)
 			if err := P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
@@ -405,7 +404,7 @@ func SetMetaTcpTable(ctx context.Context, p4RtC *client.Client,
 						Value: Pack32BinaryIP4(podIpAddr[i]),
 					},
 					"hdr.tcp.dst_port": &client.ExactMatch{
-						Value: ValueToBytes16(portID[i]),
+						Value: ToBytes(portID[i]),
 					},
 				},
 				nil,
@@ -439,11 +438,11 @@ func SetMetaUdpTable(ctx context.Context, p4RtC *client.Client,
 						Value: Pack32BinaryIP4(podIpAddr[i]),
 					},
 					"hdr.udp.dst_port": &client.ExactMatch{
-						Value: ValueToBytes16(portID[i]),
+						Value: ToBytes(portID[i]),
 					},
 				},
 				P4w.NewTableActionDirect(p4RtC, "k8s_dp_control.set_key_for_reverse_ct",
-					[][]byte{ValueToBytes(ModBlobPtrSnat)}),
+					[][]byte{ToBytes(ModBlobPtrSnat)}),
 				nil,
 			)
 			if err := P4w.InsertTableEntry(ctx, p4RtC, entryAdd); err != nil {
@@ -461,7 +460,7 @@ func SetMetaUdpTable(ctx context.Context, p4RtC *client.Client,
 						Value: Pack32BinaryIP4(podIpAddr[i]),
 					},
 					"hdr.udp.dst_port": &client.ExactMatch{
-						Value: ValueToBytes16(portID[i]),
+						Value: ToBytes(portID[i]),
 					},
 				},
 				nil,
@@ -506,13 +505,13 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		epNum = 0
 	}
 
-	if net.ParseIP(s.ClusterIp) == nil {
+	if CheckIPAddress(s.ClusterIp) != nil {
 		err := fmt.Errorf("Invalid cluster IP: %s", s.ClusterIp)
 		return err, store.Service{}
 	}
 
 	for i := 0; i < len(podIpAddr); i, epNum = i+1, epNum+1 {
-		if net.ParseIP(podIpAddr[i]) == nil {
+		if CheckIPAddress(podIpAddr[i]) != nil {
 			err := fmt.Errorf("Invalid IP Address: %s", podIpAddr[i])
 			return err, store.Service{}
 		}

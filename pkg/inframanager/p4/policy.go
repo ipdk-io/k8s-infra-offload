@@ -67,12 +67,12 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 	if protocol != 0 {
 		pLen = 8
 		matchAction = "k8s_dp_control.set_range_check_ref"
-		params = [][]byte{ValueToBytes16(polID),
-			ValueToBytes16(rangeID)}
+		params = [][]byte{ToBytes(polID),
+			ToBytes(rangeID)}
 	} else {
 		pLen = 1
 		matchAction = "k8s_dp_control.set_status_match_ipset_only"
-		params = [][]byte{ValueToBytes16(polID)}
+		params = [][]byte{ToBytes(polID)}
 	}
 
 	entry := p4RtC.NewTableEntry(
@@ -82,7 +82,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 				Value: Pack32BinaryIP4(workerep),
 			},
 			"hdr.ipv4.protocol": &client.LpmMatch{
-				Value: ValueToBytes8(protocol),
+				Value: ToBytes(protocol),
 				PLen:  pLen,
 			},
 		},
@@ -140,7 +140,7 @@ func AclIpSetMatchTable(ctx context.Context, p4RtC *client.Client,
 		tableName,
 		map[string]client.MatchInterface{
 			"meta.acl_pol_id": &client.ExactMatch{
-				Value: ValueToBytes16(polID),
+				Value: ToBytes(polID),
 			},
 			addrKey: &client.LpmMatch{
 				Value: Pack32BinaryIP4(ip),
@@ -148,7 +148,7 @@ func AclIpSetMatchTable(ctx context.Context, p4RtC *client.Client,
 			},
 		},
 		p4RtC.NewTableActionDirect("k8s_dp_control.set_ipset_match_result",
-			[][]byte{ValueToBytes8(mask)}),
+			[][]byte{ToBytes(mask)}),
 		nil,
 	)
 
@@ -182,7 +182,7 @@ func DstPortRcTable(ctx context.Context, p4RtC *client.Client,
 	var ports = [][]byte{}
 
 	for i := range portrange {
-		ports = append(ports, ValueToBytes16(portrange[i]))
+		ports = append(ports, ToBytes(portrange[i]))
 	}
 
 	switch protocol {
@@ -199,7 +199,7 @@ func DstPortRcTable(ctx context.Context, p4RtC *client.Client,
 		tableName,
 		map[string]client.MatchInterface{
 			"meta.acl_pol_id": &client.ExactMatch{
-				Value: ValueToBytes16(polID),
+				Value: ToBytes(polID),
 			},
 		},
 		p4RtC.NewTableActionDirect(matchAction, ports),

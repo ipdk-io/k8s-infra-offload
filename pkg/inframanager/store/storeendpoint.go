@@ -20,6 +20,8 @@ import (
 	"net"
 	"os"
 	"path"
+	"strings"
+	"sync"
 
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	log "github.com/sirupsen/logrus"
@@ -27,6 +29,8 @@ import (
 
 var (
 	StoreEpFile = path.Join(StorePath, "cni_db.json")
+	epFileMutex = &sync.Mutex{}
+	epBufDirty  = false
 )
 
 func IsEndPointStoreEmpty() bool {
@@ -94,6 +98,11 @@ func InitEndPointStore(setFwdPipe bool) bool {
 }
 
 func (ep EndPoint) WriteToStore() bool {
+	if strings.TrimSpace(ep.PodIpAddress) == "" || len(ep.PodIpAddress) == 0 {
+		log.Errorf("Empty IP address srting")
+		return false
+	}
+
 	if net.ParseIP(ep.PodIpAddress) == nil {
 		log.Errorf("Invalid IP Address %s", ep.PodIpAddress)
 		return false
@@ -104,32 +113,38 @@ func (ep EndPoint) WriteToStore() bool {
 		log.Errorf("Invalid MAC Address %s", ep.PodMacAddress)
 		return false
 	}
-	//aquire lock before adding entry into the map
 	EndPointSet.EndPointLock.Lock()
-	//append ep entry to the map
+	defer EndPointSet.EndPointLock.Unlock()
 	EndPointSet.EndPointMap[ep.PodIpAddress] = ep
-	//release lock after updating the map
-	EndPointSet.EndPointLock.Unlock()
+	epBufDirty = true
 
 	return true
 }
 
 func (ep EndPoint) DeleteFromStore() bool {
+	if strings.TrimSpace(ep.PodIpAddress) == "" || len(ep.PodIpAddress) == 0 {
+		log.Errorf("Empty IP address srting")
+		return false
+	}
+
 	if net.ParseIP(ep.PodIpAddress) == nil {
 		log.Errorf("Invalid IP Address %s", ep.PodIpAddress)
 		return false
 	}
 
-	//aquire lock before adding entry into the map
 	EndPointSet.EndPointLock.Lock()
-	//delete tmp entry from the map
+	defer EndPointSet.EndPointLock.Unlock()
 	delete(EndPointSet.EndPointMap, ep.PodIpAddress)
-	//release lock after updating the map
-	EndPointSet.EndPointLock.Unlock()
+	epBufDirty = true
 	return true
 }
 
 func (ep EndPoint) GetFromStore() store {
+	if strings.TrimSpace(ep.PodIpAddress) == "" || len(ep.PodIpAddress) == 0 {
+		log.Errorf("Empty IP address srting")
+		return nil
+	}
+
 	if net.ParseIP(ep.PodIpAddress) == nil {
 		log.Errorf("Invalid IP Address %s", ep.PodIpAddress)
 		return nil
@@ -145,21 +160,40 @@ func (ep EndPoint) GetFromStore() store {
 
 func (ep EndPoint) UpdateToStore() bool {
 	fmt.Println("not implemented")
+	EndPointSet.EndPointLock.Lock()
+	defer EndPointSet.EndPointLock.Unlock()
+	epBufDirty = true
 	return true
 }
 
 func RunSyncEndPointInfo() bool {
+
+	/*
+		Flush the entries to the file only when there is an update
+	*/
+	if !epBufDirty {
+		return true
+	}
+
+	epFileMutex.Lock()
 	jsonStr, err := JsonMarshalIndent(EndPointSet.EndPointMap, "", " ")
 	if err != nil {
 		log.Errorf("Failed to marshal endpoint entries map %s", err)
+		epFileMutex.Unlock()
 		return false
 	}
 
 	if err = NewWriteFile(StoreEpFile, jsonStr, 0755); err != nil {
 		log.Errorf("Failed to write entries to %s, err %s",
 			StoreEpFile, err)
+		epFileMutex.Unlock()
 		return false
 	}
+	epFileMutex.Unlock()
+
+	EndPointSet.EndPointLock.Lock()
+	defer EndPointSet.EndPointLock.Unlock()
+	epBufDirty = false
 
 	return true
 }

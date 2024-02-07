@@ -21,6 +21,7 @@ type Conf struct {
 	Infrap4dGrpcServer conf.ServerConf  `yaml:"Infrap4dGrpcServer,omitempty"`
 	Infrap4dGnmiServer conf.ServerConf  `yaml:"Infrap4dGnmiServer,omitempty"`
 	DeviceId           uint64           `yaml:"DeviceId,omitempty"`
+	DBTicker           uint32           `yaml:"DBTicker,omitempty"`
 }
 
 type AgentConf struct {
@@ -145,6 +146,10 @@ func main() {
 		cConf.InfraManager.ArpMac = ""
 	}
 
+	if cConf.DBTicker == 0 {
+		cConf.DBTicker = types.DBTicker
+	}
+
 	mgr := mgrGetDefault()
 	mgr.Addr = cConf.InfraManager.Addr
 	mgr.Conn = cConf.Conn
@@ -158,6 +163,7 @@ func main() {
 		InterfaceType:      cConf.InterfaceType,
 		LogLevel:           cConf.LogLevel,
 		DeviceId:           cConf.DeviceId,
+		DBTicker:           cConf.DBTicker,
 	}
 
 	mgrData, err := yaml.Marshal(mgrConf)

@@ -25,6 +25,7 @@ type Configuration struct {
 	P4InfoPath         string      `yaml:"P4InfoPath,omitempty"`
 	P4BinPath          string      `yaml:"P4BinPath,omitempty"`
 	DeviceId           uint64      `yaml:"DeviceID,omitempty"`
+	DBTicker           uint32      `yaml:"DBTicker,omitempty"`
 }
 
 // ServerConfigurations exported

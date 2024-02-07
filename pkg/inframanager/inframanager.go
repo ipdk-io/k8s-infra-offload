@@ -17,6 +17,7 @@ package inframanager
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	api "github.com/ipdk-io/k8s-infra-offload/inframanager/api_handler"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
@@ -33,14 +34,15 @@ const (
 )
 
 type Manager struct {
-	server *api.ApiServer
-	log    *log.Entry
-	t      tomb.Tomb
+	server   *api.ApiServer
+	log      *log.Entry
+	t        tomb.Tomb
+	dbTicker time.Duration
 }
 
 var manager *Manager
 
-func NewManager() {
+func NewManager(dbTicker uint32) {
 	err := utils.LogInit(logDir, api.GetLogLevel())
 	if err != nil {
 		return
@@ -49,7 +51,8 @@ func NewManager() {
 	api.NewApiServer()
 
 	manager = &Manager{
-		log: log.WithField("pkg", "inframanager"),
+		log:      log.WithField("pkg", "inframanager"),
+		dbTicker: time.Duration(dbTicker),
 	}
 	mgrAddr := viper.GetString("InfraManager.Addr")
 	values := strings.Split(mgrAddr, ":")
@@ -69,6 +72,19 @@ func (m *Manager) stopServer() {
 	}
 }
 
+func periodicSync(ticker *time.Ticker, stopCh <-chan struct{}) {
+	for {
+		select {
+		case <-ticker.C:
+			store.SyncDB()
+		case <-stopCh:
+			log.Infof("Exiting manager, syncing entries to the store")
+			store.SyncDB()
+			return
+		}
+	}
+}
+
 func Run(stopCh <-chan struct{}, waitCh chan<- struct{}) {
 
 	// Insert the default rule for the arp-proxy
@@ -77,10 +93,12 @@ func Run(stopCh <-chan struct{}, waitCh chan<- struct{}) {
 	// Start the api server
 	manager.createAndStartServer()
 
+	ticker := time.NewTicker(manager.dbTicker * time.Second)
+	go periodicSync(ticker, stopCh)
+
 	<-stopCh
 
 	manager.stopServer()
-	store.SyncDB()
 
 	close(waitCh)
 
