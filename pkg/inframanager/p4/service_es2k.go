@@ -537,18 +537,22 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 	key = append(key, ToBytes(uint16(service.Port)))
 
 	for i := 0; i < 64; i++ {
-		key = append(key, ToBytes(uint8(i)))
+		if i == 0 {
+			key = append(key, ToBytes(uint8(i)))
+		} else {
+			key[len(key)-1] = ToBytes(uint8(i))
+		}
 
 		updateTables("k8s_dp_control.tx_balance", data, svcmap, key, nil, 1)
-		key = key[:len(key)-1]
 	}
 	resetSlices(&key, nil)
 
 	err = ConfigureTable(ctx, p4RtC, P4w, service_table_names, svcmap, nil, false)
 	if err != nil {
-		fmt.Println("failed to delete entries")
+		log.Errorf("Failed to delete entries")
 		return err
 	}
+	log.Debugf("Delete complete from all the tables")
 
 	return nil
 }
