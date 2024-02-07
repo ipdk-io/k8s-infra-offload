@@ -93,12 +93,12 @@ once mentioned dependencies are compiled and installed.
    ```
 
    Note that the above script generates the default keys and certificates and
-   uses cipher suites as specified in the `deploy/inframanager-config.yaml` file.
+   uses cipher suites as specified in the `deploy/common-config.yaml` file.
    Refer to section [inframanager config file update](#inframanager-config-file-update)
    for any custom cipher suite, key, certificate change.
 
    Note that the above script generates the default keys and certificates and
-   uses cipher suites as specified in the `deploy/inframanager-config.yaml` file.
+   uses cipher suites as specified in the `deploy/common-config.yaml` file.
 
    For split mode, the openssl.cnf file under scripts/tls dir would require
    addition of the remote node IP address under `[server_alt_names]` section.
@@ -267,7 +267,7 @@ once mentioned dependencies are compiled and installed.
 
 ### infraagent config file update
 
-The config file `deploy/es2k/infraagent-config.yaml` is used to inform the
+The config file `deploy/common-config.yaml` is used to inform the
 infraagent which interface and interfacetype to use.
 
 The interfaceType should be `cdq` for E2100 and the the interface name is the
@@ -286,10 +286,12 @@ For split mode, also configure the follwing.
 managerAddr : <IP address of comms channel on ACC>
 managerPort : 50002
 ```
+Perform "make" after updates to `deploy/common-config.yaml` to bring changes
+into effect.
 
 ### inframanager config file update
 
-The config file `deploy/inframanager-config.yaml` is used to define the parameters
+The config file `deploy/common-config.yaml` is used to define the parameters
 which the inframanager will use for the connection establishment with infrap4d
 and for the interfaces created.
 
@@ -317,9 +319,12 @@ the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) for ARP proxy gateway.
 
 If user doesn't wish to use these default keys, certificates, and cipher suites, then
 modify the `scripts/mev/tls/gen_certs.sh` script accordingly before running
-`make gen-certs` and modify the `deploy/inframanager-config.yaml` file with preferred
+`make gen-certs` and modify the `deploy/common-config.yaml` file with preferred
 cipher suites. These changes need to be done prior to the creation of container
 images in step 9 of the [Set Up P4 Kubernetes](#set-up-p4-kubernetes) section.
+
+Perform "make" after updates to `deploy/common-config.yaml` to bring changes
+into effect.
 
 ## Deploy P4 Kubernetes
 

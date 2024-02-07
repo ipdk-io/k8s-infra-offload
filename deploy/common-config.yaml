@@ -1,0 +1,113 @@
+# Type of network interface
+# Possible values
+# - sriov (for mev)
+# - cdq (for mev)
+# - tap (for dpdk)
+# If none specified, defaults to cdq.
+InterfaceType: cdq
+
+# Not required for dpdk, ignored if provided
+Interface: ens801f0 
+
+# Possible MTU sizes
+# - 1500 for mev 
+# - 1280 for dpdk
+# If none specified, defaults to 1500. 
+HostIfaceMTU: 1500
+
+# Possible connection types
+# - insecure
+# - tls
+# - mtls
+# For tls and mtls, expects certificates under
+#    For manager(server) 
+#    - /etc/pki/inframanager/server
+#     - ca-cert: "ca.crt"
+#     - server-cert: "tls.crt"
+#     - server-key: "tls.key" 
+#    For agent(client)
+#    - /etc/pki/infraagent/client
+#      - ca-cert: "ca.crt"
+#      - client-cert: "tls.crt"
+#      - client-key: "tls.key"
+Conn: mtls
+
+# Possible debug levels
+#  "Panic"
+#  "Fatal"
+#  "Error"
+#  "Warn"
+#  "Info"
+#  "Debug" (Default)
+#  "Trace"
+LogLevel: "Debug"
+
+InfraManager:
+  # Possible manager addr configs
+  #  split mode - IP address of the ACC comms interface.
+  #               This is where inframanager listens for
+  #               agent connections(generally 10.10.0.2).
+  #  host mode - loopback ip of local host
+  addr: 127.0.0.1:50002
+  #  - arp-mac
+  #    This is the mac address of the interface given to
+  #    arp-proxy namespace using the arp_proxy.sh script
+  #
+  # Not required for dpdk, ignored if provided
+  arp-mac: "00:0f:00:04:03:14"
+
+  # ciphersuites: []
+  #   If not specified, the default values are
+  #   [
+  #     "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+  #     "TLS_AES_256_GCM_SHA384",
+  #   ]
+  #   Check https://pkg.go.dev/crypto/tls
+  #   for the list of supported ciphersuites.
+  #   The paths for the secrets are where the running
+  #   instances look for the certs and these paths
+  #   are not on the host where the secrets are
+  #   being generated on
+  ciphersuites : [
+          "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+          "TLS_AES_256_GCM_SHA384",
+        ]
+  # Time (in sec) to periodically sync
+  # the p4 entries into the local store.
+  # Defaults to 5 sec if not specified.
+  DBTicker: 5
+
+Infrap4dGrpcServer:
+  addr: localhost:9559
+# Possible connnection types
+#  - insecure
+#  - mtls
+#    For mtls, also provide the below fields
+#      client-cert: "cert_path"
+#      client-key: "key_path"
+#      ca-cert: "ca_path"
+#    If not specified, the default values are
+#      client-cert: "/etc/pki/inframanager/client/tls.crt"
+#      client-key: "/etc/pki/inframanager/client/tls.key"
+#      ca-cert: "/etc/pki/inframanager/client/ca.crt"
+  conn: mtls
+
+Infrap4dGnmiServer:
+  addr: localhost:9339
+# Possible connection types
+#  - insecure
+#  - mtls
+#    For mtls, expects certificates under
+#    For Gnmi(server)
+#    - /usr/share/stratum/certs/
+#      - client-cert: "tls.crt"
+#      - client-key: "tls.key"
+#      - ca-cert: "ca.crt" 
+#    For manager(client)
+#    - /etc/pki/inframanager/client
+#      - client-cert: "tls.crt"
+#      - client-key: "tls.key"
+#      - ca-cert: "ca.crt"
+  conn: mtls
+
+DeviceId: 1

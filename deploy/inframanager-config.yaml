@@ -1,101 +1,15 @@
 Infrap4dGrpcServer:
   addr: localhost:9559
-# Possible connnection types
-#  - insecure
-#  - mtls
-#    For mtls, also provide the below fields
-#      client-cert: "cert_path"
-#      client-key: "key_path"
-#      ca-cert: "ca_path"
-#    If not specified, the default values are
-#      client-cert: "/etc/pki/inframanager/client/tls.crt"
-#      client-key: "/etc/pki/inframanager/client/tls.key"
-#      ca-cert: "/etc/pki/inframanager/client/ca.crt"
   conn: mtls
-
 Infrap4dGnmiServer:
   addr: localhost:9339
-# Possible connection types
-#  - insecure
-#  - mtls
-#    For mtls, also provide the below fields
-#      client-cert: "cert_path"
-#      client-key: "key_path"
-#      ca-cert: "ca_path"
-#    If not specified, the default values are
-#      client-cert: "/etc/pki/inframanager/client/tls.crt"
-#      client-key: "/etc/pki/inframanager/client/tls.key"
-#      ca-cert: "/etc/pki/inframanager/client/ca.crt"
   conn: mtls
-
-# Possible manager addr configs
-#  split mode - IP address of the ACC comms interface.
-#               This is where inframanager listens for
-#               agent connections.
-#  host mode - loopback ip of local host
-InfraManager: 
+InfraManager:
   addr: 127.0.0.1:50002
-#  - arp-mac
-#    This is the mac address of the interface given to
-#    arp-proxy namespace using the arp_proxy.sh script
-#
-#  Possible connection types
-#  - insecure
-#  - tls
-#    For tls, also provide the ca-cert
-#      ca-cert: "ca_path"
-#    If not specified, the default value is
-#      ca-cert: "/etc/pki/inframanager/server/ca.crt"
-#  - mtls
-#    For mtls, also provide the below fields
-#      client-cert: "cert_path"
-#      client-key: "key_path"
-#      ca-cert: "ca_path"
-#        If not specified, the default values are
-#          server-cert: "/etc/pki/inframanager/server/tls.crt"
-#          server-key: "/etc/pki/inframanager/server/tls.key"
-#          ca-cert: "/etc/pki/inframanager/server/ca.crt"
-#      ciphersuites: []
-#        If not specified, the default values are
-#        [
-#          "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
-#          "TLS_AES_256_GCM_SHA384",
-#        ]
-#        Check https://pkg.go.dev/crypto/tls
-#        for the list of supported ciphersuites.
-#        The paths for the secrets are where the running
-#        instances look for the certs and these paths
-#        are not on the host where the secrets are
-#        being generated on
-
-# Not required for dpdk
-  arp-mac: "00:0f:00:04:03:14"
+  arp-mac: 00:0f:00:04:03:14
   conn: mtls
-  ciphersuites : [
-          "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
-          "TLS_AES_256_GCM_SHA384",
-        ]
-
-# Type of network interface
-# Possible values
-# - sriov
-# - cdq
-# - tap
-# If none specified, defaults to cdq
+  ciphersuites: [TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_AES_256_GCM_SHA384]
 InterfaceType: cdq
-
-DeviceId: 1
-
-# Time (in sec) to periodically sync
-# the p4 entries into the local store
+LogLevel: Debug
+DeviceID: 1
 DBTicker: 5
-
-# Possible debug levels
-#  "Panic"
-#  "Fatal"
-#  "Error"
-#  "Warn"
-#  "Info"
-#  "Debug" (Default)
-#  "Trace"
-LogLevel: "Debug"

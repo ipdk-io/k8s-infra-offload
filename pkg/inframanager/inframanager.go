@@ -42,7 +42,7 @@ type Manager struct {
 
 var manager *Manager
 
-func NewManager(dbTicker time.Duration) {
+func NewManager(dbTicker uint32) {
 	err := utils.LogInit(logDir, api.GetLogLevel())
 	if err != nil {
 		return
@@ -52,7 +52,7 @@ func NewManager(dbTicker time.Duration) {
 
 	manager = &Manager{
 		log:      log.WithField("pkg", "inframanager"),
-		dbTicker: dbTicker,
+		dbTicker: time.Duration(dbTicker),
 	}
 	mgrAddr := viper.GetString("InfraManager.Addr")
 	values := strings.Split(mgrAddr, ":")
