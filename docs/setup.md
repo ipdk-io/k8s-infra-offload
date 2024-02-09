@@ -69,7 +69,7 @@ once mentioned dependencies are compiled and installed.
       ls
       ```
       ```
-      bf-rt.json  context.json  k8s_dp.p4  k8s_dp.pb.bin  p4Info.txt
+      tdi.json  context.json  k8s_dp.p4  k8s_dp.pb.bin  p4Info.txt
       ```
 
       For generating the artifacts for E2100, refer to the
