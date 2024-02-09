@@ -2673,7 +2673,7 @@
 pipeá™{
   "program_name" : "k8s_dp",
   "build_date" : "Wed Apr 12 18:42:58 2023",
-  "compile_command" : "p4c-dpdk --arch pna -o ./pipe/k8s_dp.spec --p4runtime-files ./p4Info.txt --bf-rt-schema ./bfrt.json --context ./pipe/context.json ./k8s_dp.p4",
+  "compile_command" : "p4c-dpdk --arch pna -o ./pipe/k8s_dp.spec --p4runtime-files ./p4Info.txt --bf-rt-schema ./tdi.json --context ./pipe/context.json ./k8s_dp.p4",
   "compiler_version" : "0.1 (SHA: e052f1fbe BUILD: RELEASE)",
   "schema_version" : "0.1",
   "target" : "DPDK",

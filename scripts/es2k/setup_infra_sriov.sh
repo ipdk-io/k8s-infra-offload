@@ -108,7 +108,7 @@ function setup_run_env () {
   sed -i "s/\"cfgqs-idx\": \"[0-9]-15\"/\"cfgqs-idx\": \"2-15\"/g" "$file"
   sed -i "s/\(\"pcie_bdf\": \)\"[^\"]*\"/\1\"0000:$dev_id\"/" $file
   sed -i "s/\(\"program-name\": \)\"[^\"]*\"/\1\"k8s_dp\"/" $file
-  sed -i "s/\(\"bfrt-config\": \)\"[^\"]*\"/\1\"\/share\/infra\/k8s_dp\/bf-rt.json\"/" $file
+  sed -i "s/\(\"tdi-config\": \)\"[^\"]*\"/\1\"\/share\/infra\/k8s_dp\/tdi.json\"/" $file
   sed -i "s/\(\"p4_pipeline_name\": \)\"[^\"]*\"/\1\"main\"/" $file
   sed -i "s/\(\"context\": \)\"[^\"]*\"/\1\"\/share\/infra\/k8s_dp\/context.json\"/" $file
   sed -i "s/\(\"config\": \)\"[^\"]*\"/\1\"\/share\/infra\/k8s_dp\/tofino.bin\"/" $file
