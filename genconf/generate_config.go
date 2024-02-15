@@ -92,6 +92,12 @@ func validateIpAddrPort(ipAddrPort string) {
 func validateInfraMgrParams(mgr config.ManagerConf) {
 	validateIpAddrPort(mgr.Addr)
 
+	if len(mgr.ArpMac) > 0 {
+		if _, err := net.ParseMAC(mgr.ArpMac); err != nil {
+			log.Fatalf("Invalid arp mac address %s, err: %v", mgr.ArpMac, err)
+		}
+	}
+
 	if !utils.ValidCiphers(mgr.CipherSuites) {
 		log.Fatal("Invalid ciphers provided for inframanager server")
 	}
@@ -108,6 +114,9 @@ func validateConfigs(cConf Conf) {
 	if cConf.InterfaceType == types.TapInterface && mtu != types.TapInterfaceMTU {
 		log.Fatalf("Invalid mtu size: %s for %s. Use %d",
 			cConf.HostIfaceMTU, types.TapInterface, types.TapInterfaceMTU)
+	}
+	if cConf.InterfaceType == types.CDQInterface && len(cConf.InfraManager.ArpMac) == 0 {
+		log.Fatalf("Missing arpMac field. Please provide proper input")
 	}
 	if utils.GetConnType(cConf.Conn) == utils.UnknownConn {
 		log.Fatalf("Invalid connection type: %s", cConf.Conn)
