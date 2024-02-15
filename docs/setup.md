@@ -296,7 +296,7 @@ which the inframanager will use for the connection establishment with infrap4d
 and for the interfaces created.
 
 All fields have a default value in the file. Please verify if the values
-correspond to the desired values especially arp-mac.
+correspond to the desired values especially arpmac.
 
 InfraManager section:
 addr: The local address to which the inframanager will bind to as the
@@ -311,7 +311,7 @@ addr:10.10.0.2:50002
 
 For InterfaceType, it needs to be `sriov` for SRIOV since it defaults to `cdq`.
 
-arp-mac: The arp-mac needs to be configured. This should be the
+arpmac: The arpmac needs to be configured. This should be the
 MAC of the interface the user wants to configure as the ARP-proxy gateway.
 This is the address of the interface which is given to the arp-proxy
 namespace using the `scrips/arp_proxy.sh` script mentioned in
