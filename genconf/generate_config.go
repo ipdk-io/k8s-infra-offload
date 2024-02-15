@@ -115,8 +115,10 @@ func validateConfigs(cConf Conf) {
 		log.Fatalf("Invalid mtu size: %s for %s. Use %d",
 			cConf.HostIfaceMTU, types.TapInterface, types.TapInterfaceMTU)
 	}
-	if cConf.InterfaceType == types.CDQInterface && len(cConf.InfraManager.ArpMac) == 0 {
-		log.Fatalf("Missing arpMac field. Please provide proper input")
+	if cConf.InterfaceType == types.CDQInterface || cConf.InterfaceType == types.SriovPodInterface {
+		if len(cConf.InfraManager.ArpMac) == 0 {
+			log.Fatalf("Missing arpMac field. Please provide proper input")
+		}
 	}
 	if utils.GetConnType(cConf.Conn) == utils.UnknownConn {
 		log.Fatalf("Invalid connection type: %s", cConf.Conn)
