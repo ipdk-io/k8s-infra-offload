@@ -9,7 +9,7 @@ InfraManager:
   arpmac: 00:0f:00:04:03:14
   conn: mtls
   ciphersuites: [TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_AES_256_GCM_SHA384]
+  DBTicker: 5
 InterfaceType: cdq
 LogLevel: Debug
 DeviceID: 1
-DBTicker: 5

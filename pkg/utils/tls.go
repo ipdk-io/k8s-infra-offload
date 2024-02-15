@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/spf13/viper"
@@ -59,16 +60,19 @@ type ServerParams struct {
 	ConClient Service
 }
 
+var onceMap sync.Once
 var CipherMap map[string]uint16
 
 func CreateCipherMap() {
-	ciphers := tls.CipherSuites()
-	ciphers = append(ciphers, tls.InsecureCipherSuites()...)
-	CipherMap = map[string]uint16{}
+	onceMap.Do(func() {
+		ciphers := tls.CipherSuites()
+		ciphers = append(ciphers, tls.InsecureCipherSuites()...)
+		CipherMap = map[string]uint16{}
 
-	for _, c := range ciphers {
-		CipherMap[c.Name] = c.ID
-	}
+		for _, c := range ciphers {
+			CipherMap[c.Name] = c.ID
+		}
+	})
 }
 
 func DefaultCipherSuites() []string {
@@ -76,6 +80,17 @@ func DefaultCipherSuites() []string {
 		"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
 		"TLS_AES_256_GCM_SHA384",
 	}
+}
+
+func ValidCiphers(ciphers []string) bool {
+	CreateCipherMap()
+	for _, c := range ciphers {
+		_, ok := CipherMap[c]
+		if !ok {
+			return false
+		}
+	}
+	return true
 }
 
 func ConvertCiphers(ciphers []string) ([]uint16, error) {
@@ -115,9 +130,9 @@ func GetClientCredentials() (credentials.TransportCredentials, error) {
 
 // getClientMTLSCredentials returns grpc mTLS credetials with client cert and key added
 func getClientMTLSCredentials() (credentials.TransportCredentials, error) {
-	clientCert := viper.GetString("client-cert")
-	clientKey := viper.GetString("client-key")
-	caCert := viper.GetString("ca-cert")
+	clientCert := viper.GetString("clientCert")
+	clientKey := viper.GetString("clientKey")
+	caCert := viper.GetString("caCert")
 
 	certificate, err := tls.LoadX509KeyPair(clientCert, clientKey)
 	if err != nil {
@@ -145,7 +160,7 @@ func getClientMTLSCredentials() (credentials.TransportCredentials, error) {
 // getClientTLSCredentials retuns credentials for for client with only CA added to CA pool
 func getClientTLSCredentials() (credentials.TransportCredentials, error) {
 
-	caCert := viper.GetString("ca-cert")
+	caCert := viper.GetString("caCert")
 
 	ca, err := ioutil.ReadFile(caCert)
 	if err != nil {
@@ -211,13 +226,13 @@ func loadCA(s Service) ([]byte, error) {
 		/*
 			The CA for infraagent and inframanager is same.
 		*/
-		ca = viper.GetString("InfraManager.ca-cert")
+		ca = viper.GetString("InfraManager.caCert")
 		return ioutil.ReadFile(ca)
 	case Infrap4dGnmiServer:
-		ca = viper.GetString("Infrap4dGnmiServer.ca-cert")
+		ca = viper.GetString("Infrap4dGnmiServer.caCert")
 		return ioutil.ReadFile(ca)
 	case Infrap4dGrpcServer:
-		ca = viper.GetString("Infrap4dGrpcServer.ca-cert")
+		ca = viper.GetString("Infrap4dGrpcServer.caCert")
 		return ioutil.ReadFile(ca)
 	default:
 		err := fmt.Errorf("No CA for service %s",
@@ -229,9 +244,9 @@ func loadCA(s Service) ([]byte, error) {
 func getCertFile(c Conn) string {
 	switch c {
 	case Server:
-		return viper.GetString("InfraManager.server-cert")
+		return viper.GetString("InfraManager.serverCert")
 	case Client:
-		return viper.GetString("InfraManager.client-cert")
+		return viper.GetString("InfraManager.clientCert")
 	default:
 		return ""
 	}
@@ -240,9 +255,9 @@ func getCertFile(c Conn) string {
 func getKeyFile(c Conn) string {
 	switch c {
 	case Server:
-		return viper.GetString("InfraManager.server-key")
+		return viper.GetString("InfraManager.serverKey")
 	case Client:
-		return viper.GetString("InfraManager.client-key")
+		return viper.GetString("InfraManager.clientKey")
 	default:
 		return ""
 	}

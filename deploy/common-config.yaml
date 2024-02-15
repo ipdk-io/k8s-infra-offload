@@ -22,14 +22,14 @@ HostIfaceMTU: 1500
 # For tls and mtls, expects certificates under
 #    For manager(server) 
 #    - /etc/pki/inframanager/server
-#     - ca-cert: "ca.crt"
-#     - server-cert: "tls.crt"
-#     - server-key: "tls.key" 
+#     - caCert: "ca.crt"
+#     - serverCert: "tls.crt"
+#     - serverKey: "tls.key" 
 #    For agent(client)
 #    - /etc/pki/infraagent/client
-#      - ca-cert: "ca.crt"
-#      - client-cert: "tls.crt"
-#      - client-key: "tls.key"
+#      - caCert: "ca.crt"
+#      - clientCert: "tls.crt"
+#      - clientKey: "tls.key"
 Conn: mtls
 
 # Possible debug levels
@@ -82,14 +82,10 @@ Infrap4dGrpcServer:
 # Possible connnection types
 #  - insecure
 #  - mtls
-#    For mtls, also provide the below fields
-#      client-cert: "cert_path"
-#      client-key: "key_path"
-#      ca-cert: "ca_path"
-#    If not specified, the default values are
-#      client-cert: "/etc/pki/inframanager/client/tls.crt"
-#      client-key: "/etc/pki/inframanager/client/tls.key"
-#      ca-cert: "/etc/pki/inframanager/client/ca.crt"
+#    For mtls, expects, certificates under
+#      clientCert: "/etc/pki/inframanager/client/tls.crt"
+#      clientKey: "/etc/pki/inframanager/client/tls.key"
+#      caCert: "/etc/pki/inframanager/client/ca.crt"
   conn: mtls
 
 Infrap4dGnmiServer:
@@ -100,14 +96,14 @@ Infrap4dGnmiServer:
 #    For mtls, expects certificates under
 #    For Gnmi(server)
 #    - /usr/share/stratum/certs/
-#      - client-cert: "tls.crt"
-#      - client-key: "tls.key"
-#      - ca-cert: "ca.crt" 
+#      - clientCert: "tls.crt"
+#      - clientKey: "tls.key"
+#      - caCert: "ca.crt" 
 #    For manager(client)
 #    - /etc/pki/inframanager/client
-#      - client-cert: "tls.crt"
-#      - client-key: "tls.key"
-#      - ca-cert: "ca.crt"
+#      - clientCert: "tls.crt"
+#      - clientKey: "tls.key"
+#      - caCert: "ca.crt"
   conn: mtls
 
 DeviceId: 1

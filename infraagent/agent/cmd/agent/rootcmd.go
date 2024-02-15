@@ -118,9 +118,9 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&config.tapPrefix, "tapPrefix", types.TapInterfacePrefix, "Host TAP interface prefix for TAP interface type")
 	rootCmd.PersistentFlags().BoolVar(&config.insecure, "insecure", false, "use insecure mode for internal communication with backend")
 	rootCmd.PersistentFlags().BoolVar(&config.mtls, "mtls", true, "use mTLS for internal communication with backend")
-	rootCmd.PersistentFlags().StringVar(&config.clientCert, "client-cert", types.AgentDefaultClientCert, "TLS Client cert file for mTLS")
-	rootCmd.PersistentFlags().StringVar(&config.clientKey, "client-key", types.AgentDefaultClientKey, "TLS Client key file for mTLS")
-	rootCmd.PersistentFlags().StringVar(&config.caCert, "ca-cert", types.AgentDefaultCACert, "TLS Client CA Cert file")
+	rootCmd.PersistentFlags().StringVar(&config.clientCert, "clientCert", types.AgentDefaultClientCert, "TLS Client cert file for mTLS")
+	rootCmd.PersistentFlags().StringVar(&config.clientKey, "clientKey", types.AgentDefaultClientKey, "TLS Client key file for mTLS")
+	rootCmd.PersistentFlags().StringVar(&config.caCert, "caCert", types.AgentDefaultCACert, "TLS Client CA Cert file")
 	rootCmd.PersistentFlags().StringVar(&types.InfraManagerAddr, "managerAddr", types.DefaultInfraManagerAddr, "Inframanager IP Address")
 	rootCmd.PersistentFlags().StringVar(&types.InfraManagerPort, "managerPort", types.DefaultInfraManagerPort, "Inframanager Port")
 	logLevelOpts := newFlagOpts(supportedLogLevels, defaultLogLevel)
@@ -151,16 +151,16 @@ func init() {
 		fmt.Fprintf(os.Stderr, "There was an error while binding mtls flag '%s'", err)
 		os.Exit(1)
 	}
-	if err := viper.BindPFlag("client-cert", rootCmd.PersistentFlags().Lookup("client-cert")); err != nil {
-		fmt.Fprintf(os.Stderr, "There was an error while binding client-cert flag '%s'", err)
+	if err := viper.BindPFlag("clientCert", rootCmd.PersistentFlags().Lookup("clientCert")); err != nil {
+		fmt.Fprintf(os.Stderr, "There was an error while binding clientCert flag '%s'", err)
 		os.Exit(1)
 	}
-	if err := viper.BindPFlag("client-key", rootCmd.PersistentFlags().Lookup("client-key")); err != nil {
-		fmt.Fprintf(os.Stderr, "There was an error while binding client-key flag '%s'", err)
+	if err := viper.BindPFlag("clientKey", rootCmd.PersistentFlags().Lookup("clientKey")); err != nil {
+		fmt.Fprintf(os.Stderr, "There was an error while binding clientKey flag '%s'", err)
 		os.Exit(1)
 	}
-	if err := viper.BindPFlag("ca-cert", rootCmd.PersistentFlags().Lookup("ca-cert")); err != nil {
-		fmt.Fprintf(os.Stderr, "There was an error while binding ca-cert flag '%s'", err)
+	if err := viper.BindPFlag("caCert", rootCmd.PersistentFlags().Lookup("caCert")); err != nil {
+		fmt.Fprintf(os.Stderr, "There was an error while binding caCert flag '%s'", err)
 		os.Exit(1)
 	}
 	if err := viper.BindPFlag("managerAddr", rootCmd.PersistentFlags().Lookup("managerAddr")); err != nil {
@@ -242,7 +242,7 @@ func validateConfigs() error {
 	// If (insecure==false && mtls==true) then validate that the cert,key,cacert files exist
 	if !viper.GetBool("insecure") {
 		if viper.GetBool("mtls") {
-			tlsFiles := []string{viper.GetString("client-cert"), viper.GetString("client-key"), viper.GetString("ca-cert")}
+			tlsFiles := []string{viper.GetString("clientCert"), viper.GetString("clientKey"), viper.GetString("caCert")}
 			for _, file := range tlsFiles {
 				if _, lsErr := os.Lstat(file); os.IsNotExist(lsErr) {
 					err = fmt.Errorf("%s file not found", file)

@@ -44,7 +44,7 @@ func main() {
 	api.PutConf(config)
 
 	//Create a new manager object
-	mgr.NewManager(config.DBTicker)
+	mgr.NewManager(config.InfraManager.DBTicker)
 
 	if config.P4BinPath == "" || config.P4InfoPath == "" {
 		log.Fatalf("Missing .bin or P4Info")

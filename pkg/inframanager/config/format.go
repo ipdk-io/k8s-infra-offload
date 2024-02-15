@@ -25,23 +25,23 @@ type Configuration struct {
 	P4InfoPath         string      `yaml:"P4InfoPath,omitempty"`
 	P4BinPath          string      `yaml:"P4BinPath,omitempty"`
 	DeviceId           uint64      `yaml:"DeviceID,omitempty"`
-	DBTicker           uint32      `yaml:"DBTicker,omitempty"`
 }
 
 // ServerConfigurations exported
 type ServerConf struct {
 	Addr       string `yaml:"addr,omitempty"`
 	Conn       string `yaml:"conn,omitempty"`
-	ClientCert string `yaml:"client-cert,omitempty"`
-	ClientKey  string `yaml:"client-key,omitempty"`
-	CACert     string `yaml:"ca-cert,omitempty"`
+	ClientCert string `yaml:"clientCert,omitempty"`
+	ClientKey  string `yaml:"clientKey,omitempty"`
+	CACert     string `yaml:"caCert,omitempty"`
 }
 type ManagerConf struct {
 	Addr         string   `yaml:"addr,omitempty"`
 	ArpMac       string   `yaml:"arpmac,omitempty"`
 	Conn         string   `yaml:"conn,omitempty"`
-	ServerCert   string   `yaml:"server-cert,omitempty"`
-	ServerKey    string   `yaml:"server-key,omitempty"`
-	CACert       string   `yaml:"ca-cert,omitempty"`
+	ServerCert   string   `yaml:"serverCert,omitempty"`
+	ServerKey    string   `yaml:"serverKey,omitempty"`
+	CACert       string   `yaml:"caCert,omitempty"`
 	CipherSuites []string `yaml:"ciphersuites,flow,omitempty"`
+	DBTicker     uint32   `yaml:"DBTicker,omitempty"`
 }
