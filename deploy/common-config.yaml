@@ -54,7 +54,7 @@ InfraManager:
   #    arp-proxy namespace using the arp_proxy.sh script
   #
   # Not required for dpdk, ignored if provided
-  arp-mac: "00:0f:00:04:03:14"
+  arpmac: "00:0f:00:04:03:14"
 
   # ciphersuites: []
   #   If not specified, the default values are

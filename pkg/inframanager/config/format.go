@@ -38,7 +38,7 @@ type ServerConf struct {
 }
 type ManagerConf struct {
 	Addr         string   `yaml:"addr,omitempty"`
-	ArpMac       string   `yaml:"arp-mac,omitempty"`
+	ArpMac       string   `yaml:"arpmac,omitempty"`
 	Conn         string   `yaml:"conn,omitempty"`
 	ServerCert   string   `yaml:"server-cert,omitempty"`
 	ServerKey    string   `yaml:"server-key,omitempty"`

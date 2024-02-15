@@ -6,7 +6,7 @@ Infrap4dGnmiServer:
   conn: mtls
 InfraManager:
   addr: 127.0.0.1:50002
-  arp-mac: 00:0f:00:04:03:14
+  arpmac: 00:0f:00:04:03:14
   conn: mtls
   ciphersuites: [TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_AES_256_GCM_SHA384]
 InterfaceType: cdq
