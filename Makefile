@@ -82,7 +82,6 @@ endif
 	go build -o ./bin/felix-api-proxy ./infraagent/felix_api_proxy/main.go
 	go build -tags $(tagname) -o ./bin/inframanager ./inframanager/cmd/main.go 
 	go build -o ./bin/arp-proxy ./arp-proxy/cmd/main.go
-	./bin/generate-config
 
 BUILDFILES=k8s_dp/*.* scripts/*.sh deploy/infraagent-config.yaml hack/cicd/run-tests.sh
 

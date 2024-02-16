@@ -4,6 +4,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -145,9 +147,15 @@ func validateConfigs(cConf Conf) {
 
 func main() {
 	var cConf Conf
-	configFile := "./deploy/common-config.yaml"
-	agentFile := "./deploy/infraagent-config.yaml"
-	mgrFile := "./deploy/inframanager-config.yaml"
+
+	ex, err := os.Executable()
+	if err != nil {
+		log.Fatal("Failed to get the path of the executable")
+	}
+	exPath := filepath.Dir(ex)
+	configFile := filepath.Join(exPath, "../deploy/", "common-config.yaml")
+	agentFile := filepath.Join(exPath, "../deploy/", "infraagent-config.yaml")
+	mgrFile := filepath.Join(exPath, "../deploy/", "inframanager-config.yaml")
 
 	data, err := ioutil.ReadFile(configFile)
 	if err != nil {

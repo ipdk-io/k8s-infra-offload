@@ -11,6 +11,17 @@
 set -e
 
 STRATUM_DIR="/usr/share/stratum"
+BASE_DIR="$K8S_RECIPE"
+
+# Check the status of a command and return
+function check_status () {
+  local status=$1
+  local command="$2"
+  if [ $status -ne 0 ]; then
+    echo "Error executing command: $command"
+    exit $status
+  fi
+}
 
 check_infrap4d_env()
 {
@@ -24,6 +35,7 @@ check_infrap4d_env()
     echo "SDE_INSTALL - Path to SDE install"
     echo "IPDK_RECIPE - Path to IPDK networking recipe source"
     echo "DEPEND_INSTALL - Path to IPDK networking dependencies install"
+    echo "K8S_RECIPE - Path to K8S recipe on the host"
     exit 1
   fi
 }
@@ -75,6 +87,17 @@ function copy_certs() {
   fi
 }
 
+function generate_config() {
+  if [ -f "$BASE_DIR/bin/generate-config" ]; then
+      echo "Generating inframanager and agent config"
+      $BASE_DIR/bin/generate-config
+      check_status $? "$BASE_DIR/bin/generate-config"
+  else
+      echo "Error: Missing $BASE_DIR/bin/generate-config"
+      exit 1
+  fi
+}
+
 if [ "$#" -lt 1 ]; then
   echo " "
   echo "Usage: $0 <max_ifs>"
@@ -92,7 +115,7 @@ else
   exit 1
 fi
 
-check_infrap4d_env SDE_INSTALL IPDK_RECIPE DEPEND_INSTALL
+check_infrap4d_env SDE_INSTALL IPDK_RECIPE DEPEND_INSTALL K8S_RECIPE
 set_env
 setup_run_env
 
@@ -109,6 +132,8 @@ copy_certs
 # Run infrap4d
 run_infrap4d
 sleep 3
+
+generate_config
 
 max=$(($IF_MAX - 1))
 for i in $(seq 0 $max);
