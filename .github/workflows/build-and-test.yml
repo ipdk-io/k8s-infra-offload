@@ -105,6 +105,7 @@ jobs:
 
     - name: "docker deploy"
       run: |
+        make config
         cp -f deploy/dpdk/infraagent-config.yaml deploy/.
         make deploy IMAGE_REGISTRY=ghcr.io//${{ github.repository_owner }}k8s-infra-offload/ IMAGE_VERSION=sha-${GITHUB_SHA::7}
         # getnodes using kubectl
