@@ -34,6 +34,8 @@ type AgentConf struct {
 	Insecure      bool   `yaml:"insecure,omitempty"`
 	Mtls          bool   `yaml:"mtls,omitempty"`
 	LogLevel      string `yaml:"logLevel,omitempty"`
+	ManagerAddr   string `yaml:"managerAddr,omitempty"`
+	ManagerPort   string `yaml:"managerPort,omitempty"`
 }
 
 func mgrGetDefault() conf.ManagerConf {
@@ -189,6 +191,10 @@ func main() {
 	default:
 		log.Fatalf("Invalid connection type: %s", cConf.Conn)
 	}
+
+	fields := strings.Split(cConf.InfraManager.Addr, ":")
+	agentConf.ManagerAddr = fields[0]
+	agentConf.ManagerPort = fields[1]
 
 	agentData, err := yaml.Marshal(&agentConf)
 	if err != nil {
