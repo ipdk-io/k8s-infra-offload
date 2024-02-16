@@ -86,7 +86,7 @@ endif
 BUILDFILES=k8s_dp/*.* scripts/*.sh deploy/infraagent-config.yaml hack/cicd/run-tests.sh
 
 # Make install is used by es2k targets
-install:
+install: config
 	@echo "Installing build artifacts"
 	install -d $(DESTDIR)$(cnidir)/inframanager
 	install -d $(DESTDIR)$(logdir)/inframanager
@@ -96,9 +96,14 @@ install:
 	install -d $(DESTDIR)$(sbindir)
 	install -d $(DESTDIR)$(jsonfiles)
 	install -m 0755 bin/* $(DESTDIR)$(bindir)
+	install -C -m 0755 ./deploy/inframanager-config.yaml $(DESTDIR)$(sysconfdir)/inframanager-config.yaml
+	install -C -m 0755 ./deploy/infraagent-config.yaml $(DESTDIR)$(sysconfdir)/infraagent-config.yaml
 	install -C -m 0755 ./scripts/$(tagname)/*.sh $(DESTDIR)$(sbindir)
 	install -C -m 0755 -t $(DESTDIR)$(datadir) ./k8s_dp/$(tagname)/* ./LICENSE
 	install -C -m 0755 ./pkg/inframanager/p4/*.json $(DESTDIR)$(jsonfiles)
+
+config:
+	./bin/generate-config
 
 test:
 	./hack/cicd/run-tests.sh
@@ -106,6 +111,7 @@ test:
 clean:
 	@echo "Remove bin directory"
 	rm -rf ./bin $(BUILDFILES)
+	rm -rf deploy/inframanager-config.yaml deploy/infraagent-config.yaml
 
 distclean: clean
 	pkill arp_proxy || true

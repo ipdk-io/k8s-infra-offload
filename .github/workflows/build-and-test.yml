@@ -30,6 +30,9 @@ jobs:
     - name: "Build DPDK"
       run: make dpdk
 
+    - name: "Build Config"
+      run: make config
+
     - name: Change Permissions
       run: |
        sudo mkdir -p /var/lib/cni/inframanager
