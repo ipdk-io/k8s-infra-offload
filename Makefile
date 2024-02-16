@@ -96,8 +96,6 @@ install:
 	install -d $(DESTDIR)$(sbindir)
 	install -d $(DESTDIR)$(jsonfiles)
 	install -m 0755 bin/* $(DESTDIR)$(bindir)
-	install -C -m 0755 ./deploy/inframanager-config.yaml $(DESTDIR)$(sysconfdir)/inframanager-config.yaml
-	install -C -m 0755 ./deploy/infraagent-config.yaml $(DESTDIR)$(sysconfdir)/infraagent-config.yaml
 	install -C -m 0755 ./scripts/$(tagname)/*.sh $(DESTDIR)$(sbindir)
 	install -C -m 0755 -t $(DESTDIR)$(datadir) ./k8s_dp/$(tagname)/* ./LICENSE
 	install -C -m 0755 ./pkg/inframanager/p4/*.json $(DESTDIR)$(jsonfiles)
