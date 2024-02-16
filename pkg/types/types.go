@@ -64,6 +64,7 @@ const (
 	P4BinPath                   = "/share/infra/k8s_dp/k8s_dp.pb.bin"
 	AgentConf                   = "/etc/infra/infraagent-config.yaml"
 	DefaultMTU                  = 1500
+	TapInterfaceMTU             = 1280
 	DBTicker                    = 5
 )
 

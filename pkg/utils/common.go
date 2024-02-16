@@ -33,6 +33,16 @@ func GetNodeIPFromEnv() (ipAddr string, err error) {
 	}
 	return ipAddr, err
 }
+
+func ValidLogLevel(logLevel string) bool {
+	switch logLevel {
+	case "Panic", "Fatal", "Error", "Warn", "Info", "Debug", "Trace":
+		return true
+	default:
+		return false
+	}
+}
+
 func LogInit(logDir string, logLevel string) error {
 	logFilename := path.Join(logDir, path.Base(os.Args[0])+".log")
 	verifiedFileName, err := VerifiedFilePath(logFilename, logDir)

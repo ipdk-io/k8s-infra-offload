@@ -82,12 +82,11 @@ endif
 	go build -o ./bin/felix-api-proxy ./infraagent/felix_api_proxy/main.go
 	go build -tags $(tagname) -o ./bin/inframanager ./inframanager/cmd/main.go 
 	go build -o ./bin/arp-proxy ./arp-proxy/cmd/main.go
-	./bin/generate-config
 
 BUILDFILES=k8s_dp/*.* scripts/*.sh deploy/infraagent-config.yaml hack/cicd/run-tests.sh
 
 # Make install is used by es2k targets
-install:
+install: config
 	@echo "Installing build artifacts"
 	install -d $(DESTDIR)$(cnidir)/inframanager
 	install -d $(DESTDIR)$(logdir)/inframanager
@@ -103,12 +102,16 @@ install:
 	install -C -m 0755 -t $(DESTDIR)$(datadir) ./k8s_dp/$(tagname)/* ./LICENSE
 	install -C -m 0755 ./pkg/inframanager/p4/*.json $(DESTDIR)$(jsonfiles)
 
+config:
+	./bin/generate-config
+
 test:
 	./hack/cicd/run-tests.sh
 
 clean:
 	@echo "Remove bin directory"
 	rm -rf ./bin $(BUILDFILES)
+	rm -rf deploy/inframanager-config.yaml deploy/infraagent-config.yaml
 
 distclean: clean
 	pkill arp_proxy || true

@@ -3,8 +3,13 @@ package main
 import (
 	"io/ioutil"
 	"log"
+	"net"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 
+	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/config"
 	conf "github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/config"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
@@ -31,6 +36,8 @@ type AgentConf struct {
 	Insecure      bool   `yaml:"insecure,omitempty"`
 	Mtls          bool   `yaml:"mtls,omitempty"`
 	LogLevel      string `yaml:"logLevel,omitempty"`
+	ManagerAddr   string `yaml:"managerAddr,omitempty"`
+	ManagerPort   string `yaml:"managerPort,omitempty"`
 }
 
 func mgrGetDefault() conf.ManagerConf {
@@ -56,16 +63,6 @@ func infrap4dGetGrpcDefault() conf.ServerConf {
 	return grpcServer
 }
 
-func validCiphers(ciphers []string) bool {
-	for _, c := range ciphers {
-		_, ok := utils.CipherMap[c]
-		if !ok {
-			return false
-		}
-	}
-	return true
-}
-
 func validIfaceType(ifaceType string) bool {
 	switch ifaceType {
 	case types.SriovPodInterface, types.TapInterface, types.CDQInterface:
@@ -75,11 +72,90 @@ func validIfaceType(ifaceType string) bool {
 	}
 }
 
+func validateIpAddrPort(ipAddrPort string) {
+	fields := strings.Split(ipAddrPort, ":")
+	if len(fields) != 2 {
+		log.Fatalf("Invalid address and port specified: %s", ipAddrPort)
+	}
+	ipAddr := fields[0]
+	p := fields[1]
+
+	if ipAddr != "localhost" {
+		if net.ParseIP(ipAddr) == nil {
+			log.Fatalf("Invalid ip address specified: %s", ipAddr)
+		}
+	}
+
+	port, err := strconv.Atoi(p)
+	if err != nil || port < 0 || port > 65535 {
+		log.Fatalf("Invalid port specified: %s", p)
+	}
+
+}
+
+func validateInfraMgrParams(mgr config.ManagerConf) {
+	validateIpAddrPort(mgr.Addr)
+
+	if len(mgr.ArpMac) > 0 {
+		if _, err := net.ParseMAC(mgr.ArpMac); err != nil {
+			log.Fatalf("Invalid arp mac address %s, err: %v", mgr.ArpMac, err)
+		}
+	}
+
+	if !utils.ValidCiphers(mgr.CipherSuites) {
+		log.Fatal("Invalid ciphers provided for inframanager server")
+	}
+}
+
+func validateConfigs(cConf Conf) {
+	if !validIfaceType(cConf.InterfaceType) {
+		log.Fatalf("Invalid interface type: %s", cConf.InterfaceType)
+	}
+	mtu, err := strconv.Atoi(cConf.HostIfaceMTU)
+	if err != nil || mtu < 576 || mtu > 9000 {
+		log.Fatalf("Invalid mtu size: %s", cConf.HostIfaceMTU)
+	}
+	if cConf.InterfaceType == types.TapInterface && mtu != types.TapInterfaceMTU {
+		log.Fatalf("Invalid mtu size: %s for %s. Use %d",
+			cConf.HostIfaceMTU, types.TapInterface, types.TapInterfaceMTU)
+	}
+	if cConf.InterfaceType == types.CDQInterface || cConf.InterfaceType == types.SriovPodInterface {
+		if len(cConf.InfraManager.ArpMac) == 0 {
+			log.Fatalf("Missing arpMac field. Please provide proper input")
+		}
+	}
+	if utils.GetConnType(cConf.Conn) == utils.UnknownConn {
+		log.Fatalf("Invalid connection type: %s", cConf.Conn)
+	}
+
+	if !utils.ValidLogLevel(cConf.LogLevel) {
+		log.Fatalf("Invalid log level: %s", cConf.LogLevel)
+	}
+
+	validateInfraMgrParams(cConf.InfraManager)
+	validateIpAddrPort(cConf.Infrap4dGrpcServer.Addr)
+	validateIpAddrPort(cConf.Infrap4dGnmiServer.Addr)
+
+	if utils.GetConnType(cConf.Infrap4dGrpcServer.Conn) == utils.UnknownConn {
+		log.Fatalf("Invalid connection type: %s for infrap4d grpc server", cConf.Infrap4dGrpcServer.Conn)
+	}
+	if utils.GetConnType(cConf.Infrap4dGnmiServer.Conn) == utils.UnknownConn {
+		log.Fatalf("Invalid connection type: %s for infrap4d gnmi server", cConf.Infrap4dGnmiServer.Conn)
+	}
+
+}
+
 func main() {
 	var cConf Conf
-	configFile := "./deploy/common-config.yaml"
-	agentFile := "./deploy/infraagent-config.yaml"
-	mgrFile := "./deploy/inframanager-config.yaml"
+
+	ex, err := os.Executable()
+	if err != nil {
+		log.Fatal("Failed to get the path of the executable")
+	}
+	exPath := filepath.Dir(ex)
+	configFile := filepath.Join(exPath, "../deploy/", "common-config.yaml")
+	agentFile := filepath.Join(exPath, "../deploy/", "infraagent-config.yaml")
+	mgrFile := filepath.Join(exPath, "../deploy/", "inframanager-config.yaml")
 
 	data, err := ioutil.ReadFile(configFile)
 	if err != nil {
@@ -94,20 +170,16 @@ func main() {
 	if len(cConf.InterfaceType) == 0 {
 		cConf.InterfaceType = types.CDQInterface
 	}
-	if !validIfaceType(cConf.InterfaceType) {
-		log.Fatalf("Invalid interface type: %s", cConf.InterfaceType)
-	}
 	if len(cConf.HostIfaceMTU) == 0 {
 		cConf.HostIfaceMTU = strconv.Itoa(types.DefaultMTU)
-	}
-	mtu, err := strconv.Atoi(cConf.HostIfaceMTU)
-	if err != nil || mtu < 0 {
-		log.Fatalf("Invalid mtu size: %s", cConf.HostIfaceMTU)
 	}
 
 	if cConf.InterfaceType == types.TapInterface {
 		cConf.Interface = ""
 	}
+
+	validateConfigs(cConf)
+
 	agentConf := AgentConf{
 		InterfaceType: cConf.InterfaceType,
 		Iface:         cConf.Interface,
@@ -128,6 +200,10 @@ func main() {
 		log.Fatalf("Invalid connection type: %s", cConf.Conn)
 	}
 
+	fields := strings.Split(cConf.InfraManager.Addr, ":")
+	agentConf.ManagerAddr = fields[0]
+	agentConf.ManagerPort = fields[1]
+
 	agentData, err := yaml.Marshal(&agentConf)
 	if err != nil {
 		log.Fatal("Failed to marshal agent data")
@@ -137,17 +213,12 @@ func main() {
 		log.Fatalf("Failed to write configuration to %s", agentFile)
 	}
 
-	utils.CreateCipherMap()
-	if !validCiphers(cConf.InfraManager.CipherSuites) {
-		log.Fatal("Invalid ciphers provide for inframanager server")
-	}
-
 	if cConf.InterfaceType == types.TapInterface {
 		cConf.InfraManager.ArpMac = ""
 	}
 
-	if cConf.DBTicker == 0 {
-		cConf.DBTicker = types.DBTicker
+	if cConf.InfraManager.DBTicker == 0 {
+		cConf.InfraManager.DBTicker = types.DBTicker
 	}
 
 	mgr := mgrGetDefault()
@@ -155,6 +226,7 @@ func main() {
 	mgr.Conn = cConf.Conn
 	mgr.ArpMac = cConf.InfraManager.ArpMac
 	mgr.CipherSuites = cConf.InfraManager.CipherSuites
+	mgr.DBTicker = cConf.InfraManager.DBTicker
 
 	mgrConf := conf.Configuration{
 		Infrap4dGrpcServer: cConf.Infrap4dGrpcServer,
@@ -163,7 +235,6 @@ func main() {
 		InterfaceType:      cConf.InterfaceType,
 		LogLevel:           cConf.LogLevel,
 		DeviceId:           cConf.DeviceId,
-		DBTicker:           cConf.DBTicker,
 	}
 
 	mgrData, err := yaml.Marshal(mgrConf)

@@ -57,6 +57,17 @@ function install_drivers () {
   modprobe idpf
 }
 
+function generate_config() {
+  if [ -f "$BASE_DIR/bin/generate-config" ]; then
+      echo "Generating inframanager and agent config"
+      $BASE_DIR/bin/generate-config
+      check_status $? "$BASE_DIR/bin/generate-config"
+  else
+      echo "Error: Missing $BASE_DIR/bin/generate-config"
+      exit 1
+  fi
+}
+
 # Get PCI device ID for IDPF
 function get_device_id () {
   dev_id=$(lspci | grep 1452 | cut -d ':' -f 1)
@@ -352,6 +363,7 @@ if [ $MODE = "host" ]; then
   setup_host_dep_env
   setup_run_env
   install_drivers
+  generate_config
   #Wait for driver initialization to happen
   sleep 6
   copy_certs
@@ -367,6 +379,7 @@ else
   NEW_OCTET=$((LAST_OCTET + 1))
   NEW_IP="${REMOTE_HOST%.*}.$NEW_OCTET"
   install_drivers
+  generate_config
   #Wait for driver initialization to happen
   sleep 6
   config_comms_channel_host $NEW_IP
