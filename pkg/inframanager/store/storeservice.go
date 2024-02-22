@@ -197,9 +197,12 @@ func RunSyncServiceInfo() bool {
 	/*
 		Flush the entries to the file only when there is an update
 	*/
+	ServiceSet.ServiceLock.Lock()
 	if !svcBufDirty {
+		ServiceSet.ServiceLock.Unlock()
 		return true
 	}
+	ServiceSet.ServiceLock.Unlock()
 
 	serviceFileMutex.Lock()
 	jsonStr, err := JsonMarshalIndent(ServiceSet.ServiceMap, "", " ")

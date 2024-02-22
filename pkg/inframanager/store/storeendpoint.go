@@ -171,9 +171,12 @@ func RunSyncEndPointInfo() bool {
 	/*
 		Flush the entries to the file only when there is an update
 	*/
+	EndPointSet.EndPointLock.Lock()
 	if !epBufDirty {
+		EndPointSet.EndPointLock.Unlock()
 		return true
 	}
+	EndPointSet.EndPointLock.Unlock()
 
 	epFileMutex.Lock()
 	jsonStr, err := JsonMarshalIndent(EndPointSet.EndPointMap, "", " ")

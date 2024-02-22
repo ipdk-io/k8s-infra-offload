@@ -139,9 +139,12 @@ func RunSyncSetupInfo() bool {
 	/*
 		Flush the entries to the file only when there is an update
 	*/
+	Setup.mutex.Lock()
 	if !setupBufDirty {
+		Setup.mutex.Unlock()
 		return true
 	}
+	Setup.mutex.Unlock()
 
 	setupFileMutex.Lock()
 	jsonStr, err := JsonMarshalIndent(Setup, "", " ")
