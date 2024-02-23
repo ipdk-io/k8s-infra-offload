@@ -490,9 +490,12 @@ func RunSyncPolicyInfo() bool {
 	/*
 		Flush the entries to the file only when there is an update
 	*/
+	PolicySet.PolicyLock.Lock()
 	if !policyBufDirty {
+		PolicySet.PolicyLock.Unlock()
 		return true
 	}
+	PolicySet.PolicyLock.Unlock()
 
 	policyFileMutex.Lock()
 	jsonStr, err := JsonMarshalIndent(PolicySet.PolicyMap, "", " ")
@@ -520,9 +523,12 @@ func RunSyncIpSetInfo() bool {
 	/*
 		Flush the entries to the file only when there is an update
 	*/
+	PolicySet.PolicyLock.Lock()
 	if !ipsetBufDirty {
+		PolicySet.PolicyLock.Unlock()
 		return true
 	}
+	PolicySet.PolicyLock.Unlock()
 
 	ipsetFileMutex.Lock()
 	jsonStr, err := JsonMarshalIndent(PolicySet.IpSetMap, "", " ")
@@ -550,9 +556,12 @@ func RunSyncWorkerEpInfo() bool {
 	/*
 		Flush the entries to the file only when there is an update
 	*/
+	PolicySet.PolicyLock.Lock()
 	if !workerEpBufDirty {
+		PolicySet.PolicyLock.Unlock()
 		return true
 	}
+	PolicySet.PolicyLock.Unlock()
 
 	workerEpFileMutex.Lock()
 	jsonStr, err := JsonMarshalIndent(PolicySet.WorkerEpMap, "", " ")
