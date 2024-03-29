@@ -19,6 +19,7 @@ package p4
 import (
 	"context"
 	"fmt"
+
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
 	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
@@ -480,7 +481,7 @@ func SetMetaUdpTable(ctx context.Context, p4RtC *client.Client,
 }
 
 func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
-	podIpAddr []string, portID []uint16, s store.Service,
+	podIpAddr []string, portID []uint16, s store.Service, idgen *IdGenerator,
 	update bool) (err error, service store.Service) {
 	var action InterfaceType
 	var epNum uint32
@@ -500,7 +501,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		groupID = service.GroupID
 		epNum = service.NumEndPoints
 	} else {
-		groupID = uuidFactory.getUUID()
+		groupID = getSvcId(idgen)
 		service.GroupID = groupID
 		epNum = 0
 	}

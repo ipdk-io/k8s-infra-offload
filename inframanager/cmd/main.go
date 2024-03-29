@@ -112,6 +112,8 @@ func main() {
 		}
 	}
 
+	api.InitModCtr()
+
 	api.SetHostInterface()
 	// Starting inframanager gRPC server
 	waitCh := make(chan struct{})

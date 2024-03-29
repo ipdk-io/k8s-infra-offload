@@ -62,7 +62,7 @@ func InitSetupStore(setFwdPipe bool) bool {
 
 	/* Create the store file if it doesn't exist */
 	file, err := NewOpenFile(verifiedFileName, flags, 0700)
-	log.Info("store ep file path:", StoreSetupFile)
+	log.Info("store setup file path:", StoreSetupFile)
 	if err != nil {
 		log.Errorf("Failed to open %s, error: %s", StoreSetupFile, err)
 		return false
@@ -90,6 +90,14 @@ func InitSetupStore(setFwdPipe bool) bool {
 	}
 
 	return true
+}
+
+func SetCniId(newCniMod uint32) {
+	Setup.ModCntr.CniId = newCniMod
+}
+
+func SetSvcId(newSvcMod uint32) {
+	Setup.ModCntr.ServiceId = newSvcMod
 }
 
 func GetHostInterface() Iface {
@@ -121,6 +129,10 @@ func SetHostInterface(ip string, mac string) bool {
 	Setup.HostInterface.Mac = mac
 	setupBufDirty = true
 	return true
+}
+
+func SetSetupBuffDirty() {
+	setupBufDirty = true
 }
 
 func SetDefaultRule() {

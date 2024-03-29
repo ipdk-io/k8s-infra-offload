@@ -19,10 +19,11 @@ package p4
 import (
 	"context"
 	"fmt"
+	"net"
+
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
 	log "github.com/sirupsen/logrus"
-	"net"
 )
 
 func ArptToPortTable(ctx context.Context, p4RtC *client.Client, arpTpa string, port uint32, flag bool) error {
@@ -117,11 +118,12 @@ func Ipv4ToPortTable(ctx context.Context, p4RtC *client.Client, ipAddr string, m
 }
 
 func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint,
-	ifaceType InterfaceType) (store.EndPoint, error) {
+	ifaceType InterfaceType, idgen *IdGenerator) (store.EndPoint, error) {
 	/*
 		TODO. Distinguish for interface type
 		and program the rules accordingly.
 	*/
+	_ = idgen
 	if CheckIPAddress(ep.PodIpAddress) != nil {
 		err := fmt.Errorf("Invalid IP Address")
 		return ep, err

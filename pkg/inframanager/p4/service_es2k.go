@@ -24,7 +24,6 @@ import (
 	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 
-	//p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
 	"net"
 
 	log "github.com/sirupsen/logrus"
@@ -48,6 +47,7 @@ var (
 
 // To track unique combination of service IP and service protocol.
 var flagMap = make(map[string]bool)
+var maxEndpoints int = 16
 
 func ServiceFlowPacketOptions(ctx context.Context, p4RtC *client.Client,
 	flags [][]byte, action InterfaceType) error {
@@ -212,11 +212,10 @@ func concatOldEntries(modblobPtrDNAT [][]byte, oldModblobPtrDNAT [][]byte, oldIp
 }
 
 func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
-	podIpAddr []string, portID []uint16, s store.Service,
+	podIpAddr []string, portID []uint16, s store.Service, idgen *IdGenerator,
 	update bool) (err error, service store.Service) {
 	var actn InterfaceType
 	var epNum uint32
-	var groupID uint32
 
 	svcmap := make(map[string][]UpdateTable)
 	key := make([]interface{}, 0)
@@ -240,9 +239,15 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 
 	log.Infof("Inserting to service tables")
 
+	if int(service.NumEndPoints) >= maxEndpoints {
+		err := fmt.Errorf("Received %d endpoint, max supported are %d", service.NumEndPoints, maxEndpoints)
+		return err, store.Service{}
+	}
+
 	if update {
+		log.Infof("Update to an existing service received")
 		actn = Update
-		groupID = service.GroupID
+		//groupID = service.GroupID
 		epNum = service.NumEndPoints
 
 		for _, value := range s.ServiceEndPoint {
@@ -251,8 +256,10 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		}
 	} else {
 		actn = Insert
-		groupID = uuidFactory.getUUID()
-		service.GroupID = groupID
+		log.Infof("Initial service add received")
+		service.GroupID = getSvcId(idgen)
+		store.SetSvcId(service.GroupID)
+		store.SetSetupBuffDirty()
 		epNum = 0
 	}
 
@@ -269,7 +276,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		podipByte = append(podipByte, Pack32BinaryIP4(podIpAddr[i]))
 		portIDByte = append(portIDByte, ToBytes(uint16(portID[i]))) //L4 port
 
-		id := uint32((groupID << 4) | ((epNum + 1) & 0xF))
+		id := uint32((service.GroupID << 6) | ((epNum + 1) & 0x11F))
 		modblobptrdnatbyte = append(modblobptrdnatbyte, ToBytes(id))
 
 		log.Debugf("modblobptrdnatbyte: %d, pod ip: %s, portID: %d",
@@ -307,7 +314,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	service.NumEndPoints = epNum
 
 	log.Debugf("group id: %d, service ip: %s, service mac: %s, service port: %d, endpoints: %d",
-		groupID, service.ClusterIp, service.MacAddr, service.Port, service.NumEndPoints)
+		service.GroupID, service.ClusterIp, service.MacAddr, service.Port, service.NumEndPoints)
 
 	data := parseJson("service.json")
 	if data == nil {
@@ -378,7 +385,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 
 	//write_source_ip_table
 	if actn != Update {
-		key = append(key, ToBytes(groupID))
+		key = append(key, ToBytes(service.GroupID))
 		action = append(action, smac)
 		action = append(action, Pack32BinaryIP4(service.ClusterIp))
 		action = append(action, ToBytes(uint16(service.Port)))
@@ -386,7 +393,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		resetSlices(&key, &action)
 
 		log.Debugf("Inserted into table WriteSourceIpTable, group id: %d, service ip: %s, service port: %d",
-			groupID, service.ClusterIp, uint16(service.Port))
+			service.GroupID, service.ClusterIp, uint16(service.Port))
 	}
 
 	//rx_src_ip
@@ -397,11 +404,11 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		key = append(key, ToBytes(uint8(PROTO_UDP)))
 	}
 	key = append(key, portIDByte)
-	action = append(action, ToBytes(groupID))
+	action = append(action, ToBytes(service.GroupID))
 	updateTables("k8s_dp_control.rx_src_ip", data, svcmap, key, action, len(podIpAddr))
 	resetSlices(&key, &action)
 	log.Debugf("Inserted into table RxSrcIpTable, group id: %d, podipByte: %v, portIDByte: %v",
-		groupID, podipByte, portIDByte)
+		service.GroupID, podipByte, portIDByte)
 
 	if actn == Update {
 		modblobptrdnatbyte, InterfaceIDbyte = concatOldEntries(modblobptrdnatbyte, oldmodblobptrdnatbyte, oldIpAddrs, InterfaceIDbyte)
@@ -417,7 +424,7 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	}
 	key = append(key, ToBytes(uint16(service.Port))) //L4 port
 
-	for i := 0; i < 64; i++ {
+	for i := 0; i < maxEndpoints; i++ {
 		key = append(key, ToBytes(uint8(i)))
 
 		index := i % int(epNum)
@@ -437,6 +444,8 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	P4w = GetP4Wrapper(Env)
 	err = ConfigureTable(ctx, p4RtC, P4w, service_table_names, svcmap, service_action_names, true)
 	if err != nil {
+		//TODO - rollback
+		//ConfigureTable(ctx, p4RtC, P4w, service_table_names, svcmap, service_action_names, false)
 		fmt.Println("failed to make entries to service p4")
 		return err, service
 	}
@@ -447,7 +456,6 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 	s store.Service) error {
 	var err error
-	var groupID uint32
 	var service store.Service
 
 	podipByte := make([][]byte, 0)
@@ -472,7 +480,6 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 	}
 
 	service = res.(store.Service)
-	groupID = service.GroupID
 	NumEp := int(service.NumEndPoints)
 
 	for _, ep := range service.ServiceEndPoint {
@@ -506,8 +513,8 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 	resetSlices(&key, nil)
 
 	//write_source_ip_table
-	log.Debugf("Deleting from table WriteSourceIpTable, group id: %d", groupID)
-	key = append(key, ToBytes(groupID))
+	log.Debugf("Deleting from table WriteSourceIpTable, group id: %d", service.GroupID)
+	key = append(key, ToBytes(service.GroupID))
 	updateTables("k8s_dp_control.write_source_ip_table", data, svcmap, key, nil, 1)
 	resetSlices(&key, nil)
 
@@ -536,7 +543,7 @@ func DeleteServiceRules(ctx context.Context, p4RtC *client.Client,
 	}
 	key = append(key, ToBytes(uint16(service.Port)))
 
-	for i := 0; i < 64; i++ {
+	for i := 0; i < maxEndpoints; i++ {
 		if i == 0 {
 			key = append(key, ToBytes(uint8(i)))
 		} else {

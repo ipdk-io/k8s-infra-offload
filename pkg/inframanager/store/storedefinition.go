@@ -35,6 +35,11 @@ type store interface {
 	UpdateToStore() bool
 }
 
+type ModCounter struct {
+	CniId     uint32
+	ServiceId uint32
+}
+
 type Iface struct {
 	Ip  string
 	Mac string
@@ -43,6 +48,7 @@ type Iface struct {
 type SetupData struct {
 	HostInterface  Iface
 	SetDefaultRule bool
+	ModCntr        ModCounter
 	mutex          *sync.Mutex
 }
 
@@ -171,12 +177,13 @@ func NewPolicy() {
 	})
 }
 
-func NewSetup() {
+func NewSetup() *SetupData {
 	onceSetup.Do(func() {
 		Setup = &SetupData{
 			mutex: &sync.Mutex{},
 		}
 	})
+	return Setup
 }
 
 func Init(setFwdPipe bool) error {
