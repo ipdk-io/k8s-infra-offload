@@ -18,18 +18,20 @@ package test
 
 import (
 	"context"
+	"testing"
+
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
 	p4 "github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/p4"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
 	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
-	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var (
-	tempDir string
+	tempDir   string
+	idgentest *p4.IdGenerator
 )
 var (
 	errorcase = false
@@ -54,6 +56,8 @@ var _ = Describe("service", func() {
 	p4RtC = client.NewClient(c, deviceID, &electionID)
 	var podIpAddr = []string{"10.10.10.1", "10.10.10.2"}
 	var portID = []uint16{1, 2}
+	idgentest = p4.NewIdGenerator(0, 0)
+	store.NewSetup()
 
 	Describe("DeleteServiceRules", func() {
 
@@ -65,6 +69,7 @@ var _ = Describe("service", func() {
 					ClusterIp: "10.100.1.1",
 					Port:      10000,
 					Proto:     "TCP",
+					GroupID:   1,
 				}
 				err := p4.DeleteServiceRules(ctx, p4RtC, service)
 				Expect(err).To(HaveOccurred())
@@ -81,18 +86,21 @@ var _ = Describe("service", func() {
 			It("returns success if entry is found", func() {
 				store.NewEndPoint()
 				data_valid := store.EndPoint{
+					ModPtr:        1,
 					PodIpAddress:  "10.10.10.1",
 					InterfaceID:   1,
 					PodMacAddress: "00:00:00:aa:aa:aa",
 				}
 				data_valid.WriteToStore()
 				data_valid = store.EndPoint{
+					ModPtr:        2,
 					PodIpAddress:  "10.10.10.2",
 					InterfaceID:   1,
 					PodMacAddress: "00:00:00:aa:aa:aa",
 				}
 				data_valid.WriteToStore()
 				default_route := store.EndPoint{
+					ModPtr:        3,
 					PodIpAddress:  "169.254.1.1",
 					InterfaceID:   1,
 					PodMacAddress: "00:00:00:aa:aa:aa",
@@ -121,7 +129,7 @@ var _ = Describe("service", func() {
 				ret := service.WriteToStore()
 				Expect(ret).To(Equal(true))
 
-				err, _ := p4.InsertServiceRules(ctx, p4RtC, podIpAddr, portID, service, false)
+				err, _ := p4.InsertServiceRules(ctx, p4RtC, podIpAddr, portID, service, idgentest, false)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				err = p4.DeleteServiceRules(ctx, p4RtC, service)
@@ -139,18 +147,21 @@ var _ = Describe("service", func() {
 			It("inserts a valid entry", func() {
 				store.NewEndPoint()
 				data_valid := store.EndPoint{
+					ModPtr:        1,
 					PodIpAddress:  "10.10.10.1",
 					InterfaceID:   1,
 					PodMacAddress: "00:00:00:aa:aa:aa",
 				}
 				data_valid.WriteToStore()
 				data_valid = store.EndPoint{
+					ModPtr:        2,
 					PodIpAddress:  "10.10.10.2",
 					InterfaceID:   1,
 					PodMacAddress: "00:00:00:aa:aa:aa",
 				}
 				data_valid.WriteToStore()
 				default_route := store.EndPoint{
+					ModPtr:        3,
 					PodIpAddress:  "169.254.1.1",
 					InterfaceID:   1,
 					PodMacAddress: "00:00:00:aa:aa:aa",
@@ -179,7 +190,7 @@ var _ = Describe("service", func() {
 				ret := service.WriteToStore()
 				Expect(ret).To(Equal(true))
 
-				err, _ := p4.InsertServiceRules(ctx, p4RtC, podIpAddr, portID, service, false)
+				err, _ := p4.InsertServiceRules(ctx, p4RtC, podIpAddr, portID, service, idgentest, false)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -197,7 +208,7 @@ var _ = Describe("service", func() {
 					Port:      10000,
 					Proto:     "TCP",
 				}
-				err, _ := p4.InsertServiceRules(ctx, p4RtC, podIpAddr, portID, service, false)
+				err, _ := p4.InsertServiceRules(ctx, p4RtC, podIpAddr, portID, service, idgentest, false)
 				Expect(err).To(HaveOccurred())
 			})
 

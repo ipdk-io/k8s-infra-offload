@@ -18,11 +18,12 @@ package p4_test
 
 import (
 	"context"
+	"testing"
+
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
 	p4 "github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/p4"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
 	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
-	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -47,6 +48,7 @@ var _ = Describe("cni", func() {
 	deviceID = 1
 	electionID = p4_v1.Uint128{High: 0, Low: 1}
 	p4RtC = client.NewClient(c, deviceID, &electionID)
+	idgentest := p4.NewIdGenerator(1, 1)
 
 	Describe("ArptToPortTable", func() {
 
@@ -128,7 +130,7 @@ var _ = Describe("cni", func() {
 					InterfaceID:   1,
 					PodMacAddress: "00:00:00:aa:aa:aa",
 				}
-				ep, err := p4.InsertCniRules(ctx, p4RtC, ep, 1)
+				ep, err := p4.InsertCniRules(ctx, p4RtC, ep, 1, idgentest)
 				Expect(err).To(HaveOccurred())
 			})
 
@@ -138,7 +140,7 @@ var _ = Describe("cni", func() {
 					InterfaceID:   1,
 					PodMacAddress: "z.z.z.z",
 				}
-				ep, err := p4.InsertCniRules(ctx, p4RtC, ep, 1)
+				ep, err := p4.InsertCniRules(ctx, p4RtC, ep, 1, idgentest)
 				Expect(err).To(HaveOccurred())
 			})
 
@@ -163,6 +165,7 @@ var _ = Describe("service", func() {
 	var modBlobPtrDnat = []uint32{1, 2}
 	var memberID = []uint32{1, 2}
 	var action p4.InterfaceType
+	idgentest := p4.NewIdGenerator(1, 1)
 
 	Describe("WriteDestIpTable", func() {
 
@@ -585,7 +588,7 @@ var _ = Describe("service", func() {
 					Port:      10000,
 					Proto:     "TCP",
 				}
-				err, _ := p4.InsertServiceRules(ctx, p4RtC, podIpAddr, portID, service, false)
+				err, _ := p4.InsertServiceRules(ctx, p4RtC, podIpAddr, portID, service, idgentest, false)
 				Expect(err).To(HaveOccurred())
 			})
 

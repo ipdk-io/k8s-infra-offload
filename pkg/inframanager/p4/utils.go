@@ -361,35 +361,66 @@ func GetStr(action InterfaceType) string {
 	}
 }
 
-func newUUIDGenerator() *UUIDGenerator {
-	gen := &UUIDGenerator{
-		idGen:        0,
-		internalChan: make(chan uint32, DEFAULT_UUID_CNT_CACHE),
+const (
+	DEFAULT_CNIID_CNT_CACHE = 4094
+	DEFAULT_SVCID_CNT_CACHE = 64
+)
+
+type IdGenerator struct {
+	cniId   uint32
+	svcId   uint32
+	cniChan chan uint32
+	svcChan chan uint32
+}
+
+func NewIdGenerator(cni uint32, svc uint32) *IdGenerator {
+	//once.Do(func() {
+	gen := &IdGenerator{
+		cniId:   cni,
+		svcId:   svc,
+		svcChan: make(chan uint32, DEFAULT_SVCID_CNT_CACHE),
+		cniChan: make(chan uint32, DEFAULT_CNIID_CNT_CACHE),
 	}
-	gen.startGen()
+	startCniGen(gen)
+	startSvcGen(gen)
+	//})
 	return gen
 }
 
-// Open goroutine and put the generated UUID in digital form into the buffer pipe
-func (this *UUIDGenerator) startGen() {
+func startSvcGen(g *IdGenerator) {
 	go func() {
 		for {
-			if this.idGen == MAXMODVAL {
-				this.idGen = 1
+			if g.svcId == DEFAULT_SVCID_CNT_CACHE-1 {
+				g.svcId = 1
 			} else {
-				this.idGen += 1
+				g.svcId += 1
 			}
-			this.internalChan <- this.idGen
+			g.svcChan <- g.svcId
 		}
 	}()
 }
 
-// Get UUID in uint32 form
-func (this *UUIDGenerator) getUUID() uint32 {
-	return <-this.internalChan
+func startCniGen(g *IdGenerator) {
+	go func() {
+		for {
+
+			if g.cniId == DEFAULT_CNIID_CNT_CACHE-1 {
+				g.cniId = 1
+			} else {
+				g.cniId += 1
+			}
+			g.cniChan <- g.cniId
+		}
+	}()
 }
 
-var uuidFactory = newUUIDGenerator()
+func getSvcId(g *IdGenerator) uint32 {
+	return <-g.svcChan
+}
+
+func getCniId(g *IdGenerator) uint32 {
+	return <-g.cniChan
+}
 
 var Mask = []uint8{1, 2, 4, 8, 16, 32, 64, 128}
 

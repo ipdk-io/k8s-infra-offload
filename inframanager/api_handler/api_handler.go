@@ -43,6 +43,7 @@ import (
 
 var hostInterface store.Iface
 var config *conf.Configuration
+var idgen *p4.IdGenerator
 
 // To identify different tcp packets based on tcp flag
 // ACK RST SYN FIN
@@ -107,6 +108,11 @@ func NewApiServer() *ApiServer {
 
 func GetLogLevel() string {
 	return config.LogLevel
+}
+
+func InitModCtr() {
+	StoreDB := store.NewSetup()
+	idgen = p4.NewIdGenerator(StoreDB.ModCntr.CniId, StoreDB.ModCntr.ServiceId)
 }
 
 func OpenP4RtC(ctx context.Context, high uint64, low uint64, stopCh <-chan struct{}) error {
@@ -447,7 +453,7 @@ func insertRule(log *log.Entry, ctx context.Context, p4RtC *client.Client, macAd
 	}
 
 	logger.Infof("Inserting entry into the cni tables")
-	ep, err = p4.InsertCniRules(ctx, p4RtC, ep, ifaceType)
+	ep, err = p4.InsertCniRules(ctx, p4RtC, ep, ifaceType, idgen)
 	if err != nil {
 		logger.Errorf("Failed to insert the entries for cni add %s %s", macAddr, ipAddr)
 		return false, err
@@ -595,6 +601,25 @@ func (s *ApiServer) SetSnatAddress(ctx context.Context, in *proto.SetSnatAddress
 	return &proto.Reply{Successful: true}, nil
 }
 
+func validateNatTranslationReq(in *proto.NatTranslation) (err error) {
+	if in == nil || reflect.DeepEqual(*in, proto.NatTranslation{}) {
+		return errors.New("Empty NatTranslation request")
+	}
+	if in.Endpoint == nil || reflect.DeepEqual(*in.Endpoint, proto.NatEndpoint{}) {
+		return errors.New("Service Endpoint is missing")
+	}
+	if net.ParseIP(in.Endpoint.Ipv4Addr) == nil {
+		return errors.New("Service Endpoint IP address is not valid")
+	}
+	if in.Endpoint.Port == 0 || in.Endpoint.Port > 65535 {
+		return errors.New("Service port is not valid")
+	}
+	if in.Proto == "" {
+		return errors.New("Proto field is not updated")
+	}
+	return nil
+}
+
 func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslation) (*proto.Reply, error) {
 	var err error
 	var podPortIDs []uint16
@@ -611,13 +636,13 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 
 	defer recoverPanic(logger)
 
-	if in == nil || reflect.DeepEqual(*in, proto.NatTranslation{}) {
+	if err = validateNatTranslationReq(in); err != nil {
+		logger.Errorf("Invalid grpc request received, %s", err)
 		out.Successful = false
-		logger.Errorf("Empty NatTranslationAdd request")
-		return out, errors.New("Empty NatTranslationAdd request")
+		return out, err
 	}
 
-	logger.Infof("Incoming NatTranslationAdd request %s", in.String())
+	logger.Infof("Incoming NatTranslationAdd request %+v", in)
 
 	/*
 		If there are no backend endpoints for the service,
@@ -709,7 +734,7 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 
 	//Update: We need to handle in p4 layer.
 	err, service = p4.InsertServiceRules(ctx, server.p4RtC, podIpAddrs,
-		podPortIDs, service, update)
+		podPortIDs, service, idgen, update)
 	if err != nil {
 		logger.Errorf("Failed to insert the service entry %s:%s:%d, backends: %v, into the pipeline",
 			serviceIpAddr, in.Proto, in.Endpoint.Port, podIpAddrs)
@@ -768,13 +793,13 @@ func (s *ApiServer) NatTranslationDelete(ctx context.Context, in *proto.NatTrans
 
 	defer recoverPanic(logger)
 
-	if in == nil || reflect.DeepEqual(*in, proto.NatTranslation{}) {
+	if err := validateNatTranslationReq(in); err != nil {
+		logger.Errorf("Invalid grpc request received, %s", err)
 		out.Successful = false
-		logger.Errorf("Empty NatTranslationDelete request")
-		return out, errors.New("Empty NatTranslationDelete request")
+		return out, err
 	}
 
-	logger.Infof("Incoming NatTranslationDelete %+v", in)
+	logger.Infof("Incoming NatTranslationDelete request %+v", in)
 
 	service := store.Service{
 		ClusterIp: in.Endpoint.Ipv4Addr,

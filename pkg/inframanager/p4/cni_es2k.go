@@ -80,7 +80,7 @@ func ArptToPortTable(ctx context.Context, p4RtC *client.Client, arpTpa string, p
 }
 
 func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint,
-	ifaceType InterfaceType) (store.EndPoint, error) {
+	ifaceType InterfaceType, idgen *IdGenerator) (store.EndPoint, error) {
 
 	cniupdatemap := make(map[string][]UpdateTable)
 	var err error
@@ -103,10 +103,10 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 		return ep, err
 	}
 
-	//To avoid overlapping with service modblob
-	var cni_modblob_offset uint32
-	cni_modblob_offset = 700
-	ep.ModPtr = cni_modblob_offset + uuidFactory.getUUID()
+	//Max limit is set to 255
+	ep.ModPtr = getCniId(idgen)
+	store.SetCniId(ep.ModPtr)
+	store.SetSetupBuffDirty()
 
 	key := make([]interface{}, 0)
 	action := make([]interface{}, 0)
@@ -188,6 +188,8 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 
 	err = ConfigureTable(ctx, p4RtC, P4w, cni_table_names, cniupdatemap, cni_action_names, true)
 	if err != nil {
+		//TODO - rollback
+		//ConfigureTable(ctx, p4RtC, P4w, cni_table_names, cniupdatemap, cni_action_names, false)
 		fmt.Println("failed to make entries to cni p4")
 		return ep, err
 	}

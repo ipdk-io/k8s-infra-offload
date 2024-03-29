@@ -55,6 +55,14 @@ function install_drivers () {
   modprobe vfio_iommu_type1
   # change this with insmod in case of new idpf host driver
   modprobe idpf
+  if [[ "$1" == "sriov" ]]; then
+    sleep 1
+    # change this with insmod in case of new idpf host driver
+    dev_id=$(lspci | grep 1452 | cut -d ':' -f 1)
+    echo $2 > /sys/class/pci_bus/0000:$dev_id/device/0000:$dev_id:00.0/sriov_numvfs
+    #sriov vf devices take a long time to come up
+    sleep 10
+  fi
 }
 
 function generate_config() {
@@ -277,12 +285,13 @@ ARM_SCRIPT="setup_arm_infra.sh"
 K8S_REMOTE="/opt/p4/k8s"
 CERT_DIR="/etc/pki"
 DEV_BUS=""
+TYPE="cdq"
 
 # Displays help text
 usage() {
   echo ""
   echo "*****************************************************************"
-  echo "Usage: $0 < -i 8|16|.. > < -m host|split > < -r 10.10.0.2 >" 1>&2;
+  echo "Usage: $0 < -i 8|16|.. > < -m host|split > < -r 10.10.0.2 > [ -t cdq|sriov ]" 1>&2;
   echo ""
   echo "Configure and setup k8s infrastructure for deployment"
   echo ""
@@ -297,6 +306,7 @@ usage() {
       comms channel \"([5,0],[4,0]),([4,2],[0,3])\". This must be specified
       in split mode. Script will assign an IP addresss from the same subnet
       on the Host side for connectivity."
+  echo "  -t  Type of the device interface. Default - cdq"
   echo ""
   echo " Please set following env variables to setup paths prior to executing
       the script:"
@@ -312,7 +322,7 @@ usage() {
 }
 
 
-while getopts ":i:m:r:" o; do
+while getopts ":i:m:r:t:" o; do
   case "${o}" in
       i)
           i=${OPTARG}
@@ -326,6 +336,9 @@ while getopts ":i:m:r:" o; do
           ;;
       r)
           r=${OPTARG}
+          ;;
+      t)
+          t=${OPTARG}
           ;;
       *)
           usage
@@ -351,25 +364,35 @@ if [[ "$m" == "split" ]]; then
   fi
 fi
 
+if [[ "$t" == "sriov" ]]; then
+    echo "Creating interfaces of type sriov"
+    TYPE="sriov"
+else
+    TYPE="cdq"
+    echo "Creating interfaces of type cdq"
+fi
+
 IF_MAX=$i
 MODE=$m
 REMOTE_HOST=$r
 
-echo "User entered - $IF_MAX $MODE $REMOTE_HOST"
+echo "User entered - $IF_MAX $MODE $REMOTE_HOST $TYPE"
 
-if [ $MODE = "host" ]; then
+if [[ "$MODE" == "host" ]]; then
   echo "Setting up p4k8s on host"
   check_host_env SDE_INSTALL P4CP_INSTALL DEPEND_INSTALL K8S_RECIPE
   setup_host_dep_env
   setup_run_env
-  install_drivers
+  install_drivers $TYPE $IF_MAX
   generate_config
   #Wait for driver initialization to happen
   sleep 6
   copy_certs
-  get_device_id
-  create_arp_interface
-  create_pod_interfaces
+  if [[ "$TYPE" == "cdq" ]]; then
+    get_device_id
+    create_arp_interface
+    create_pod_interfaces
+  fi
   #Run infrap4d
   run_infrap4d
 else
@@ -378,7 +401,7 @@ else
   LAST_OCTET="${REMOTE_HOST##*.}"
   NEW_OCTET=$((LAST_OCTET + 1))
   NEW_IP="${REMOTE_HOST%.*}.$NEW_OCTET"
-  install_drivers
+  install_drivers $TYPE $IF_MAX
   generate_config
   #Wait for driver initialization to happen
   sleep 6
@@ -389,9 +412,11 @@ else
   copy_artifacts_to_remote
   copy_config_to_remote
   SYSTEM_IP=$(hostname -I | awk '{print $1}')
-  get_device_id
-  create_arp_interface
-  create_pod_interfaces
+  if [[ "$TYPE" == "cdq" ]]; then
+    get_device_id
+    create_arp_interface
+    create_pod_interfaces
+  fi
   launch_on_remote "$K8S_REMOTE/$ARM_SCRIPT" "$SYSTEM_IP"
   echo "Remote script launched successfully!"
   exit 0
