@@ -47,7 +47,7 @@ var (
 
 // To track unique combination of service IP and service protocol.
 var flagMap = make(map[string]bool)
-var maxEndpoints int = 16
+var maxEndpoints int = 64
 
 func ServiceFlowPacketOptions(ctx context.Context, p4RtC *client.Client,
 	flags [][]byte, action InterfaceType) error {
