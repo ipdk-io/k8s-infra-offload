@@ -20,12 +20,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
-	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 	"net"
 	"path/filepath"
 	"time"
+
+	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
 
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
 	"github.com/antoninbas/p4runtime-go-client/pkg/signals"

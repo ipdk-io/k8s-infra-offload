@@ -18,11 +18,12 @@ package test
 
 import (
 	"context"
+	"testing"
+
 	"github.com/antoninbas/p4runtime-go-client/pkg/client"
 	p4 "github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/p4"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/inframanager/store"
 	p4_v1 "github.com/p4lang/p4runtime/go/p4/v1"
-	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -54,6 +55,7 @@ var _ = Describe("service", func() {
 	p4RtC = client.NewClient(c, deviceID, &electionID)
 	var podIpAddr = []string{"10.10.10.1", "10.10.10.2"}
 	var portID = []uint16{1, 2}
+	var idgentest = p4.NewIdGenerator(1, 1)
 
 	Describe("DeleteServiceRules", func() {
 
@@ -121,7 +123,7 @@ var _ = Describe("service", func() {
 				ret := service.WriteToStore()
 				Expect(ret).To(Equal(true))
 
-				err, _ := p4.InsertServiceRules(ctx, p4RtC, podIpAddr, portID, service, false)
+				err, _ := p4.InsertServiceRules(ctx, p4RtC, podIpAddr, portID, service, idgentest, false)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				err = p4.DeleteServiceRules(ctx, p4RtC, service)
@@ -179,7 +181,7 @@ var _ = Describe("service", func() {
 				ret := service.WriteToStore()
 				Expect(ret).To(Equal(true))
 
-				err, _ := p4.InsertServiceRules(ctx, p4RtC, podIpAddr, portID, service, false)
+				err, _ := p4.InsertServiceRules(ctx, p4RtC, podIpAddr, portID, service, idgentest, false)
 				Expect(err).ShouldNot(HaveOccurred())
 			})
 
@@ -197,7 +199,7 @@ var _ = Describe("service", func() {
 					Port:      10000,
 					Proto:     "TCP",
 				}
-				err, _ := p4.InsertServiceRules(ctx, p4RtC, podIpAddr, portID, service, false)
+				err, _ := p4.InsertServiceRules(ctx, p4RtC, podIpAddr, portID, service, idgentest, false)
 				Expect(err).To(HaveOccurred())
 			})
 
