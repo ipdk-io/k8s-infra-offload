@@ -30,7 +30,8 @@ import (
 )
 
 var (
-	tempDir string
+	tempDir   string
+	idgentest *p4.IdGenerator
 )
 var (
 	errorcase = false
@@ -55,7 +56,8 @@ var _ = Describe("service", func() {
 	p4RtC = client.NewClient(c, deviceID, &electionID)
 	var podIpAddr = []string{"10.10.10.1", "10.10.10.2"}
 	var portID = []uint16{1, 2}
-	var idgentest = p4.NewIdGenerator(1, 1)
+	idgentest = p4.NewIdGenerator(0, 0)
+	store.NewSetup()
 
 	Describe("DeleteServiceRules", func() {
 
@@ -67,6 +69,7 @@ var _ = Describe("service", func() {
 					ClusterIp: "10.100.1.1",
 					Port:      10000,
 					Proto:     "TCP",
+					GroupID:   1,
 				}
 				err := p4.DeleteServiceRules(ctx, p4RtC, service)
 				Expect(err).To(HaveOccurred())
@@ -83,18 +86,21 @@ var _ = Describe("service", func() {
 			It("returns success if entry is found", func() {
 				store.NewEndPoint()
 				data_valid := store.EndPoint{
+					ModPtr:        1,
 					PodIpAddress:  "10.10.10.1",
 					InterfaceID:   1,
 					PodMacAddress: "00:00:00:aa:aa:aa",
 				}
 				data_valid.WriteToStore()
 				data_valid = store.EndPoint{
+					ModPtr:        2,
 					PodIpAddress:  "10.10.10.2",
 					InterfaceID:   1,
 					PodMacAddress: "00:00:00:aa:aa:aa",
 				}
 				data_valid.WriteToStore()
 				default_route := store.EndPoint{
+					ModPtr:        3,
 					PodIpAddress:  "169.254.1.1",
 					InterfaceID:   1,
 					PodMacAddress: "00:00:00:aa:aa:aa",
@@ -141,18 +147,21 @@ var _ = Describe("service", func() {
 			It("inserts a valid entry", func() {
 				store.NewEndPoint()
 				data_valid := store.EndPoint{
+					ModPtr:        1,
 					PodIpAddress:  "10.10.10.1",
 					InterfaceID:   1,
 					PodMacAddress: "00:00:00:aa:aa:aa",
 				}
 				data_valid.WriteToStore()
 				data_valid = store.EndPoint{
+					ModPtr:        2,
 					PodIpAddress:  "10.10.10.2",
 					InterfaceID:   1,
 					PodMacAddress: "00:00:00:aa:aa:aa",
 				}
 				data_valid.WriteToStore()
 				default_route := store.EndPoint{
+					ModPtr:        3,
 					PodIpAddress:  "169.254.1.1",
 					InterfaceID:   1,
 					PodMacAddress: "00:00:00:aa:aa:aa",
