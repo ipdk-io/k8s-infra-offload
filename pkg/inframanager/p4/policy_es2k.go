@@ -47,22 +47,20 @@ const (
 )
 
 func CheckAclResult(ctx context.Context, p4RtC *client.Client,
-	acl_status uint8, range_check_result uint8, ipset_check_result uint8, direction string,
-	ipsetID uint16, aclAction string, action InterfaceType) error {
+	acl_status uint8, range_check_result uint8, range_check_mask uint8,
+	ipset_check_result uint8, ipset_check_mask uint8,
+	priority uint16, aclAction string, action InterfaceType) error {
 	var tableName string
 	var entryAdd *p4_v1.TableEntry
 	var entryDelete *p4_v1.TableEntry
-	
-	//TODO: Find a better way to come up with priority
-	prio := ipsetID
+	var actionName string
 
 	if aclAction == "allow" {
 		actionName = "k8s_dp_control.allow"
-	}
-	else {
+	} else {
 		actionName = "k8s_dp_control.deny"
 	}
-	
+
 	switch action {
 	case Insert:
 		tableName = "k8s_dp_control.check_acl_result"
@@ -74,14 +72,14 @@ func CheckAclResult(ctx context.Context, p4RtC *client.Client,
 				},
 				"meta.fxp_internal.range_check_result": &client.TernaryMatch{
 					Value: ValueToBytes8(range_check_result),
-					Mask:  ValueToBytes8(0xFF),
+					Mask:  ValueToBytes8(range_check_mask),
 				},
 				"user_meta.gmeta.ipset_check_result": &client.TernaryMatch{
-					Value: ValueToBytes8(range_check_result),
-					Mask:  ValueToBytes8(0xFF),
+					Value: ValueToBytes8(ipset_check_result),
+					Mask:  ValueToBytes8(ipset_check_mask),
 				},
 				"priority": &client.ExactMatch{
-					Value: ValueToBytes32(prio),
+					Value: ValueToBytes32(priority),
 				},
 			},
 			p4RtC.NewTableActionDirect(actionName),
@@ -322,7 +320,7 @@ func AclLpmRootLutTable(ctx context.Context, p4RtC *client.Client,
 
 	//TODO: Find a better way to come up with priority
 	prio := ipsetID
-	
+
 	switch action {
 	case Insert:
 		if direction == "TX" {
@@ -831,4 +829,23 @@ func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype Opera
 	default:
 		return errors.New("Invalid operation type")
 	}
+}
+
+func updatePolicyDefaultEntries(ctx context.Context, p4RtC *client.Client, checkAclResultEntries [][]byte, action InterfaceType) error {
+	var aclAction string
+
+	for i := 0; i <= 13; i++ {
+		if checkAclResultEntries[i][6] == 1 {
+			aclAction = "allow"
+		} else {
+			aclAction = "deny"
+		}
+		err := CheckAclResult(ctx, p4RtC, checkAclResultEntries[i][0], checkAclResultEntries[i][1], checkAclResultEntries[i][2],
+			checkAclResultEntries[i][3], checkAclResultEntries[i][4], checkAclResultEntries[i][5], aclAction, action)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+
 }

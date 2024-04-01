@@ -63,6 +63,22 @@ var flags = [][]byte{{0x00, 0x00, 0x01, 0x00},
 	{0x01, 0x00, 0x00, 0x00},
 	{0x01, 0x00, 0x01, 0x00},
 	{0x00, 0x00, 0x00, 0x00}}
+	
+// Entries for CheckAclResult table
+// acl_status, range_check_result, range_check_mask, ipset_check_result, ipset_check_mask, priority, action (1=allow,0=deny)
+var checkAclResultEntries = [][]byte{{0,0x0,0xff,0x0,0xff,2,1},
+        {1,0x0,0xff,0x0,0xff,2,0},
+        {2,0x80,0x80,0x80,0x80,2,1},
+	{2,0x40,0x40,0x40,0x40,2,1},
+	{2,0x20,0x20,0x20,0x20,2,1},
+	{2,0x10,0x10,0x10,0x10,2,1},
+	{2,0x8,0x8,0x8,0x8,2,1},
+	{2,0x4,0x4,0x4,0x4,2,1},
+	{2,0x2,0x2,0x2,0x2,2,1},
+	{2,0x1,0x1,0x1,0x1,2,1},
+	{2,0x0,0xff,0x0,0xff,1,0},
+	{3,0x0,0xff,0x0,0xff,2,0},
+	{3,0x0,0xff,0x0,0xff,1,0}}
 
 type Protocol int
 
@@ -377,12 +393,24 @@ func InsertDefaultRule() {
 		}
 	}
 
+	//TODO: Add condition to pick only services or policy. Will not work without the change!!
 	log.Infof("Inserting default gateway rule for service: ServiceFlowPacketOptions")
 	action := p4.Insert
 	if config.InterfaceType != types.TapInterface {
 		err = p4.ServiceFlowPacketOptions(context.Background(), server.p4RtC, flags, action)
 		if err != nil {
 			log.Errorf("Failed to insert ServiceFlowPacketOptions")
+			return
+		}
+	}
+
+	//TODO: Add condition to pick only services or policy. Will not work without the change!!
+	log.Infof("Inserting default gateway rule for : CheckAclResult")
+	action := p4.Insert
+	if config.InterfaceType != types.TapInterface {
+		err = p4.updatePolicyDefaultEntries(context.Background(), server.p4RtC, checkAclResultEntries, action)
+		if err != nil {
+			log.Errorf("Failed to insert Policy default entries")
 			return
 		}
 	}
