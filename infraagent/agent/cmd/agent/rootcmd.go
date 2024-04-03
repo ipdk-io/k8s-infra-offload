@@ -41,6 +41,8 @@ var config struct {
 	clientCert    string
 	clientKey     string
 	caCert        string
+	services      bool
+	policy        bool
 }
 
 var supportedIntfTypes = []string{
@@ -123,6 +125,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&config.caCert, "caCert", types.AgentDefaultCACert, "TLS Client CA Cert file")
 	rootCmd.PersistentFlags().StringVar(&types.InfraManagerAddr, "managerAddr", types.DefaultInfraManagerAddr, "Inframanager IP Address")
 	rootCmd.PersistentFlags().StringVar(&types.InfraManagerPort, "managerPort", types.DefaultInfraManagerPort, "Inframanager Port")
+	rootCmd.PersistentFlags().BoolVar(&config.services, "services", true, "enable/disable services. Enabling services will disable policy by default. Not applicable for dpdk")
+	rootCmd.PersistentFlags().BoolVar(&config.policy, "policy", false, "enable/disable policy. Enabling policy will disable services. Not applicable for dpdk")
 	logLevelOpts := newFlagOpts(supportedLogLevels, defaultLogLevel)
 	rootCmd.PersistentFlags().Var(logLevelOpts, "logLevel", "Log Level (Panic|Fatal|Error|Warn|Info|Debug|Trace)")
 
@@ -173,6 +177,14 @@ func init() {
 	}
 	if err := viper.BindPFlag("logLevel", rootCmd.PersistentFlags().Lookup("logLevel")); err != nil {
 		fmt.Fprintf(os.Stderr, "There was an error while binding log level flags '%s'", err)
+		os.Exit(1)
+	}
+	if err := viper.BindPFlag("services", rootCmd.PersistentFlags().Lookup("services")); err != nil {
+		fmt.Fprintf(os.Stderr, "There was an error while binding services flag '%s'", err)
+		os.Exit(1)
+	}
+	if err := viper.BindPFlag("policy", rootCmd.PersistentFlags().Lookup("policy")); err != nil {
+		fmt.Fprintf(os.Stderr, "There was an error while binding policy flag '%s'", err)
 		os.Exit(1)
 	}
 

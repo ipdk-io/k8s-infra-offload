@@ -28,6 +28,7 @@ import (
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"gopkg.in/tomb.v2"
 	"k8s.io/client-go/kubernetes"
 )
@@ -83,23 +84,46 @@ func (a *agent) prepareServers() ([]types.Server, error) {
 	}
 	servers = append(servers, cs)
 
-	srv, err := services.NewServiceServer(a.log.WithField("pkg", "services"), services.NewNatServiceHandler(a.log.WithField("pkg", "services")), types.ServiceRefreshTimeInSeconds)
-	if err != nil {
-		return nil, err
+	// MEV p4 currently support either services or policy but not both.
+	// TODO: Remove these checks when p4 is developed with both features.
+	if a.podInterfaceType != types.TapInterface {
+		enableServices := viper.GetBool("services")
+		enablePolicy := viper.GetBool("policy")
+
+		if enableServices {
+			srv, err := services.NewServiceServer(a.log.WithField("pkg", "services"), services.NewNatServiceHandler(a.log.WithField("pkg", "services")), types.ServiceRefreshTimeInSeconds)
+			if err != nil {
+				return nil, err
+			}
+			servers = append(servers, srv)
+		}
+
+		if !enableServices && enablePolicy {
+			p, err := policy.NewPolicyServer(a.log.WithField("pkg", "policy"))
+			if err != nil {
+				return nil, err
+			}
+			servers = append(servers, p)
+		}
+	} else {
+		srv, err := services.NewServiceServer(a.log.WithField("pkg", "services"), services.NewNatServiceHandler(a.log.WithField("pkg", "services")), types.ServiceRefreshTimeInSeconds)
+		if err != nil {
+			return nil, err
+		}
+		servers = append(servers, srv)
+
+		p, err := policy.NewPolicyServer(a.log.WithField("pkg", "policy"))
+		if err != nil {
+			return nil, err
+		}
+		servers = append(servers, p)
 	}
-	servers = append(servers, srv)
 
 	hs, err := healthserver.NewHealthCheckServer(a.log.WithField("pkg", "healthserver"))
 	if err != nil {
 		return nil, err
 	}
 	servers = append(servers, hs)
-
-	p, err := policy.NewPolicyServer(a.log.WithField("pkg", "policy"))
-	if err != nil {
-		return nil, err
-	}
-	servers = append(servers, p)
 
 	return servers, nil
 }
