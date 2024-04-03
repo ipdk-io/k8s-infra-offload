@@ -92,12 +92,25 @@ func InitSetupStore(setFwdPipe bool) bool {
 	return true
 }
 
+func SetDBPolicyRuleGroupIdTop(top int) {
+	Setup.mutex.Lock()
+	defer Setup.mutex.Unlock()
+	Setup.PolicyRuleGroupIdTop = top
+	setupBufDirty = true
+}
+
 func SetCniId(newCniMod uint32) {
+	Setup.mutex.Lock()
+	defer Setup.mutex.Unlock()
 	Setup.ModCntr.CniId = newCniMod
+	setupBufDirty = true
 }
 
 func SetSvcId(newSvcMod uint32) {
+	Setup.mutex.Lock()
+	defer Setup.mutex.Unlock()
 	Setup.ModCntr.ServiceId = newSvcMod
+	setupBufDirty = true
 }
 
 func GetHostInterface() Iface {
@@ -129,10 +142,6 @@ func SetHostInterface(ip string, mac string) bool {
 	Setup.HostInterface.Mac = mac
 	setupBufDirty = true
 	return true
-}
-
-func SetSetupBuffDirty() {
-	setupBufDirty = true
 }
 
 func SetDefaultRule() {

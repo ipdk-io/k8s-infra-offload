@@ -1066,6 +1066,9 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 	}
 	logger.Infof("Successfully added/updated policy %v to the pipeline", policy)
 
+	top := store.GetNewRuleGroupIdTop()
+	store.SetDBPolicyRuleGroupIdTop(top)
+
 	if ok := policy.UpdateToStore(); !ok {
 		logger.Errorf("Failed to add/update policy to the store")
 		err := fmt.Errorf("Failed to add/update policy to the store")
@@ -1126,6 +1129,9 @@ func (s *ApiServer) ActivePolicyRemove(ctx context.Context, in *proto.ActivePoli
 		out.Successful = false
 		return out, err
 	}
+
+	top := store.GetNewRuleGroupIdTop()
+	store.SetDBPolicyRuleGroupIdTop(top)
 
 	if ok := policy.DeleteFromStore(); !ok {
 		logger.Errorf("Failed to delete policy to the store")

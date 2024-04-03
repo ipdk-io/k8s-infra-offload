@@ -37,6 +37,10 @@ func GetNewRuleGroupId() int {
 	return PolicySet.RuleGroupIdStack.Pop()
 }
 
+func GetNewRuleGroupIdTop() int {
+	return PolicySet.RuleGroupIdStack.GetTop()
+}
+
 func ReleaseRuleGroupId(val int) {
 	PolicySet.RuleGroupIdStack.Push(val)
 }
@@ -147,6 +151,13 @@ func InitPolicyStore(setFwdPipe bool) bool {
 			return false
 		}
 	}
+
+	setup := NewSetup()
+
+	if setup.PolicyRuleGroupIdTop > 0 {
+		PolicySet.RuleGroupIdStack.SetTop(setup.PolicyRuleGroupIdTop)
+	}
+
 	return true
 }
 

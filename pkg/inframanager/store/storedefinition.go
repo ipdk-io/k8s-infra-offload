@@ -46,10 +46,11 @@ type Iface struct {
 }
 
 type SetupData struct {
-	HostInterface  Iface
-	SetDefaultRule bool
-	ModCntr        ModCounter
-	mutex          *sync.Mutex
+	HostInterface        Iface
+	SetDefaultRule       bool
+	ModCntr              ModCounter
+	PolicyRuleGroupIdTop int
+	mutex                *sync.Mutex
 }
 
 type EndPoint struct {

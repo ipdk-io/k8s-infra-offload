@@ -106,7 +106,6 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 	//Max limit is set to 255
 	ep.ModPtr = getCniId(idgen)
 	store.SetCniId(ep.ModPtr)
-	store.SetSetupBuffDirty()
 
 	key := make([]interface{}, 0)
 	action := make([]interface{}, 0)
