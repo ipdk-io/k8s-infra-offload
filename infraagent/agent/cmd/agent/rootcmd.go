@@ -125,7 +125,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&config.caCert, "caCert", types.AgentDefaultCACert, "TLS Client CA Cert file")
 	rootCmd.PersistentFlags().StringVar(&types.InfraManagerAddr, "managerAddr", types.DefaultInfraManagerAddr, "Inframanager IP Address")
 	rootCmd.PersistentFlags().StringVar(&types.InfraManagerPort, "managerPort", types.DefaultInfraManagerPort, "Inframanager Port")
-	rootCmd.PersistentFlags().BoolVar(&config.services, "services", true, "enable/disable services. Enabling services will disable policy by default. Not applicable for dpdk")
+	rootCmd.PersistentFlags().BoolVar(&config.services, "services", false, "enable/disable services. Enabling services will disable policy by default. Not applicable for dpdk")
 	rootCmd.PersistentFlags().BoolVar(&config.policy, "policy", false, "enable/disable policy. Enabling policy will disable services. Not applicable for dpdk")
 	logLevelOpts := newFlagOpts(supportedLogLevels, defaultLogLevel)
 	rootCmd.PersistentFlags().Var(logLevelOpts, "logLevel", "Log Level (Panic|Fatal|Error|Warn|Info|Debug|Trace)")

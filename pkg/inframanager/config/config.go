@@ -47,7 +47,7 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 	viper.SetDefault("Infrap4dGnmiServer.clientKey", types.ManagerDefaultClientKey)
 	viper.SetDefault("Infrap4dGnmiServer.caCert", types.ManagerDefaultCACert)
 
-	viper.SetDefault("Services", true)
+	viper.SetDefault("Services", false)
 	viper.SetDefault("Policy", false)
 
 	viper.SetDefault("InfraManager.Addr", "localhost:50002")
