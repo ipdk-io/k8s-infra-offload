@@ -28,7 +28,6 @@ import (
 	"github.com/ipdk-io/k8s-infra-offload/pkg/types"
 	"github.com/ipdk-io/k8s-infra-offload/pkg/utils"
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 	"gopkg.in/tomb.v2"
 	"k8s.io/client-go/kubernetes"
 )
@@ -84,40 +83,17 @@ func (a *agent) prepareServers() ([]types.Server, error) {
 	}
 	servers = append(servers, cs)
 
-	// MEV p4 currently support either services or policy but not both.
-	// TODO: Remove these checks when p4 is developed with both features.
-	if a.podInterfaceType != types.TapInterface {
-		enableServices := viper.GetBool("services")
-		enablePolicy := viper.GetBool("policy")
-
-		if enableServices {
-			srv, err := services.NewServiceServer(a.log.WithField("pkg", "services"), services.NewNatServiceHandler(a.log.WithField("pkg", "services")), types.ServiceRefreshTimeInSeconds)
-			if err != nil {
-				return nil, err
-			}
-			servers = append(servers, srv)
-		}
-
-		if !enableServices && enablePolicy {
-			p, err := policy.NewPolicyServer(a.log.WithField("pkg", "policy"))
-			if err != nil {
-				return nil, err
-			}
-			servers = append(servers, p)
-		}
-	} else {
-		srv, err := services.NewServiceServer(a.log.WithField("pkg", "services"), services.NewNatServiceHandler(a.log.WithField("pkg", "services")), types.ServiceRefreshTimeInSeconds)
-		if err != nil {
-			return nil, err
-		}
-		servers = append(servers, srv)
-
-		p, err := policy.NewPolicyServer(a.log.WithField("pkg", "policy"))
-		if err != nil {
-			return nil, err
-		}
-		servers = append(servers, p)
+	srv, err := services.NewServiceServer(a.log.WithField("pkg", "services"), services.NewNatServiceHandler(a.log.WithField("pkg", "services")), types.ServiceRefreshTimeInSeconds)
+	if err != nil {
+		return nil, err
 	}
+	servers = append(servers, srv)
+
+	p, err := policy.NewPolicyServer(a.log.WithField("pkg", "policy"))
+	if err != nil {
+		return nil, err
+	}
+	servers = append(servers, p)
 
 	hs, err := healthserver.NewHealthCheckServer(a.log.WithField("pkg", "healthserver"))
 	if err != nil {
@@ -129,25 +105,11 @@ func (a *agent) prepareServers() ([]types.Server, error) {
 }
 
 func (a *agent) startServers(servers []types.Server) error {
-	cs := servers[0]
-	srv := servers[1]
-	hs := servers[2]
-	p := servers[3]
-
-	// start servers
-	if err := a.startServer(cs.GetName(), cs.Start); err != nil {
-		return err
+	for _, server := range servers {
+		if err := a.startServer(server.GetName(), server.Start); err != nil {
+			return err
+		}
 	}
-	if err := a.startServer(srv.GetName(), srv.Start); err != nil {
-		return err
-	}
-	if err := a.startServer(hs.GetName(), hs.Start); err != nil {
-		return err
-	}
-	if err := a.startServer(p.GetName(), p.Start); err != nil {
-		return err
-	}
-
 	return nil
 }
 

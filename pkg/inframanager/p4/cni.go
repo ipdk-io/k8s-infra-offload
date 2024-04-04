@@ -118,12 +118,13 @@ func Ipv4ToPortTable(ctx context.Context, p4RtC *client.Client, ipAddr string, m
 }
 
 func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint,
-	ifaceType InterfaceType, idgen *IdGenerator) (store.EndPoint, error) {
+	ifaceType InterfaceType, idgen *IdGenerator, services bool) (store.EndPoint, error) {
 	/*
 		TODO. Distinguish for interface type
 		and program the rules accordingly.
 	*/
 	_ = idgen
+	_ = services
 	if CheckIPAddress(ep.PodIpAddress) != nil {
 		err := fmt.Errorf("Invalid IP Address")
 		return ep, err
@@ -148,7 +149,10 @@ func InsertCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint
 	return ep, nil
 }
 
-func DeleteCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint) error {
+func DeleteCniRules(ctx context.Context, p4RtC *client.Client, ep store.EndPoint,
+	services bool) error {
+
+	_ = services
 	if CheckIPAddress(ep.PodIpAddress) != nil {
 		err := fmt.Errorf("Invalid IP Address")
 		return err

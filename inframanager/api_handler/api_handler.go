@@ -481,7 +481,7 @@ func insertRule(log *log.Entry, ctx context.Context, p4RtC *client.Client, macAd
 	}
 
 	logger.Infof("Inserting entry into the cni tables")
-	ep, err = p4.InsertCniRules(ctx, p4RtC, ep, ifaceType, idgen)
+	ep, err = p4.InsertCniRules(ctx, p4RtC, ep, ifaceType, idgen, config.Services)
 	if err != nil {
 		logger.Errorf("Failed to insert the entries for cni add %s %s", macAddr, ipAddr)
 		return false, err
@@ -606,7 +606,7 @@ func (s *ApiServer) DeleteNetwork(ctx context.Context, in *proto.DeleteNetworkRe
 	}
 	epEntry := entry.(store.EndPoint)
 
-	if err = p4.DeleteCniRules(ctx, server.p4RtC, epEntry); err != nil {
+	if err = p4.DeleteCniRules(ctx, server.p4RtC, epEntry, config.Services); err != nil {
 		logger.Errorf("Failed to delete the entries for %s %s", macAddr, ipAddr)
 		out.Successful = false
 		return out, err
@@ -1493,7 +1493,7 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 			epEntry := entry.(store.EndPoint)
 			logger.Infof("Deleting old ip entry")
 			// Delete the old host IP entry. Ignore any errors.
-			p4.DeleteCniRules(ctx, server.p4RtC, epEntry)
+			p4.DeleteCniRules(ctx, server.p4RtC, epEntry, config.Services)
 		}
 		updateHostIP = true
 
@@ -1511,7 +1511,7 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 			epEntry := entry.(store.EndPoint)
 			logger.Infof("Deleting old mac entry with host ip")
 			// Delete the old host IP entry. Ignore any errors.
-			p4.DeleteCniRules(ctx, server.p4RtC, epEntry)
+			p4.DeleteCniRules(ctx, server.p4RtC, epEntry, config.Services)
 		}
 
 		ep = store.EndPoint{
@@ -1523,7 +1523,7 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 			epEntry := entry.(store.EndPoint)
 			logger.Infof("Deleting old mac entry with node ip")
 			// Delete the old node IP entry. Ignore any errors.
-			p4.DeleteCniRules(ctx, server.p4RtC, epEntry)
+			p4.DeleteCniRules(ctx, server.p4RtC, epEntry, config.Services)
 		}
 		updateHostIP = true
 		updateNodeIP = true

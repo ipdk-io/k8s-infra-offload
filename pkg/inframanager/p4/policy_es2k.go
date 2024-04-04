@@ -77,12 +77,14 @@ func CheckAclResult(ctx context.Context, p4RtC *client.Client,
 					Value: ToBytes(ipset_check_result),
 					Mask:  ToBytes(ipset_check_mask),
 				},
-				"priority": &client.ExactMatch{
-					Value: ToBytes(priority),
-				},
 			},
-			p4RtC.NewTableActionDirect(actionName, [][]byte{ToBytes(aclAction)}),
-			nil,
+			//p4RtC.NewTableActionDirect(actionName, [][]byte{ToBytes(aclAction)}),
+			p4RtC.NewTableActionDirect(actionName, nil),
+			//nil,
+			&client.TableEntryOptions{
+				IdleTimeout: 0,
+				Priority:    int32(priority),
+			},
 		)
 		if err := p4RtC.InsertTableEntry(ctx, entry); err != nil {
 			log.Errorf("Cannot insert entry into %s: %v", tableName, err)
@@ -104,9 +106,6 @@ func CheckAclResult(ctx context.Context, p4RtC *client.Client,
 				"user_meta.gmeta.ipset_check_result": &client.TernaryMatch{
 					Value: ToBytes(range_check_result),
 					Mask:  ToBytes(0xFF),
-				},
-				"priority": &client.ExactMatch{
-					Value: ToBytes(priority),
 				},
 			},
 			nil,
@@ -332,7 +331,7 @@ func AclLpmRootLutTable(ctx context.Context, p4RtC *client.Client,
 	var entryDelete *p4_v1.TableEntry
 
 	//TODO: Find a better way to come up with priority
-	prio := ipsetID
+	priority := ipsetID
 
 	switch action {
 	case Insert:
@@ -347,13 +346,14 @@ func AclLpmRootLutTable(ctx context.Context, p4RtC *client.Client,
 						Value: ToBytes(tcam_key),
 						Mask:  ToBytes(0xFFFFFFFF),
 					},
-					"priority": &client.ExactMatch{
-						Value: ToBytes(prio),
-					},
 				},
 				p4RtC.NewTableActionDirect("k8s_dp_control.set_ipset_match_result",
 					[][]byte{ToBytes(mask)}),
-				nil,
+				//nil,
+				&client.TableEntryOptions{
+					IdleTimeout: 0,
+					Priority:    int32(priority),
+				},
 			)
 		} else {
 			tcam_key := uint32((ipsetID << 8) | (0 & 0xFF))
@@ -365,13 +365,13 @@ func AclLpmRootLutTable(ctx context.Context, p4RtC *client.Client,
 						Value: ToBytes(tcam_key),
 						Mask:  ToBytes(0xFFFFFFFF),
 					},
-					"priority": &client.ExactMatch{
-						Value: ToBytes(prio),
-					},
 				},
 				p4RtC.NewTableActionDirect("k8s_dp_control.set_ipset_match_result",
 					[][]byte{ToBytes(mask)}),
-				nil,
+				&client.TableEntryOptions{
+					IdleTimeout: 0,
+					Priority:    int32(priority),
+				},
 			)
 		}
 		if err := p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
@@ -391,9 +391,6 @@ func AclLpmRootLutTable(ctx context.Context, p4RtC *client.Client,
 						Value: ToBytes(tcam_key),
 						Mask:  ToBytes(0xFFFFFFFF),
 					},
-					"priority": &client.ExactMatch{
-						Value: ToBytes(prio),
-					},
 				},
 				nil,
 				nil,
@@ -408,9 +405,6 @@ func AclLpmRootLutTable(ctx context.Context, p4RtC *client.Client,
 					"user_meta.gmeta.tcam_key": &client.TernaryMatch{
 						Value: ToBytes(tcam_key),
 						Mask:  ToBytes(0xFFFFFFFF),
-					},
-					"priority": &client.ExactMatch{
-						Value: ToBytes(prio),
 					},
 				},
 				nil,
@@ -847,7 +841,7 @@ func PolicyTableEntries(ctx context.Context, p4RtC *client.Client, tbltype Opera
 func UpdatePolicyDefaultEntries(ctx context.Context, p4RtC *client.Client, checkAclResultEntries [][]byte, action InterfaceType) error {
 	var aclAction string
 
-	for i := 0; i <= 13; i++ {
+	for i := 0; i < len(checkAclResultEntries); i++ {
 		if checkAclResultEntries[i][6] == 1 {
 			aclAction = "allow"
 		} else {
