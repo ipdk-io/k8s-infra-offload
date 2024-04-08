@@ -89,41 +89,27 @@ func (a *agent) prepareServers() ([]types.Server, error) {
 	}
 	servers = append(servers, srv)
 
-	hs, err := healthserver.NewHealthCheckServer(a.log.WithField("pkg", "healthserver"))
-	if err != nil {
-		return nil, err
-	}
-	servers = append(servers, hs)
-
 	p, err := policy.NewPolicyServer(a.log.WithField("pkg", "policy"))
 	if err != nil {
 		return nil, err
 	}
 	servers = append(servers, p)
 
+	hs, err := healthserver.NewHealthCheckServer(a.log.WithField("pkg", "healthserver"))
+	if err != nil {
+		return nil, err
+	}
+	servers = append(servers, hs)
+
 	return servers, nil
 }
 
 func (a *agent) startServers(servers []types.Server) error {
-	cs := servers[0]
-	srv := servers[1]
-	hs := servers[2]
-	p := servers[3]
-
-	// start servers
-	if err := a.startServer(cs.GetName(), cs.Start); err != nil {
-		return err
+	for _, server := range servers {
+		if err := a.startServer(server.GetName(), server.Start); err != nil {
+			return err
+		}
 	}
-	if err := a.startServer(srv.GetName(), srv.Start); err != nil {
-		return err
-	}
-	if err := a.startServer(hs.GetName(), hs.Start); err != nil {
-		return err
-	}
-	if err := a.startServer(p.GetName(), p.Start); err != nil {
-		return err
-	}
-
 	return nil
 }
 

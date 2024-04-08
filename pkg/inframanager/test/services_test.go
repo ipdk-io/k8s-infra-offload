@@ -161,7 +161,9 @@ func Ipv4ToPortTable(ctx context.Context, p4RtC *client.Client, ipAddr string, m
 	return nil
 }
 
-func InsertCniRules(ctx context.Context, p4RtC *client.Client, macAddr string, ipAddr string, portId uint32) error {
+func InsertCniRules(ctx context.Context, p4RtC *client.Client, macAddr string, ipAddr string, portId uint32, services bool) error {
+
+	_ = services
 	/*
 	   TODO. Distinguish for interface type
 	   and program the rules accordingly.
@@ -714,7 +716,7 @@ func ServicesTest() {
 	log.Info("installing the entries to the table")
 
 	for i := 0; i < 4; i++ {
-		err = InsertCniRules(ctx, p4RtC, podMacs[i], podIps[i], podPort[i])
+		err = InsertCniRules(ctx, p4RtC, podMacs[i], podIps[i], podPort[i], true)
 		if err != nil {
 			log.Fatalf("cannot insert cni rules")
 		}

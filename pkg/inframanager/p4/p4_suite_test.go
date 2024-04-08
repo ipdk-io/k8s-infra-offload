@@ -130,7 +130,7 @@ var _ = Describe("cni", func() {
 					InterfaceID:   1,
 					PodMacAddress: "00:00:00:aa:aa:aa",
 				}
-				ep, err := p4.InsertCniRules(ctx, p4RtC, ep, 1, idgentest)
+				ep, err := p4.InsertCniRules(ctx, p4RtC, ep, 1, idgentest, true)
 				Expect(err).To(HaveOccurred())
 			})
 
@@ -140,7 +140,7 @@ var _ = Describe("cni", func() {
 					InterfaceID:   1,
 					PodMacAddress: "z.z.z.z",
 				}
-				ep, err := p4.InsertCniRules(ctx, p4RtC, ep, 1, idgentest)
+				ep, err := p4.InsertCniRules(ctx, p4RtC, ep, 1, idgentest, true)
 				Expect(err).To(HaveOccurred())
 			})
 

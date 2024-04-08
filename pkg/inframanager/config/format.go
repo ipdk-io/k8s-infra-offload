@@ -18,6 +18,8 @@ package config
 type Configuration struct {
 	Infrap4dGrpcServer ServerConf  `yaml:"Infrap4dGrpcServer,omitempty"`
 	Infrap4dGnmiServer ServerConf  `yaml:"Infrap4dGnmiServer,omitempty"`
+	Services           bool        `yaml:"Services,omitempty"`
+	Policy             bool        `yaml:"Policy,omitempty"`
 	InfraManager       ManagerConf `yaml:"InfraManager,omitempty"`
 	InterfaceType      string      `yaml:"InterfaceType,omitempty"`
 	NodeIP             string      `yaml:"NodeIP,omitempty"`

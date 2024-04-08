@@ -22,6 +22,8 @@ type Conf struct {
 	HostIfaceMTU       string           `yaml:"HostIfaceMTU,omitempty"`
 	Conn               string           `yaml:"Conn,omitempty"`
 	LogLevel           string           `yaml:"LogLevel,omitempty"`
+	Services           bool             `yaml:"Services,omitempty"`
+	Policy             bool             `yaml:"Policy,omitempty"`
 	InfraManager       conf.ManagerConf `yaml:"InfraManager,omitempty"`
 	Infrap4dGrpcServer conf.ServerConf  `yaml:"Infrap4dGrpcServer,omitempty"`
 	Infrap4dGnmiServer conf.ServerConf  `yaml:"Infrap4dGnmiServer,omitempty"`
@@ -38,6 +40,8 @@ type AgentConf struct {
 	LogLevel      string `yaml:"logLevel,omitempty"`
 	ManagerAddr   string `yaml:"managerAddr,omitempty"`
 	ManagerPort   string `yaml:"managerPort,omitempty"`
+	Services      bool   `yaml:"services,omitempty"`
+	Policy        bool   `yaml:"policy,omitempty"`
 }
 
 func mgrGetDefault() conf.ManagerConf {
@@ -185,6 +189,8 @@ func main() {
 		Iface:         cConf.Interface,
 		HostIfaceMTU:  cConf.HostIfaceMTU,
 		LogLevel:      cConf.LogLevel,
+		Services:      cConf.Services,
+		Policy:        cConf.Policy,
 	}
 	switch cConf.Conn {
 	case "insecure":
@@ -203,6 +209,15 @@ func main() {
 	fields := strings.Split(cConf.InfraManager.Addr, ":")
 	agentConf.ManagerAddr = fields[0]
 	agentConf.ManagerPort = fields[1]
+
+	// If services is enabled, disable policy
+	if agentConf.Services {
+		agentConf.Policy = false
+	}
+	// If policy is enabled, disable services
+	if agentConf.Policy {
+		agentConf.Services = false
+	}
 
 	agentData, err := yaml.Marshal(&agentConf)
 	if err != nil {
@@ -232,6 +247,8 @@ func main() {
 		Infrap4dGrpcServer: cConf.Infrap4dGrpcServer,
 		Infrap4dGnmiServer: cConf.Infrap4dGnmiServer,
 		InfraManager:       mgr,
+		Services:           cConf.Services,
+		Policy:             cConf.Policy,
 		InterfaceType:      cConf.InterfaceType,
 		LogLevel:           cConf.LogLevel,
 		DeviceId:           cConf.DeviceId,

@@ -47,6 +47,9 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 	viper.SetDefault("Infrap4dGnmiServer.clientKey", types.ManagerDefaultClientKey)
 	viper.SetDefault("Infrap4dGnmiServer.caCert", types.ManagerDefaultCACert)
 
+	viper.SetDefault("Services", false)
+	viper.SetDefault("Policy", false)
+
 	viper.SetDefault("InfraManager.Addr", "localhost:50002")
 	viper.SetDefault("InfraManager.conn", "mtls")
 	viper.SetDefault("InfraManager.serverCert", types.ManagerDefaultServerCert)
@@ -70,6 +73,11 @@ func ReadConfig(conf *Configuration, cfgFileName string) {
 
 	conf.P4InfoPath = types.P4InfoPath
 	conf.P4BinPath = types.P4BinPath
+
+	if conf.InterfaceType == types.TapInterface {
+		conf.Services = true
+		conf.Policy = true
+	}
 
 	// Reading variables without using the model
 	fmt.Println("Infrap4d GRPC Server Addr:\t", viper.GetString("Infrap4dGrpcServer.Addr"))

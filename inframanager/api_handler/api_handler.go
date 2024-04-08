@@ -64,6 +64,22 @@ var flags = [][]byte{{0x00, 0x00, 0x01, 0x00},
 	{0x01, 0x00, 0x01, 0x00},
 	{0x00, 0x00, 0x00, 0x00}}
 
+// Entries for CheckAclResult table
+// acl_status, range_check_result, range_check_mask, ipset_check_result, ipset_check_mask, priority, action (1=allow,0=deny)
+var checkAclResultEntries = [][]byte{{0, 0x0, 0xff, 0x0, 0xff, 2, 1},
+	{1, 0x0, 0xff, 0x0, 0xff, 2, 0},
+	{2, 0x80, 0x80, 0x80, 0x80, 2, 1},
+	{2, 0x40, 0x40, 0x40, 0x40, 2, 1},
+	{2, 0x20, 0x20, 0x20, 0x20, 2, 1},
+	{2, 0x10, 0x10, 0x10, 0x10, 2, 1},
+	{2, 0x8, 0x8, 0x8, 0x8, 2, 1},
+	{2, 0x4, 0x4, 0x4, 0x4, 2, 1},
+	{2, 0x2, 0x2, 0x2, 0x2, 2, 1},
+	{2, 0x1, 0x1, 0x1, 0x1, 2, 1},
+	{2, 0x0, 0xff, 0x0, 0xff, 1, 0},
+	{3, 0x0, 0xff, 0x0, 0xff, 2, 0},
+	{3, 0x0, 0xff, 0x0, 0xff, 1, 0}}
+
 type Protocol int
 
 const (
@@ -377,13 +393,25 @@ func InsertDefaultRule() {
 		}
 	}
 
-	log.Infof("Inserting default gateway rule for service: ServiceFlowPacketOptions")
-	action := p4.Insert
 	if config.InterfaceType != types.TapInterface {
-		err = p4.ServiceFlowPacketOptions(context.Background(), server.p4RtC, flags, action)
-		if err != nil {
-			log.Errorf("Failed to insert ServiceFlowPacketOptions")
-			return
+		action := p4.Insert
+		// MEV p4 currently support either services or policy but not both.
+		// TODO: Remove these checks when p4 is developed with both features.
+		if config.Services {
+			log.Infof("Inserting default gateway rule for service: ServiceFlowPacketOptions")
+			err = p4.ServiceFlowPacketOptions(context.Background(), server.p4RtC, flags, action)
+			if err != nil {
+				log.Errorf("Failed to insert ServiceFlowPacketOptions")
+				return
+			}
+		}
+		if !config.Services && config.Policy {
+			log.Infof("Inserting default gateway rule for : CheckAclResult")
+			err = p4.UpdatePolicyDefaultEntries(context.Background(), server.p4RtC, checkAclResultEntries, action)
+			if err != nil {
+				log.Errorf("Failed to insert Policy default entries")
+				return
+			}
 		}
 	}
 
@@ -453,7 +481,7 @@ func insertRule(log *log.Entry, ctx context.Context, p4RtC *client.Client, macAd
 	}
 
 	logger.Infof("Inserting entry into the cni tables")
-	ep, err = p4.InsertCniRules(ctx, p4RtC, ep, ifaceType, idgen)
+	ep, err = p4.InsertCniRules(ctx, p4RtC, ep, ifaceType, idgen, config.Services)
 	if err != nil {
 		logger.Errorf("Failed to insert the entries for cni add %s %s", macAddr, ipAddr)
 		return false, err
@@ -578,7 +606,7 @@ func (s *ApiServer) DeleteNetwork(ctx context.Context, in *proto.DeleteNetworkRe
 	}
 	epEntry := entry.(store.EndPoint)
 
-	if err = p4.DeleteCniRules(ctx, server.p4RtC, epEntry); err != nil {
+	if err = p4.DeleteCniRules(ctx, server.p4RtC, epEntry, config.Services); err != nil {
 		logger.Errorf("Failed to delete the entries for %s %s", macAddr, ipAddr)
 		out.Successful = false
 		return out, err
@@ -628,6 +656,11 @@ func (s *ApiServer) NatTranslationAdd(ctx context.Context, in *proto.NatTranslat
 
 	out := &proto.Reply{
 		Successful: true,
+	}
+
+	// If services is not enabled, return
+	if !config.Services {
+		return out, nil
 	}
 
 	update := false
@@ -791,6 +824,11 @@ func (s *ApiServer) NatTranslationDelete(ctx context.Context, in *proto.NatTrans
 		Successful: true,
 	}
 
+	// If services is not enabled, return
+	if !config.Services {
+		return out, nil
+	}
+
 	defer recoverPanic(logger)
 
 	if err := validateNatTranslationReq(in); err != nil {
@@ -836,6 +874,11 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 		Successful: true,
 	}
 
+	// If policy is not enabled, return
+	if !config.Policy {
+		return out, nil
+	}
+
 	logger := log.WithField("func", "updatePolicy")
 
 	defer recoverPanic(logger)
@@ -848,14 +891,6 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 	}
 
 	logger.Infof("Incoming updatePolicy Request %+v", in)
-
-	/*
-		Currently supporting policies for dpdk target only
-	*/
-
-	if config.InterfaceType != "tap" {
-		return out, nil
-	}
 
 	server := NewApiServer()
 
@@ -1031,6 +1066,9 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 	}
 	logger.Infof("Successfully added/updated policy %v to the pipeline", policy)
 
+	top := store.GetNewRuleGroupIdTop()
+	store.SetDBPolicyRuleGroupIdTop(top)
+
 	if ok := policy.UpdateToStore(); !ok {
 		logger.Errorf("Failed to add/update policy to the store")
 		err := fmt.Errorf("Failed to add/update policy to the store")
@@ -1049,6 +1087,11 @@ func (s *ApiServer) ActivePolicyRemove(ctx context.Context, in *proto.ActivePoli
 		Successful: true,
 	}
 
+	// If policy is not enabled, return
+	if !config.Policy {
+		return out, nil
+	}
+
 	defer recoverPanic(logger)
 
 	if in == nil || reflect.DeepEqual(*in, proto.ActivePolicyRemove{}) {
@@ -1059,14 +1102,6 @@ func (s *ApiServer) ActivePolicyRemove(ctx context.Context, in *proto.ActivePoli
 	}
 
 	logger.Infof("Incoming deletePolicy Request %+v", in)
-
-	/*
-		Currently supporting policies for dpdk target only
-	*/
-
-	if config.InterfaceType != "tap" {
-		return out, nil
-	}
 
 	server := NewApiServer()
 
@@ -1094,6 +1129,9 @@ func (s *ApiServer) ActivePolicyRemove(ctx context.Context, in *proto.ActivePoli
 		out.Successful = false
 		return out, err
 	}
+
+	top := store.GetNewRuleGroupIdTop()
+	store.SetDBPolicyRuleGroupIdTop(top)
 
 	if ok := policy.DeleteFromStore(); !ok {
 		logger.Errorf("Failed to delete policy to the store")
@@ -1158,6 +1196,11 @@ func (s *ApiServer) UpdateLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 		Successful: true,
 	}
 
+	// If policy is not enabled, return
+	if !config.Policy {
+		return out, nil
+	}
+
 	if in == nil || reflect.DeepEqual(*in, proto.WorkloadEndpointUpdate{}) {
 		err := errors.New("Empty update local endpoint request")
 		logger.Errorf("Empty update local endpoint request.")
@@ -1166,14 +1209,6 @@ func (s *ApiServer) UpdateLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 	}
 
 	logger.Infof("Incoming UpdateLocalEndpoint Request %+v", in)
-
-	/*
-		Currently supporting policies for dpdk target only
-	*/
-
-	if config.InterfaceType != "tap" {
-		return out, nil
-	}
 
 	if len(in.Endpoint.Ipv4Nets) == 0 {
 		err := errors.New("No IP address assigned for the endpoint")
@@ -1237,6 +1272,11 @@ func (s *ApiServer) RemoveLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 		Successful: true,
 	}
 
+	// If policy is not enabled, return
+	if !config.Policy {
+		return out, nil
+	}
+
 	if in == nil || reflect.DeepEqual(*in, proto.WorkloadEndpointRemove{}) {
 		err := errors.New("Empty remove local endpoint request")
 		logger.Errorf("Empty remove local endpoint request.")
@@ -1245,14 +1285,6 @@ func (s *ApiServer) RemoveLocalEndpoint(ctx context.Context, in *proto.WorkloadE
 	}
 
 	logger.Infof("Incoming RemoveLocalEndpoint Request %+v", in)
-
-	/*
-		Currently supporting policies for dpdk target only
-	*/
-
-	if config.InterfaceType != "tap" {
-		return out, nil
-	}
 
 	server := NewApiServer()
 
@@ -1461,7 +1493,7 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 			epEntry := entry.(store.EndPoint)
 			logger.Infof("Deleting old ip entry")
 			// Delete the old host IP entry. Ignore any errors.
-			p4.DeleteCniRules(ctx, server.p4RtC, epEntry)
+			p4.DeleteCniRules(ctx, server.p4RtC, epEntry, config.Services)
 		}
 		updateHostIP = true
 
@@ -1479,7 +1511,7 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 			epEntry := entry.(store.EndPoint)
 			logger.Infof("Deleting old mac entry with host ip")
 			// Delete the old host IP entry. Ignore any errors.
-			p4.DeleteCniRules(ctx, server.p4RtC, epEntry)
+			p4.DeleteCniRules(ctx, server.p4RtC, epEntry, config.Services)
 		}
 
 		ep = store.EndPoint{
@@ -1491,7 +1523,7 @@ func (s *ApiServer) SetupHostInterface(ctx context.Context, in *proto.SetupHostI
 			epEntry := entry.(store.EndPoint)
 			logger.Infof("Deleting old mac entry with node ip")
 			// Delete the old node IP entry. Ignore any errors.
-			p4.DeleteCniRules(ctx, server.p4RtC, epEntry)
+			p4.DeleteCniRules(ctx, server.p4RtC, epEntry, config.Services)
 		}
 		updateHostIP = true
 		updateNodeIP = true

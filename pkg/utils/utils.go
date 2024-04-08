@@ -110,6 +110,20 @@ func (st *IdStack) Pop() int {
 	return value
 }
 
+func (st *IdStack) GetTop() int {
+	if st.IsStackEmpty() {
+		return 0
+	}
+	return st.top
+}
+
+func (st *IdStack) SetTop(top int) {
+	if st.IsStackEmpty() {
+		return
+	}
+	st.top = top
+}
+
 func (st *IdStack) IsStackFull() bool {
 	if st.top == 255 {
 		return true

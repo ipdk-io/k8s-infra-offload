@@ -45,6 +45,11 @@ const (
 	IpsetDel
 )
 
+func UpdatePolicyDefaultEntries(ctx context.Context, p4RtC *client.Client, checkAclResultEntries [][]byte, action InterfaceType) error {
+	return nil
+
+}
+
 func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 	protocol uint8, workerep string, polID uint16, rangeID uint16, direction string,
 	action InterfaceType) error {

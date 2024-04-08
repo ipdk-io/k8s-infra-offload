@@ -42,6 +42,14 @@ Conn: mtls
 #  "Trace"
 LogLevel: "Debug"
 
+# Services and policy are enabled by default for dpdk and 
+# these params will not have any impact.
+# Whereas for mev, the user can enable either services or policy
+# but not both. The services always takes the precedence.
+# If services are enabled, the policy will be considered as disabled.
+Services: true
+Policy: false
+
 InfraManager:
   # Possible manager addr configs
   #  split mode - IP address of the ACC comms interface.

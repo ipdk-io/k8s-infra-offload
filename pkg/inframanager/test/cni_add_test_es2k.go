@@ -134,8 +134,9 @@ func GWMacModTableT(ctx context.Context, p4RtC *client.Client) error {
 	return nil
 }
 
-func InsertCniRulesT(ctx context.Context, p4RtC *client.Client) error {
+func InsertCniRulesT(ctx context.Context, p4RtC *client.Client, services bool) error {
 
+	_ = services
 	err := ArptToPortTableT(ctx, p4RtC)
 	if err != nil {
 		return err
@@ -236,7 +237,7 @@ func TestCni() {
 	}
 
 	log.Info("installing the entries to the table")
-	if err := InsertCniRulesT(ctx, p4RtC); err != nil {
+	if err := InsertCniRulesT(ctx, p4RtC, true); err != nil {
 		log.Fatalf("Error when installing entry %v", err)
 	}
 

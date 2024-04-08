@@ -259,7 +259,6 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 		log.Infof("Initial service add received")
 		service.GroupID = getSvcId(idgen)
 		store.SetSvcId(service.GroupID)
-		store.SetSetupBuffDirty()
 		epNum = 0
 	}
 
