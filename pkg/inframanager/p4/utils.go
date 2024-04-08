@@ -128,7 +128,7 @@ func ToBytes(data interface{}) []byte {
 		return []byte(v)
 
 	default:
-		log.Errorf("unsupported data type")
+		log.Errorf("unsupported data type: %v", v)
 		return []byte{0x00}
 	}
 	return buf.Bytes()

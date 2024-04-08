@@ -101,11 +101,11 @@ func CheckAclResult(ctx context.Context, p4RtC *client.Client,
 				},
 				"meta.fxp_internal.range_check_result": &client.TernaryMatch{
 					Value: ToBytes(range_check_result),
-					Mask:  ToBytes(0xFF),
+					Mask:  ToBytes(range_check_mask),
 				},
 				"user_meta.gmeta.ipset_check_result": &client.TernaryMatch{
-					Value: ToBytes(range_check_result),
-					Mask:  ToBytes(0xFF),
+					Value: ToBytes(ipset_check_result),
+					Mask:  ToBytes(ipset_check_mask),
 				},
 			},
 			nil,
@@ -138,10 +138,10 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 				entryAdd = p4RtC.NewTableEntry(
 					"k8s_dp_control.acl_pod_ip_proto_table_egress",
 					map[string]client.MatchInterface{
-						"hdr.ipv4[meta.common.depth].src_ip": &client.ExactMatch{
+						"hdrs.ipv4[meta.common.depth].src_ip": &client.ExactMatch{
 							Value: Pack32BinaryIP4(workerep),
 						},
-						"hdr.ipv4[meta.common.depth].protocol": &client.ExactMatch{
+						"hdrs.ipv4[meta.common.depth].protocol": &client.ExactMatch{
 							Value: ToBytes(protocol),
 						},
 					},
@@ -156,10 +156,10 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 				entryAdd = p4RtC.NewTableEntry(
 					"k8s_dp_control.acl_pod_ip_proto_table_egress",
 					map[string]client.MatchInterface{
-						"hdr.ipv4[meta.common.depth].src_ip": &client.ExactMatch{
+						"hdrs.ipv4[meta.common.depth].src_ip": &client.ExactMatch{
 							Value: Pack32BinaryIP4(workerep),
 						},
-						"hdr.ipv4[meta.common.depth].protocol": &client.ExactMatch{
+						"hdrs.ipv4[meta.common.depth].protocol": &client.ExactMatch{
 							Value: ToBytes(protocol),
 						},
 					},
@@ -174,7 +174,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 				entryAdd = p4RtC.NewTableEntry(
 					"k8s_dp_control.acl_pod_ip_table_egress",
 					map[string]client.MatchInterface{
-						"hdr.ipv4[meta.common.depth].src_ip": &client.ExactMatch{
+						"hdrs.ipv4[meta.common.depth].src_ip": &client.ExactMatch{
 							Value: Pack32BinaryIP4(workerep),
 						},
 					},
@@ -196,10 +196,10 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 				entryAdd = p4RtC.NewTableEntry(
 					"k8s_dp_control.acl_pod_ip_proto_table_ingress",
 					map[string]client.MatchInterface{
-						"hdr.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
+						"hdrs.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
 							Value: Pack32BinaryIP4(workerep),
 						},
-						"hdr.ipv4[meta.common.depth].protocol": &client.ExactMatch{
+						"hdrs.ipv4[meta.common.depth].protocol": &client.ExactMatch{
 							Value: ToBytes(protocol),
 						},
 					},
@@ -212,11 +212,11 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 				entryAdd = p4RtC.NewTableEntry(
 					"k8s_dp_control.acl_pod_ip_proto_table_ingress",
 					map[string]client.MatchInterface{
-						"hdr.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
+						"hdrs.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
 							Value: Pack32BinaryIP4(workerep),
 						},
-						"hdr.ipv4[meta.common.depth].protocol": &client.ExactMatch{
-							Value: ToBytes(0),
+						"hdrs.ipv4[meta.common.depth].protocol": &client.ExactMatch{
+							Value: ToBytes(protocol),
 						},
 					},
 					p4RtC.NewTableActionDirect("k8s_dp_control.set_range_check_ref_udp_ingress",
@@ -230,7 +230,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 				entryAdd = p4RtC.NewTableEntry(
 					"k8s_dp_control.acl_pod_ip_table_ingress",
 					map[string]client.MatchInterface{
-						"hdr.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
+						"hdrs.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
 							Value: Pack32BinaryIP4(workerep),
 						},
 					},
@@ -252,10 +252,10 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 				entryDelete = p4RtC.NewTableEntry(
 					"k8s_dp_control.acl_pod_ip_proto_table_egress",
 					map[string]client.MatchInterface{
-						"hdr.ipv4[meta.common.depth].src_ip": &client.ExactMatch{
+						"hdrs.ipv4[meta.common.depth].src_ip": &client.ExactMatch{
 							Value: Pack32BinaryIP4(workerep),
 						},
-						"hdr.ipv4[meta.common.depth].protocol": &client.ExactMatch{
+						"hdrs.ipv4[meta.common.depth].protocol": &client.ExactMatch{
 							Value: ToBytes(protocol),
 						},
 					},
@@ -267,7 +267,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 				entryDelete = p4RtC.NewTableEntry(
 					"k8s_dp_control.acl_pod_ip_proto_table_egress",
 					map[string]client.MatchInterface{
-						"hdr.ipv4[meta.common.depth].src_ip": &client.ExactMatch{
+						"hdrs.ipv4[meta.common.depth].src_ip": &client.ExactMatch{
 							Value: Pack32BinaryIP4(workerep),
 						},
 					},
@@ -286,10 +286,10 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 				entryDelete = p4RtC.NewTableEntry(
 					"k8s_dp_control.acl_pod_ip_proto_table_ingress",
 					map[string]client.MatchInterface{
-						"hdr.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
+						"hdrs.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
 							Value: Pack32BinaryIP4(workerep),
 						},
-						"hdr.ipv4[meta.common.depth].protocol": &client.ExactMatch{
+						"hdrs.ipv4[meta.common.depth].protocol": &client.ExactMatch{
 							Value: ToBytes(protocol),
 						},
 					},
@@ -301,7 +301,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 				entryDelete = p4RtC.NewTableEntry(
 					"k8s_dp_control.acl_pod_ip_table_ingress",
 					map[string]client.MatchInterface{
-						"hdr.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
+						"hdrs.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
 							Value: Pack32BinaryIP4(workerep),
 						},
 					},
@@ -325,7 +325,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 }
 
 func AclLpmRootLutTable(ctx context.Context, p4RtC *client.Client,
-	ipsetID uint16, cidr string, mask uint8, direction string, action InterfaceType) error {
+	ipsetID uint16, direction string, action InterfaceType) error {
 	var tableName string
 	var entryAdd *p4_v1.TableEntry
 	var entryDelete *p4_v1.TableEntry
@@ -344,11 +344,11 @@ func AclLpmRootLutTable(ctx context.Context, p4RtC *client.Client,
 				map[string]client.MatchInterface{
 					"user_meta.gmeta.tcam_key": &client.TernaryMatch{
 						Value: ToBytes(tcam_key),
-						Mask:  ToBytes(0xFFFFFFFF),
+						Mask:  ToBytes(uint32(0xFFFFFFFF)),
 					},
 				},
-				p4RtC.NewTableActionDirect("k8s_dp_control.set_ipset_match_result",
-					[][]byte{ToBytes(mask)}),
+				p4RtC.NewTableActionDirect("k8s_dp_control.acl_lpm_root_lut_egress_action",
+					[][]byte{ToBytes(ipsetID)}),
 				//nil,
 				&client.TableEntryOptions{
 					IdleTimeout: 0,
@@ -363,11 +363,11 @@ func AclLpmRootLutTable(ctx context.Context, p4RtC *client.Client,
 				map[string]client.MatchInterface{
 					"user_meta.gmeta.tcam_key": &client.TernaryMatch{
 						Value: ToBytes(tcam_key),
-						Mask:  ToBytes(0xFFFFFFFF),
+						Mask:  ToBytes(uint32(0xFFFFFFFF)),
 					},
 				},
-				p4RtC.NewTableActionDirect("k8s_dp_control.set_ipset_match_result",
-					[][]byte{ToBytes(mask)}),
+				p4RtC.NewTableActionDirect("k8s_dp_control.acl_lpm_root_lut_ingress_action",
+					[][]byte{ToBytes(ipsetID)}),
 				&client.TableEntryOptions{
 					IdleTimeout: 0,
 					Priority:    int32(priority),
@@ -389,14 +389,14 @@ func AclLpmRootLutTable(ctx context.Context, p4RtC *client.Client,
 				map[string]client.MatchInterface{
 					"user_meta.gmeta.tcam_key": &client.TernaryMatch{
 						Value: ToBytes(tcam_key),
-						Mask:  ToBytes(0xFFFFFFFF),
+						Mask:  ToBytes(uint32(0xFFFFFFFF)),
 					},
 				},
 				nil,
 				nil,
 			)
 		} else {
-			tcam_key := uint32((ipsetID << 8) | (0 & 0xFF))
+			tcam_key := uint32((ipsetID & 0xFFFF << 8) | (0 & 0xFF))
 
 			tableName = "k8s_dp_control.acl_lpm_root_lut_ingress"
 			entryDelete = p4RtC.NewTableEntry(
@@ -404,7 +404,7 @@ func AclLpmRootLutTable(ctx context.Context, p4RtC *client.Client,
 				map[string]client.MatchInterface{
 					"user_meta.gmeta.tcam_key": &client.TernaryMatch{
 						Value: ToBytes(tcam_key),
-						Mask:  ToBytes(0xFFFFFFFF),
+						Mask:  ToBytes(uint32(0xFFFFFFFF)),
 					},
 				},
 				nil,
@@ -426,7 +426,7 @@ func AclLpmRootLutTable(ctx context.Context, p4RtC *client.Client,
 }
 
 func AclIpSetMatchTable(ctx context.Context, p4RtC *client.Client,
-	ipsetID uint16, cidr string, mask uint8, direction string, action InterfaceType) error {
+	ipsetID uint16, cidr string, ipset_bitmap uint8, direction string, action InterfaceType) error {
 	var tableName string
 	var entryAdd *p4_v1.TableEntry
 	var entryDelete *p4_v1.TableEntry
@@ -451,13 +451,13 @@ func AclIpSetMatchTable(ctx context.Context, p4RtC *client.Client,
 					"ipset_table_lpm_root_egress": &client.ExactMatch{
 						Value: ToBytes(lpmRoot),
 					},
-					"hdr.ipv4[meta.common.depth].dst_addr": &client.LpmMatch{
-						Value: Pack32BinaryIP4(ip),
+					"hdrs.ipv4[meta.common.depth].dst_ip": &client.LpmMatch{
+						Value: Pack32BinaryIP4(string(ip)),
 						PLen:  int32(plen),
 					},
 				},
 				p4RtC.NewTableActionDirect("k8s_dp_control.set_ipset_match_result",
-					[][]byte{ToBytes(mask)}),
+					[][]byte{ToBytes(ipset_bitmap)}),
 				nil,
 			)
 		} else {
@@ -468,13 +468,13 @@ func AclIpSetMatchTable(ctx context.Context, p4RtC *client.Client,
 					"ipset_table_lpm_root_ingress": &client.ExactMatch{
 						Value: ToBytes(lpmRoot),
 					},
-					"hdr.ipv4[meta.common.depth].src_addr": &client.LpmMatch{
-						Value: Pack32BinaryIP4(ip),
+					"hdrs.ipv4[meta.common.depth].src_ip": &client.LpmMatch{
+						Value: Pack32BinaryIP4(string(ip)),
 						PLen:  int32(plen),
 					},
 				},
 				p4RtC.NewTableActionDirect("k8s_dp_control.set_ipset_match_result",
-					[][]byte{ToBytes(mask)}),
+					[][]byte{ToBytes(ipset_bitmap)}),
 				nil,
 			)
 		}
@@ -493,8 +493,8 @@ func AclIpSetMatchTable(ctx context.Context, p4RtC *client.Client,
 					"ipset_table_lpm_root_egress": &client.ExactMatch{
 						Value: ToBytes(lpmRoot),
 					},
-					"hdr.ipv4[meta.common.depth].dst_addr": &client.LpmMatch{
-						Value: Pack32BinaryIP4(ip),
+					"hdrs.ipv4[meta.common.depth].dst_ip": &client.LpmMatch{
+						Value: Pack32BinaryIP4(string(ip)),
 						PLen:  int32(plen),
 					},
 				},
@@ -509,8 +509,8 @@ func AclIpSetMatchTable(ctx context.Context, p4RtC *client.Client,
 					"ipset_table_lpm_root_ingress": &client.ExactMatch{
 						Value: ToBytes(lpmRoot),
 					},
-					"hdr.ipv4[meta.common.depth].src_addr": &client.LpmMatch{
-						Value: Pack32BinaryIP4(ip),
+					"hdrs.ipv4[meta.common.depth].src_ip": &client.LpmMatch{
+						Value: Pack32BinaryIP4(string(ip)),
 						PLen:  int32(plen),
 					},
 				},
@@ -640,15 +640,14 @@ func IsSame(slice1 []uint16, slice2 []uint16) bool {
 func updatePolicy(ctx context.Context, p4RtC *client.Client,
 	policy store.Policy, action InterfaceType) error {
 	for id, ruleGroup := range policy.RuleGroups {
+		if err := AclLpmRootLutTable(ctx, p4RtC, id, ruleGroup.Direction, action); err != nil {
+			log.Errorf("Failed to add entry to AclLpmRootLutTable, err: %v", err)
+			return err
+		}
+
 		for _, rule := range ruleGroup.Rules {
 			cidr := rule.Cidr
 			mask := rule.RuleMask
-
-			if err := AclLpmRootLutTable(ctx, p4RtC, id, cidr, mask, ruleGroup.Direction,
-				action); err != nil {
-				log.Errorf("Failed to add entry to AclLpmRootLutTable, err: %v", err)
-				return err
-			}
 
 			if err := AclIpSetMatchTable(ctx, p4RtC, id, cidr, mask, ruleGroup.Direction,
 				action); err != nil {
