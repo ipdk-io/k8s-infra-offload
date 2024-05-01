@@ -6,6 +6,7 @@ K8S_SECRET_MGR_SERVER?=manager-server-secret
 K8S_SECRET_MGR_CLIENT?=manager-client-secret
 K8S_SECRET_AGENT_CLIENT?=agent-client-secret
 K8S_SECRET_SRC_DIR?=./scripts/tls/certs
+TARGET_K8S_VER?=1.28
 
 # KUBECONFIG_CM: ConfigMap with kubeconfig used by Infra Agent.
 # If you change the ConfigMap name here dont forget to update the configMap
@@ -33,6 +34,7 @@ bindir=/opt/infra
 sbindir=/sbin/infra
 certdir=/etc/pki
 jsonfiles=/share/infra/jsonfiles
+host_k8s_ver=$(shell kubelet --version | awk '{print $$2}' | awk -F 'v' '{print $$2}')
 
 RUNFILES:=$(logdir)/arp-proxy* $(logdir)/infra* $(cnidir)/infra* $(sysconfdir)/config.yaml $(datadir)
 RUNFILES+=$(bindir)/felix-api* $(bindir)/infra* $(bindir)/arp-proxy*
@@ -161,12 +163,25 @@ undeploy: kustomize delete-kubeconfig-cm
 	rm -rf ${RUNFILES}
 
 deploy-calico:
-	kubectl apply -f deploy/calico-with-grpc.yaml 
+	@if [ $(host_k8s_ver) = $(TARGET_K8S_VER) ]; then \
+		kubectl apply -f deploy/calico-with-grpc-3.26.1.yaml ;\
+	elif [ "$(TARGET_K8S_VER)" = "`echo -e "$(host_k8s_ver)\n$(TARGET_K8S_VER)" | sort -V | head -n1`" ] ; then \
+		kubectl apply -f deploy/calico-with-grpc-3.26.1.yaml ;\
+	else \
+		kubectl apply -f deploy/calico-with-grpc.yaml ;\
+	fi
 	kubectl apply -f deploy/felix-configuration.yaml
 
-undeploy-calico: 
+undeploy-calico:
 	kubectl delete -f deploy/felix-configuration.yaml
-	kubectl delete -f deploy/calico-with-grpc.yaml
+	@if [ $(host_k8s_ver) = $(TARGET_K8S_VER) ]; then \
+		kubectl delete -f deploy/calico-with-grpc-3.26.1.yaml ;\
+	elif [ "$(TARGET_K8S_VER)" = "`echo -e "$(host_k8s_ver)\n$(TARGET_K8S_VER)" | sort -V | head -n1`" ] ; then \
+		kubectl delete -f deploy/calico-with-grpc-3.26.1.yaml ;\
+	else \
+		echo "host version is less than target version."; \
+		kubectl delete -f deploy/calico-with-grpc.yaml ;\
+	fi
 
 create-kubeconfig-cm:
 	@echo "Using kubeconfig file:$(KUBECONFIG)"
