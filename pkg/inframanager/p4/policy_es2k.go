@@ -109,7 +109,10 @@ func CheckAclResult(ctx context.Context, p4RtC *client.Client,
 				},
 			},
 			nil,
-			nil,
+			&client.TableEntryOptions{
+				IdleTimeout: 0,
+				Priority:    int32(priority),
+			},
 		)
 		if err := p4RtC.DeleteTableEntry(ctx, entry); err != nil {
 			log.Errorf("Cannot delete entry from %s: %v", tableName, err)
@@ -265,7 +268,7 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 			} else {
 				tableName = "k8s_dp_control.acl_pod_ip_table_egress"
 				entryDelete = p4RtC.NewTableEntry(
-					"k8s_dp_control.acl_pod_ip_proto_table_egress",
+					"k8s_dp_control.acl_pod_ip_table_egress",
 					map[string]client.MatchInterface{
 						"hdrs.ipv4[meta.common.depth].src_ip": &client.ExactMatch{
 							Value: Pack32BinaryIP4(workerep),
@@ -314,6 +317,84 @@ func AclPodIpProtoTable(ctx context.Context, p4RtC *client.Client,
 				log.Errorf("Cannot delete entry from %s: %v", tableName, err)
 				return err
 			}
+		}
+
+	default:
+		log.Warnf("Invalid action %v", action)
+		err := fmt.Errorf("Invalid action %v", action)
+		return err
+	}
+	return nil
+}
+
+func AclPodIpTableDenyAll(ctx context.Context, p4RtC *client.Client,
+	protocol uint8, workerep string, direction string,
+	action InterfaceType) error {
+	var tableName string
+	var entryAdd *p4_v1.TableEntry
+	var entryDelete *p4_v1.TableEntry
+	switch action {
+	case Insert:
+		if direction == "TX" {
+			tableName = "k8s_dp_control.acl_pod_ip_table_egress"
+			entryAdd = p4RtC.NewTableEntry(
+				"k8s_dp_control.acl_pod_ip_table_egress",
+				map[string]client.MatchInterface{
+					"hdrs.ipv4[meta.common.depth].src_ip": &client.ExactMatch{
+						Value: Pack32BinaryIP4(workerep),
+					},
+				},
+				p4RtC.NewTableActionDirect("k8s_dp_control.set_status_deny_all", nil),
+				nil,
+			)
+		} else {
+			// direction = RX
+			tableName = "k8s_dp_control.acl_pod_ip_table_ingress"
+			entryAdd = p4RtC.NewTableEntry(
+				"k8s_dp_control.acl_pod_ip_table_ingress",
+				map[string]client.MatchInterface{
+					"hdrs.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
+						Value: Pack32BinaryIP4(workerep),
+					},
+				},
+				p4RtC.NewTableActionDirect("k8s_dp_control.set_status_deny_all", nil),
+				nil,
+			)
+		}
+		if err := p4RtC.InsertTableEntry(ctx, entryAdd); err != nil {
+			log.Errorf("Cannot insert DenyAll entry into %s: %v", tableName, err)
+			return err
+		}
+	case Delete:
+		if direction == "TX" {
+			tableName = "k8s_dp_control.acl_pod_ip_table_egress"
+			entryDelete = p4RtC.NewTableEntry(
+				"k8s_dp_control.acl_pod_ip_table_egress",
+				map[string]client.MatchInterface{
+					"hdrs.ipv4[meta.common.depth].src_ip": &client.ExactMatch{
+						Value: Pack32BinaryIP4(workerep),
+					},
+				},
+				nil,
+				nil,
+			)
+		} else {
+			tableName = "k8s_dp_control.acl_pod_ip_table_ingress"
+			entryDelete = p4RtC.NewTableEntry(
+				"k8s_dp_control.acl_pod_ip_table_ingress",
+				map[string]client.MatchInterface{
+					"hdrs.ipv4[meta.common.depth].dst_ip": &client.ExactMatch{
+						Value: Pack32BinaryIP4(workerep),
+					},
+				},
+				nil,
+				nil,
+			)
+		}
+
+		if err := p4RtC.DeleteTableEntry(ctx, entryDelete); err != nil {
+			log.Errorf("Cannot delete DenyAll entry from %s: %v", tableName, err)
+			return err
 		}
 
 	default:
@@ -393,7 +474,10 @@ func AclLpmRootLutTable(ctx context.Context, p4RtC *client.Client,
 					},
 				},
 				nil,
-				nil,
+				&client.TableEntryOptions{
+					IdleTimeout: 0,
+					Priority:    int32(priority),
+				},
 			)
 		} else {
 			tcam_key := uint32((ipsetID & 0xFFFF << 8) | (0 & 0xFF))
@@ -408,7 +492,10 @@ func AclLpmRootLutTable(ctx context.Context, p4RtC *client.Client,
 					},
 				},
 				nil,
-				nil,
+				&client.TableEntryOptions{
+					IdleTimeout: 0,
+					Priority:    int32(priority),
+				},
 			)
 		}
 		if err := p4RtC.DeleteTableEntry(ctx, entryDelete); err != nil {
@@ -686,6 +773,7 @@ func updatePolicy(ctx context.Context, p4RtC *client.Client,
 
 func updateWorkloadRules(ctx context.Context, p4RtC *client.Client, ip string,
 	direction string, ruleGroups map[uint16]store.RuleGroup, action InterfaceType) error {
+	noProtoRuleProcessed := false
 	for id, ruleGroup := range ruleGroups {
 		if ruleGroup.Direction == direction {
 			if err := AclPodIpProtoTable(ctx, p4RtC, ruleGroup.Protocol, ip,
@@ -693,6 +781,16 @@ func updateWorkloadRules(ctx context.Context, p4RtC *client.Client, ip string,
 				log.Errorf("Failed to %s entry from AclPodIpProtoTable, err: %v", GetStr(action), err)
 				return err
 			}
+			if ruleGroup.Protocol == 0 {
+				noProtoRuleProcessed = true
+			}
+		}
+	}
+
+	if noProtoRuleProcessed == false {
+		if err := AclPodIpTableDenyAll(ctx, p4RtC, 0, ip, direction, action); err != nil {
+			log.Errorf("Failed to %s DenyAll entry from AclPodIpTable, err: %v", GetStr(action), err)
+			return err
 		}
 	}
 

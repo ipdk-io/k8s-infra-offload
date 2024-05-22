@@ -44,6 +44,7 @@ import (
 var hostInterface store.Iface
 var config *conf.Configuration
 var idgen *p4.IdGenerator
+var MAX_PER_DIR_RULES = 8
 
 // To identify different tcp packets based on tcp flag
 // ACK RST SYN FIN
@@ -874,14 +875,23 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 		Successful: true,
 	}
 
+	logger := log.WithField("func", "updatePolicy")
+
 	// If policy is not enabled, return
 	if !config.Policy {
+		logger.Infof("Policy is not enabled, returning success")
 		return out, nil
 	}
 
-	logger := log.WithField("func", "updatePolicy")
-
 	defer recoverPanic(logger)
+
+	if len(in.Policy.InboundRules) >= MAX_PER_DIR_RULES ||
+		len(in.Policy.OutboundRules) >= MAX_PER_DIR_RULES {
+		err := fmt.Errorf("Implementation supports only %d ingress or egress rules", MAX_PER_DIR_RULES)
+		logger.Errorf("Policy with more than %d rules not supported.", MAX_PER_DIR_RULES)
+		out.Successful = false
+		return out, err
+	}
 
 	if in == nil || reflect.DeepEqual(*in, proto.ActivePolicyUpdate{}) {
 		err := errors.New("Empty policy add/update request")
@@ -921,19 +931,27 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 		switch rule.Protocol.GetName() {
 		case "udp":
 			if !ingress[udp].exists {
+				//RuleGroupID == IPSet IDs belonging to a
+				//rulegroup - Proto/Dir
 				ingress[udp].RuleGroup.Index = uint16(store.GetNewRuleGroupId())
 				ingress[udp].exists = true
 			}
+			if len(rule.DstPorts) > 1 {
+				logger.Infof("Implemetation limitation - only first port range will be used %+v", rule.DstPorts)
+			}
+			// TODO: Limitation of a single port range with a CIDR
 			r := store.Rule{
 				Id: rule.RuleId,
 				PortRange: []uint16{
 					uint16(rule.DstPorts[0].First),
 					uint16(rule.DstPorts[0].Last),
 				},
+				//Cannot have more than 8
 				RuleMask: p4.GenerateMask(ingress[udp].ruleMaskId),
 				Cidr:     rule.SrcNet[0],
 			}
 
+			// Number of rules
 			ingress[udp].ruleMaskId++
 			ingress[udp].RuleGroup.Rules[rule.RuleId] = r
 			ingress[udp].exists = true
@@ -946,6 +964,9 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 			if !ingress[tcp].exists {
 				ingress[tcp].RuleGroup.Index = uint16(store.GetNewRuleGroupId())
 				ingress[tcp].exists = true
+			}
+			if len(rule.DstPorts) > 1 {
+				logger.Infof("Implemetation limitation - only first port range will be used %+v", rule.DstPorts)
 			}
 			r := store.Rule{
 				Id: rule.RuleId,
@@ -992,6 +1013,9 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 				egress[udp].RuleGroup.Index = uint16(store.GetNewRuleGroupId())
 				egress[udp].exists = true
 			}
+			if len(rule.DstPorts) > 1 {
+				logger.Infof("Implemetation limitation - only first port range will be used %+v", rule.DstPorts)
+			}
 			r := store.Rule{
 				Id: rule.RuleId,
 				PortRange: []uint16{
@@ -1014,6 +1038,9 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 			if !egress[tcp].exists {
 				egress[tcp].RuleGroup.Index = uint16(store.GetNewRuleGroupId())
 				egress[tcp].exists = true
+			}
+			if len(rule.DstPorts) > 1 {
+				logger.Infof("Implemetation limitation - only first port range will be used %+v", rule.DstPorts)
 			}
 			r := store.Rule{
 				Id: rule.RuleId,
@@ -1057,6 +1084,7 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 		}
 	}
 
+	logger.Infof("AddPolicy Request, sending policy to pipeline %+v", policy)
 	err := p4.PolicyTableEntries(ctx, server.p4RtC, p4.PolicyAdd, policy)
 	if err != nil {
 		logger.Errorf("Failed to add/update policy to the pipeline")
@@ -1089,6 +1117,7 @@ func (s *ApiServer) ActivePolicyRemove(ctx context.Context, in *proto.ActivePoli
 
 	// If policy is not enabled, return
 	if !config.Policy {
+		logger.Infof("Policy is not enabled, returning success")
 		return out, nil
 	}
 
@@ -1122,10 +1151,12 @@ func (s *ApiServer) ActivePolicyRemove(ctx context.Context, in *proto.ActivePoli
 
 	policy = entry.(store.Policy)
 
+	logger.Infof("DeletePolicy Request, got policy from store %+v", policy)
+
 	err := p4.PolicyTableEntries(ctx, server.p4RtC, p4.PolicyDel, policy)
 	if err != nil {
-		logger.Errorf("Failed to add/update policy to the pipeline")
-		err := fmt.Errorf("Failed to add/update policy to the pipeline")
+		logger.Errorf("Failed to delete policy to the pipeline")
+		err := fmt.Errorf("Failed to delete policy to the pipeline")
 		out.Successful = false
 		return out, err
 	}
