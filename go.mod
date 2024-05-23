@@ -1,8 +1,6 @@
 module github.com/ipdk-io/k8s-infra-offload
 
-go 1.22.0
-
-toolchain go1.22.3
+go 1.22.3
 
 require (
 	github.com/antoninbas/p4runtime-go-client v0.0.0-20240422172544-372ceebfe93a
@@ -12,6 +10,7 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.4
+	github.com/ipdk-io/k8s-infra-offload v0.0.0-20240523165121-6497eaa4c61f
 	github.com/mdlayher/arp v0.0.0-20220512170110-6706a2966875
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.33.1
@@ -28,7 +27,7 @@ require (
 	k8s.io/api v0.30.1
 	k8s.io/apimachinery v0.30.1
 	k8s.io/client-go v0.30.1
-	sigs.k8s.io/controller-runtime v0.16.3
+	sigs.k8s.io/controller-runtime v0.18.2
 )
 
 require (
@@ -36,7 +35,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/emicklei/go-restful/v3 v3.12.0 // indirect
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
-	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
+	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
@@ -85,7 +84,7 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.28.3 // indirect
+	k8s.io/apiextensions-apiserver v0.30.0 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240521193020-835d969ad83a // indirect
 	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0 // indirect
