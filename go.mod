@@ -10,7 +10,6 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.4
-	github.com/ipdk-io/k8s-infra-offload v0.0.0-20240523165121-6497eaa4c61f
 	github.com/mdlayher/arp v0.0.0-20220512170110-6706a2966875
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.33.1
@@ -18,7 +17,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
-	github.com/spf13/viper v1.18.2
+	github.com/spf13/viper v1.19.0
 	github.com/vishvananda/netlink v1.2.1-beta.2
 	google.golang.org/grpc v1.64.0
 	google.golang.org/protobuf v1.34.1
