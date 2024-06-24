@@ -423,18 +423,20 @@ func InsertServiceRules(ctx context.Context, p4RtC *client.Client,
 	}
 	key = append(key, ToBytes(uint16(service.Port))) //L4 port
 
-	for i := 0; i < maxEndpoints; i++ {
-		key = append(key, ToBytes(uint8(i)))
+	if epNum > 0 {
+		for i := 0; i < maxEndpoints; i++ {
+			key = append(key, ToBytes(uint8(i)))
 
-		index := i % int(epNum)
-		action = append(action, InterfaceIDbyte[index])
-		action = append(action, modblobptrdnatbyte[index])
+			index := i % int(epNum)
+			action = append(action, InterfaceIDbyte[index])
+			action = append(action, modblobptrdnatbyte[index])
 
-		updateTables("k8s_dp_control.tx_balance", data, svcmap, key, action, 1)
+			updateTables("k8s_dp_control.tx_balance", data, svcmap, key, action, 1)
 
-		//Remove last element from key
-		key = key[:len(key)-1]
-		action = nil
+			//Remove last element from key
+			key = key[:len(key)-1]
+			action = nil
+		}
 	}
 	resetSlices(&key, &action)
 	log.Debugf("Inserted into the table TxBalance, service ip: %s, service port: %d",

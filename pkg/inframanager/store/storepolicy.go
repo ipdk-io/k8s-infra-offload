@@ -154,6 +154,8 @@ func InitPolicyStore(setFwdPipe bool) bool {
 
 	setup := NewSetup()
 
+	setup.mutex.Lock()
+	defer setup.mutex.Unlock()
 	if setup.PolicyRuleGroupIdTop > 0 {
 		PolicySet.RuleGroupIdStack.SetTop(setup.PolicyRuleGroupIdTop)
 	}
@@ -203,7 +205,7 @@ func (ipsetadd IpSet) WriteToStore() bool {
 		return false
 	}
 
-	if ipsetadd.IpSetIDx < 0 || ipsetadd.IpSetIDx > 255 {
+	if ipsetadd.IpSetIDx > 255 {
 		return false
 	}
 

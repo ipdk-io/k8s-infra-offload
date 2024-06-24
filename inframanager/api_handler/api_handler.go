@@ -885,14 +885,6 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 
 	defer recoverPanic(logger)
 
-	if len(in.Policy.InboundRules) >= MAX_PER_DIR_RULES ||
-		len(in.Policy.OutboundRules) >= MAX_PER_DIR_RULES {
-		err := fmt.Errorf("Implementation supports only %d ingress or egress rules", MAX_PER_DIR_RULES)
-		logger.Errorf("Policy with more than %d rules not supported.", MAX_PER_DIR_RULES)
-		out.Successful = false
-		return out, err
-	}
-
 	if in == nil || reflect.DeepEqual(*in, proto.ActivePolicyUpdate{}) {
 		err := errors.New("Empty policy add/update request")
 		logger.Errorf("Empty policy add/update request.")
@@ -901,6 +893,14 @@ func (s *ApiServer) ActivePolicyUpdate(ctx context.Context, in *proto.ActivePoli
 	}
 
 	logger.Infof("Incoming updatePolicy Request %+v", in)
+
+	if len(in.Policy.InboundRules) >= MAX_PER_DIR_RULES ||
+		len(in.Policy.OutboundRules) >= MAX_PER_DIR_RULES {
+		err := fmt.Errorf("Implementation supports only %d ingress or egress rules", MAX_PER_DIR_RULES)
+		logger.Errorf("Policy with more than %d rules not supported.", MAX_PER_DIR_RULES)
+		out.Successful = false
+		return out, err
+	}
 
 	server := NewApiServer()
 

@@ -152,6 +152,8 @@ func SetDefaultRule() {
 }
 
 func IsDefaultRuleSet() bool {
+	Setup.mutex.Lock()
+	defer Setup.mutex.Unlock()
 	return Setup.SetDefaultRule
 }
 
