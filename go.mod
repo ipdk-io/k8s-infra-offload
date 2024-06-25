@@ -5,7 +5,7 @@ go 1.22.3
 require (
 	github.com/antoninbas/p4runtime-go-client v0.0.0-20240422172544-372ceebfe93a
 	github.com/containernetworking/cni v1.2.0
-	github.com/containernetworking/plugins v1.5.0
+	github.com/containernetworking/plugins v1.5.1
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
@@ -60,7 +60,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
-	github.com/safchain/ethtool v0.3.0 // indirect
+	github.com/safchain/ethtool v0.4.0 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
@@ -74,7 +74,7 @@ require (
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/oauth2 v0.20.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
 	golang.org/x/term v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
