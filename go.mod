@@ -4,8 +4,8 @@ go 1.22.3
 
 require (
 	github.com/antoninbas/p4runtime-go-client v0.0.0-20240422172544-372ceebfe93a
-	github.com/containernetworking/cni v1.2.0
-	github.com/containernetworking/plugins v1.5.1
+	github.com/containernetworking/cni v1.2.3
+	github.com/containernetworking/plugins v1.5.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
