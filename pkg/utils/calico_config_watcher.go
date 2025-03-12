@@ -66,7 +66,7 @@ func (cw *calicoWatcher) handleEvents() {
 		case event, ok := <-cw.fsWatcher.Events:
 			if !ok {
 				cw.done <- false
-				cw.errors <- fmt.Errorf(event.String())
+				cw.errors <- fmt.Errorf("%s", event.String())
 				return
 			}
 			if event.Op&fsnotify.Create == fsnotify.Create {
