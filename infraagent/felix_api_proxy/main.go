@@ -43,12 +43,12 @@ func main() {
 
 	inFile, outFile, err := preparePipes(log, os.NewFile)
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatalf("Failed to setup connection to felix")
 	}
 
 	socket, err := connectToSocket(log, types.FelixDataplaneSocket, connRetries, connRetryDelay, net.Dial)
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatalf("Failed to setup connection to felix")
 	}
 
 	t.Go(func() error {

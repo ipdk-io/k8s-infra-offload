@@ -136,7 +136,7 @@ func getClientMTLSCredentials() (credentials.TransportCredentials, error) {
 
 	certificate, err := tls.LoadX509KeyPair(clientCert, clientKey)
 	if err != nil {
-		return nil, fmt.Errorf("loading client certificate failed: %s" + err.Error())
+		return nil, fmt.Errorf("loading client certificate failed: %s", err.Error())
 	}
 
 	ca, err := ioutil.ReadFile(caCert)
