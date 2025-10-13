@@ -54,21 +54,21 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: 'Run hadolint - Manager-arm64'
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: 'images/Dockerfile.manager-arm64'
           verbose: true
 
       - name: 'Run hadolint - Manager'
         if: always()
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: 'images/Dockerfile.manager'
           verbose: true
 
       - name: 'Run hadolint - Agent'
         if: always()
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         with:
           dockerfile: 'images/Dockerfile.agent'
           verbose: true
