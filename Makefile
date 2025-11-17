@@ -108,7 +108,7 @@ config:
 	./bin/generate-config
 
 test:
-	./hack/cicd/run-tests.sh
+	./hack/cicd/dpdk/run-tests.sh
 
 clean:
 	@echo "Remove bin directory"

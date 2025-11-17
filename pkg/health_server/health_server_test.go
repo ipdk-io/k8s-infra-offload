@@ -46,6 +46,10 @@ func (s *testHS) Watch(*grpc_health_v1.HealthCheckRequest, grpc_health_v1.Health
 	return nil
 }
 
+func (s *testHS) List(context.Context, *grpc_health_v1.HealthListRequest) (*grpc_health_v1.HealthListResponse, error) {
+	return nil, errors.New("Unimplemented")
+}
+
 func (s *testHS) setRes(response []*grpc_health_v1.HealthCheckResponse) {
 	s.res = response
 }
