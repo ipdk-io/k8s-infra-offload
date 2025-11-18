@@ -236,6 +236,11 @@ func (s *CniServer) Watch(in *healthgrpc.HealthCheckRequest, _ healthgrpc.Health
 	return errors.New("Unimplemented")
 }
 
+// List was created to fulfil interface requirements, unused
+func (s *CniServer) List(ctx context.Context, in *healthgrpc.HealthListRequest) (*healthgrpc.HealthListResponse, error) {
+	return nil, errors.New("Unimplemented")
+}
+
 func grpcClose(conn *grpc.ClientConn, log *log.Entry, errorMsg string) {
 	if conn == nil {
 		return

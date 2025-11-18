@@ -1603,3 +1603,8 @@ func (s *ApiServer) Check(ctx context.Context, in *healthgrpc.HealthCheckRequest
 func (s *ApiServer) Watch(in *healthgrpc.HealthCheckRequest, _ healthgrpc.Health_WatchServer) error {
 	return errors.New("Unimplemented")
 }
+
+// List was created to fulfil interface requirements, unused
+func (s *ApiServer) List(ctx context.Context, in *healthgrpc.HealthListRequest) (*healthgrpc.HealthListResponse, error) {
+	return nil, errors.New("Unimplemented")
+}
