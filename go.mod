@@ -7,7 +7,7 @@ toolchain go1.24.10
 require (
 	github.com/antoninbas/p4runtime-go-client v0.0.0-20250129182037-de3748d9d859
 	github.com/containernetworking/cni v1.3.0
-	github.com/containernetworking/plugins v1.8.0
+	github.com/containernetworking/plugins v1.9.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
