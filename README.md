@@ -105,7 +105,7 @@ software.
   notifications because of watch on Service object resources. It passes any incremental
   changes to the Infra Manager component.
 - It interfaces with Infra Manager over the secure gRPC channel to pass all the
-  configurations.
+  configurations. The gRPC connection by default is secure.
 
 ### Kubernetes ARP Proxy
 
