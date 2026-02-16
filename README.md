@@ -114,7 +114,7 @@ software.
   for the pipeline internal gateway IP address.
 - As the name suggests, it responds to ARP requests sent by the pods, seeking
   the MAC address of the common gateway. It responds with its interface's MAC
-  address.
+  address. This allows every pod to see gateway as it's next hop.
 
 ### Kubernetes P4 Pipeline
 
