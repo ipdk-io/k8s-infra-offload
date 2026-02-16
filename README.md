@@ -105,7 +105,7 @@ software.
   notifications because of watch on Service object resources. It passes any incremental
   changes to the Infra Manager component.
 - It interfaces with Infra Manager over the secure gRPC channel to pass all the
-  configurations.
+  configurations. The gRPC connection by default is secure.
 
 ### Kubernetes ARP Proxy
 
@@ -114,7 +114,7 @@ software.
   for the pipeline internal gateway IP address.
 - As the name suggests, it responds to ARP requests sent by the pods, seeking
   the MAC address of the common gateway. It responds with its interface's MAC
-  address.
+  address. This allows every pod to see gateway as it's next hop.
 
 ### Kubernetes P4 Pipeline
 
