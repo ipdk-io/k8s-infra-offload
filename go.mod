@@ -14,7 +14,7 @@ require (
 	github.com/golang/protobuf v1.5.4
 	github.com/mdlayher/arp v0.0.0-20220512170110-6706a2966875
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.38.2
+	github.com/onsi/gomega v1.39.1
 	github.com/p4lang/p4runtime v1.4.0-rc.5
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
@@ -84,14 +84,13 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/net v0.47.0 // indirect
+	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/oauth2 v0.33.0 // indirect
-	golang.org/x/sync v0.18.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
-	golang.org/x/term v0.37.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/term v0.39.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
-	golang.org/x/tools v0.39.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251111163417-95abcf5c77ba // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
