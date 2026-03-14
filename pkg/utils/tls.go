@@ -65,8 +65,7 @@ var CipherMap map[string]uint16
 
 func CreateCipherMap() {
 	onceMap.Do(func() {
-		ciphers := tls.CipherSuites()
-		ciphers = append(ciphers, tls.InsecureCipherSuites()...)
+		ciphers := tls.CipherSuites() // Only include secure cipher suites
 		CipherMap = map[string]uint16{}
 
 		for _, c := range ciphers {
